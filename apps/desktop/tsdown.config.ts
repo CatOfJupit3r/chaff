@@ -1,4 +1,4 @@
-import { access, cp, rm } from 'node:fs/promises';
+import { access, cp, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { defineConfig } from 'tsdown';
@@ -8,10 +8,12 @@ import type { UserConfig } from 'tsdown';
 const TREE_SITTER_DIRECTORY = path.dirname(createRequire(import.meta.url).resolve('@vscode/tree-sitter-wasm'));
 
 const RUNTIME_RESOURCES = [
-  { from: '../../packages/core/src/db/migrations', to: 'dist/migrations', isRequired: true },
-  { from: TREE_SITTER_DIRECTORY, to: 'dist/tree-sitter', isRequired: true },
+  { from: '../../packages/core/src/db/migrations', to: 'dist/migrations', isRequired: true, isCommonJs: false },
+  // The grammar runtime is a CommonJS script, but this package is "type": "module", so the copy gets
+  // its own package.json; otherwise Node loads it as an ES module and it cannot find its own path.
+  { from: TREE_SITTER_DIRECTORY, to: 'dist/tree-sitter', isRequired: true, isCommonJs: true },
   // Missing while developing against the Vite dev server; `pnpm run build` builds it first.
-  { from: '../web/dist', to: 'dist/renderer', isRequired: false },
+  { from: '../web/dist', to: 'dist/renderer', isRequired: false, isCommonJs: false },
 ].map((resource) => ({
   ...resource,
   from: path.resolve(import.meta.dirname, resource.from),
@@ -32,6 +34,7 @@ async function copyRuntimeResources() {
     if (!resource.isRequired && !(await exists(resource.from))) continue;
     await rm(resource.to, { recursive: true, force: true });
     await cp(resource.from, resource.to, { recursive: true });
+    if (resource.isCommonJs) await writeFile(path.join(resource.to, 'package.json'), '{ "type": "commonjs" }\n');
   }
 }
 
