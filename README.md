@@ -31,7 +31,7 @@ Chaff keeps the reviewer in charge: it never decides what you see or what is res
 ## How it works
 
 1. **Add a repository.** Pick a folder on disk. Chaff reads it with your own `git` and never writes to it: no checkouts, no new refs, no stash.
-2. **Chaff finds the stacks.** Each local branch gets a suggested parent (the nearest other branch on its first-parent history), so `feature/async-input <- feature/job-options <- feature/consent` shows up as one stack.
+2. **Chaff finds the stacks.** Each local branch gets a suggested parent (the other branch it has the fewest commits on top of), so `feature/async-input <- feature/job-options <- feature/consent` shows up as one stack.
 3. **Start a review and Chaff freezes a snapshot.** The branch, its parent and their merge base are fetched into Chaff's own bare repository and pinned, so rebasing, amending or deleting the branch does not break the review.
 4. **Chaff breaks the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing is dropped.
 5. **You read the diff in reading order.** Types and contracts come first, tests sit next to the code they test, and config, docs and generated files come last.

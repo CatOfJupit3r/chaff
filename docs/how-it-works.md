@@ -42,9 +42,10 @@ Adding a repository stores its path and default branch. From then on Chaff runs 
 
 Chaff lists your local branches and suggests a parent for each one:
 
-- It walks the branch's first-parent history and takes the nearest commit that is the tip of another local branch.
-- At the branch's own tip, only the default branch or an alphabetically earlier branch can be the parent, so two branches pointing at the same commit don't claim each other.
-- Ties go to the branch's upstream setting. A branch with no other branch in its history stacks on the default branch.
+- It walks the branch's history, merged-in commits included, and collects the tips of other local branches it finds.
+- It picks the one with the fewest commits between that tip and the branch, so a branch that merged newer commits from its parent (or from the default branch) still stacks on its parent.
+- Ties go to the branch's upstream, then the default branch, then alphabetical order. At the branch's own tip, only the default branch or an alphabetically earlier branch can be the parent, so two branches on the same commit don't claim each other.
+- A branch with no other branch in its history stacks on the default branch.
 
 Branches that chain this way form a stack, shown on the Reviews screen as `feature/async-input <- feature/job-options <- feature/consent`. Each branch is reviewed against its parent, so you read only what that branch adds. Editing parents by hand and a cumulative view of the whole stack are **planned** for the Stack overview.
 
