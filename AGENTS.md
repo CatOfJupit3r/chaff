@@ -4,7 +4,7 @@ applyTo: '**/*.ts'
 
 # Workspace Guide
 
-This repository is **Chaff**, a self-hosted, stack-aware review workspace for AI-written GitLab merge requests, built as a pnpm monorepo. Treat this file as the primary workspace guide for agentic work and the always-on source of project standards.
+This repository is **Chaff**, a stack-aware review workspace for AI-written changes (local branch stacks and GitLab merge requests). It is an Electron desktop app built as a pnpm monorepo. Treat this file as the primary workspace guide for agentic work and the always-on source of project standards.
 
 ## Answer and Code Changes Guidelines
 
@@ -40,18 +40,20 @@ Examples:
 
 ## Repository Layout
 
-- `apps/server` contains the Hono API, oRPC routers, Drizzle schema, and server-side services.
-- `apps/web` contains the React 19 client, TanStack Router tree, UI components, and client-side state.
-- `packages/server-contract` contains the API contracts used by both apps.
+- `apps/server` is the Chaff core: oRPC routers, services, the Drizzle schema on SQLite, and git access. It has no HTTP server; `createChaffCore()` in `src/core.ts` is started by the desktop main process.
+- `apps/desktop` is the Electron shell: the main process (`src/main`) owns the window, the OS dialogs and the core, and serves the renderer from `chaff://app/`; `src/preload/preload.ts` only forwards the MessagePort the renderer talks to the core through.
+- `apps/web` is the renderer: a React 19 single-page app with the TanStack Router tree, UI components, and client-side state. It has no Node access and reaches the core only through the oRPC client in `src/utils/orpc.ts`.
+- `packages/server-contract` contains the API contracts shared by the core and the renderer.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
 - `docs` contains product notes, roadmaps, and design documentation, if present.
-- `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-foreground`, `text-primary`).
+- `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-fg`, `text-accent`). The desktop app icon is `apps/desktop/build/icon.png`.
 
 ## UI, Theming, and Colors
 
 - Chaff ships with **light and dark modes**, and the UI must stay customizable: every color, radius, and font comes from theme tokens so a theme can be swapped by changing CSS variables only.
-- Theme tokens are CSS variables declared in `apps/web/src/index.css` (`:root` for light, `.dark` for dark) and exposed to Tailwind through `@theme inline` (e.g. `--color-success: var(--success)`).
-- ALWAYS use Tailwind token classes for colors (`bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-success`, `bg-overlay/50`, ...). NEVER use raw palette classes (`bg-red-500`, `text-white`, `dark:bg-gray-950`) or arbitrary color values (`bg-[#fff]`, `text-[oklch(...)]`) in components.
+- Theme tokens are CSS variables declared in `apps/web/src/index.css` (`:root` for light, `.dark` for dark) and exposed to Tailwind through `@theme inline` (e.g. `--color-good: var(--good)`). Their names follow the approved design: surfaces `canvas`, `surface`, `raised`, `hover`; lines `line`, `line-strong`; text `fg`, `fg-soft`, `muted`, `faint`; `accent`, `accent-soft`, `accent-line`; states `good`, `warn`, `bad` with `-soft` and `-line` variants; diff `add-*` and `del-*`; syntax `tok-*`.
+- The user's accent and code size are applied as `data-accent` and `data-code-size` on `<html>`, which override `--accent` and `--code-size`/`--code-lh`; theme mode toggles the `.dark` class. Set code text with the `text-code` class (size and line height follow the setting), never fixed sizes.
+- ALWAYS use Tailwind token classes for colors (`bg-canvas`, `bg-surface`, `text-fg`, `text-muted`, `border-line`, `text-accent`, `bg-accent-soft`, `text-bad`, `bg-good-soft`, `bg-scrim`, ...). NEVER use raw palette classes (`bg-red-500`, `text-white`, `dark:bg-gray-950`) or arbitrary color values (`bg-[#fff]`, `text-[oklch(...)]`) in components.
 - If no existing token fits, add one: declare the variable in both `:root` and `.dark`, map it in `@theme inline`, then use the new class. Do not hardcode a color "just this once".
 - Never branch on the theme in component code for colors (`dark:text-red-400`); the token already carries both values.
 - ESLint enforces this in `apps/web` via `better-tailwindcss/no-restricted-classes` (see `configs/eslint-config/src/index.mjs`).
@@ -60,7 +62,7 @@ Examples:
   <span className="text-red-600 dark:text-red-400">Failed</span>
 
   // GOOD
-  <span className="text-destructive">Failed</span>
+  <span className="text-bad">Failed</span>
   ```
 
 ## Core Conventions
@@ -110,7 +112,7 @@ Examples:
   export type UserProfileResponse = iUserProfileResponse; // redundant alias, delete it
   ```
 - Repository response types should be derived from the Drizzle schema (`typeof table.$inferSelect`) with `Omit`/`Pick`/intersections rather than hand-duplicating every column. See the **drizzle-orm** skill.
-- Don't hand-write a field-by-field `toResponse(row)` mapper in a repository. Build it with `createRowResolver` (`@~/lib/row-resolver`) and group a feature's mappers on a `<feature>.resolver.ts` resolver class. Resolvers are `@singleton()` and constructor-injected into repositories like any other dependency (e.g. `PostgresService`) — never static classes/methods. See the **drizzle-orm** skill.
+- Don't hand-write a field-by-field `toResponse(row)` mapper in a repository. Build it with `createRowResolver` (`@~/lib/row-resolver`) and group a feature's mappers on a `<feature>.resolver.ts` resolver class. Resolvers are `@singleton()` and constructor-injected into repositories like any other dependency (e.g. `DatabaseService`) — never static classes/methods. See the **drizzle-orm** skill.
 - If your variable is reused across server and client, define it in `packages/common/src/constants` and import it from `@chaff/common/constants`. Only do this for non-sensitive data.
 - When resolving warnings or errors, prefer addressing the root cause instead of using `// @ts-ignore` or `as unknown as <Type>`. Use these only as a last resort with a comment explaining why.
 - If you encounter eslint warnings, run `pnpm run lint` to fix them in the file.
@@ -126,12 +128,17 @@ Examples:
 
 ## Environment and Configuration
 
-- Copy `.env.example` to `.env` in `apps/server` and `apps/web`; server validates configuration with `zod` in `src/constants/env.ts`.
-- The Better Auth server is mounted under `/auth/*` and expects HTTPS cookies (`sameSite: 'none'`, `secure: true`); keep this in mind when testing locally.
-- Aliases: `@~/` resolves to `apps/server/src` or `apps/web/src` depending on the package; `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
-- PostgreSQL runs at `postgresql://postgres:postgres@localhost:5432/chaff` by default; adjust via `POSTGRES_URL` and update docker-compose if ports change.
-- Node.js v24 is required; use nvm or similar to manage Node versions.
-- pnpm ≥10.0.0 is the package manager; use `corepack enable` to activate it.
+- There are no `.env` files and no login. Everything Chaff stores lives in one SQLite file (`chaff.db`, through Node's built-in `node:sqlite`) in Electron's `userData` folder; development runs use a separate `Chaff Dev` folder. Migrations in `apps/server/src/db/migrations` are applied when the core starts.
+- Repositories are read with the system `git` from PATH. Chaff never writes to a user's repository: no checkouts, branch or ref changes, index or stash writes.
+- Aliases: `@~/` resolves to `apps/server/src` or `apps/web/src` depending on the package (in `apps/desktop` it points at the core, so desktop code uses relative imports); `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
+- Node.js 24.13 is required (Electron 44 embeds Node 24 as well); use nvm or similar to manage Node versions.
+- pnpm 11.5.0 is the package manager; use `corepack enable` to activate it.
+
+## Desktop Security
+
+- The renderer runs with `contextIsolation`, `sandbox`, no `nodeIntegration`, and a strict content security policy (`apps/desktop/src/main/content-security-policy.ts`). Never loosen these, and never add a preload API beyond the MessagePort hand-off.
+- Anything that needs the OS (dialogs, opening links, native theme) goes through the core's `iCoreHost` (`apps/server/src/host/core-host.types.ts`), implemented in `apps/desktop/src/main/electron-core-host.ts`. `openExternal` only allows `https:` and editor URL schemes.
+- Secrets such as a GitLab token stay in the main process (encrypted with Electron `safeStorage`) and are never sent to the renderer.
 
 ## Environment (Windows)
 
@@ -163,25 +170,29 @@ Do not duplicate code blocks and prefer to extract shared code into utility func
 
 Our repository is organized to promote clarity, maintainability, and scalability. We use a feature-based structure for both backend and frontend code, ensuring that related files are grouped together.
 
+- The renderer calls the core over a MessagePort: `apps/web/src/utils/orpc.ts` opens a `MessageChannel`, the preload forwards one end to the main process, and `apps/desktop/src/main/rpc-bridge.ts` serves the core router on it. The contract is the only API surface.
 - Shared API contracts live in `packages/server-contract/src/contract/*.contract.ts`.
-- Server schema files live in `apps/server/src/db/schema/*.ts`.
+- Core schema files live in `apps/server/src/db/schema/*.schema.ts`; queries go through `DatabaseService.getDb()`. Drizzle runs on a custom `node:sqlite` driver, so transactions are synchronous.
 - Repositories live under `apps/server/src/features/**/drizzle-*.repository.ts`.
-- Routers live under `apps/server/src/routers/*.router.ts`.
+- Routers live under `apps/server/src/routers/*.router.ts` and use `procedure` from `apps/server/src/lib/orpc.ts`.
 - Error handling utilities live in `apps/server/src/lib/orpc-error-wrapper.ts`.
 - Shared error codes live in `packages/common/src/enums/errors.enums.ts`.
-- Tests should mirror the feature structure inside each app or package.
+- Tests mirror the source structure inside each app or package.
 ```
-apps/<workspace>/test/
-  ├── features/<feature>/<feature>.service.test.ts
-  ├── integration/
-  └── utils/
+apps/server/test/
+  ├── integration/<feature>.test.ts   # through the router with `call()`, real git repos in temp folders
+  ├── unit/
+  └── helpers/                        # core instance, fake host, git repo builder
+apps/web/test/                        # mirrors apps/web/src (features/<feature>/..., utils/...)
+apps/desktop/test/                    # mirrors apps/desktop/src
 ```
 
 ## Commands
 
 - `pnpm run verify` is THE verification command: it runs check-types + lint (add `--tests` to also run the suite, `--filter <pkg>` to scope) and reports honest PASS/FAIL with an exit code you can trust. Use it before handing work off.
-- `pnpm run dev` boots the local stack.
-- `pnpm run build` builds the monorepo.
+- `pnpm run dev` starts the renderer dev server on port 3030 and opens Chaff in Electron, rebuilding and restarting the main process on changes.
+- `pnpm run build` builds the monorepo, including the desktop bundle in `apps/desktop/dist`.
+- `pnpm run package` builds an unsigned installer for the current OS into `apps/desktop/release`.
 - `pnpm run check-types` runs TypeScript checks across the workspace.
 - `pnpm run lint` runs ESLint across the workspace.
 - `pnpm run prettify` formats the workspace.
