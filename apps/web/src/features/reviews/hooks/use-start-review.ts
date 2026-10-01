@@ -5,7 +5,7 @@ import { showToast } from '@~/components/toast/toast-store';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
-/** Opens a branch's review, freezing its first snapshot when the review is new. */
+/** Opens a branch's review in Focus, freezing its first snapshot when the review is new. */
 export function useStartReview() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();

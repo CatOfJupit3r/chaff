@@ -200,6 +200,22 @@
   --shadow-panel: var(--panel-shadow);
 }
 
+@theme {
+  --animate-card-in: card-in 0.28s cubic-bezier(0.3, 0.7, 0.3, 1);
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.985);
+    }
+  }
+}
+
+/* Striped fill for units put off with Later; the stripe color is a theme token. */
+@utility bg-stripes {
+  background-image: repeating-linear-gradient(90deg, transparent 0 3px, var(--stripe) 3px 5px);
+}
+
 @layer base {
   * {
     border-color: var(--line);

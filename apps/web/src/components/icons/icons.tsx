@@ -100,3 +100,41 @@ export const SearchIcon = createIcon(
     <path d="M20 20l-4.5-4.5" />
   </>,
 );
+export const LeftIcon = createIcon('LeftIcon', <path d="M15 6l-6 6 6 6" />);
+export const MessageIcon = createIcon('MessageIcon', <path d="M5 5h14v10H10l-4 4v-4H5z" />);
+export const NextIcon = createIcon('NextIcon', <path d="M5 12h13M13 6l6 6-6 6" />);
+export const QuestionIcon = createIcon(
+  'QuestionIcon',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 16.5v.3" />
+  </>,
+);
+export const ClockIcon = createIcon(
+  'ClockIcon',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </>,
+);
+export const PanelIcon = createIcon(
+  'PanelIcon',
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M15 4v16" />
+  </>,
+);
+export const UndoIcon = createIcon(
+  'UndoIcon',
+  <>
+    <path d="M9 14l-5-5 5-5" />
+    <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+  </>,
+);
+export const FlagIcon = createIcon(
+  'FlagIcon',
+  <>
+    <path d="M5 21V4" />
+    <path d="M5 4h11l-2 4 2 4H5" />
+  </>,
+);

@@ -35,5 +35,9 @@ export function summarizeStackReview(stack: iLocalStack, targets: readonly iRevi
     next: lastStarted ?? links[0],
     isStarted: started.length > 0,
     unitCount: started.reduce((total, link) => total + (link.target?.latestSnapshot?.unitCount ?? 0), 0),
+    inspectedUnitCount: started.reduce(
+      (total, link) => total + (link.target?.latestSnapshot?.inspectedUnitCount ?? 0),
+      0,
+    ),
   };
 }

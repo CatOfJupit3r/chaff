@@ -36,7 +36,7 @@ const stack: iLocalStack = {
   commitCount: 3,
 };
 
-function snapshotSummary(createdAt: string, unitCount: number) {
+function snapshotSummary(createdAt: string, unitCount: number, inspectedUnitCount = 0) {
   return {
     id: `snapshot:${createdAt}`,
     version: 1,
@@ -46,6 +46,8 @@ function snapshotSummary(createdAt: string, unitCount: number) {
     deletions: 0,
     regionCount: unitCount,
     unitCount,
+    inspectedUnitCount,
+    laterUnitCount: 0,
     createdAt: new Date(createdAt),
   };
 }
@@ -69,18 +71,19 @@ describe('summarizeStackReview', () => {
     expect(review.unitCount).toBe(0);
   });
 
-  it('continues with the branch reviewed last and counts units across reviewed branches', () => {
+  it('continues with the branch reviewed last and counts units and decisions across reviewed branches', () => {
     const review = summarizeStackReview(stack, [
-      reviewTarget('feature/a', { latestSnapshot: snapshotSummary('2026-09-21T10:00:00Z', 4) }),
-      reviewTarget('feature/b', { latestSnapshot: snapshotSummary('2026-09-22T10:00:00Z', 6) }),
+      reviewTarget('feature/a', { latestSnapshot: snapshotSummary('2026-09-21T10:00:00Z', 4, 4) }),
+      reviewTarget('feature/b', { latestSnapshot: snapshotSummary('2026-09-22T10:00:00Z', 6, 1) }),
       reviewTarget('feature/c', {
         workspaceId: 'another-repository',
-        latestSnapshot: snapshotSummary('2026-09-23T10:00:00Z', 9),
+        latestSnapshot: snapshotSummary('2026-09-23T10:00:00Z', 9, 9),
       }),
     ]);
 
     expect(review.isStarted).toBe(true);
     expect(review.next?.branch.name).toBe('feature/b');
     expect(review.unitCount).toBe(10);
+    expect(review.inspectedUnitCount).toBe(5);
   });
 });

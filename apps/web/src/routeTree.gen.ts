@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
+import { Route as ReviewsSnapshotIdIndexRouteImport } from './routes/reviews.$snapshotId.index';
+import { Route as ReviewsSnapshotIdDiffRouteImport } from './routes/reviews.$snapshotId.diff';
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +24,55 @@ const ReviewsSnapshotIdRoute = ReviewsSnapshotIdRouteImport.update({
   path: '/reviews/$snapshotId',
   getParentRoute: () => rootRouteImport,
 } as any);
+const ReviewsSnapshotIdIndexRoute = ReviewsSnapshotIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
+const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
+  id: '/diff',
+  path: '/diff',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
-  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
-  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRoute;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
-  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: '/' | '/reviews/$snapshotId';
+  fullPaths:
+    | '/'
+    | '/reviews/$snapshotId'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/reviews/$snapshotId';
-  id: '__root__' | '/' | '/reviews/$snapshotId';
+  to: '/' | '/reviews/$snapshotId/diff' | '/reviews/$snapshotId';
+  id:
+    | '__root__'
+    | '/'
+    | '/reviews/$snapshotId'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
-  ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRoute;
+  ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRouteWithChildren;
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +91,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewsSnapshotIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/reviews/$snapshotId/': {
+      id: '/reviews/$snapshotId/';
+      path: '/';
+      fullPath: '/reviews/$snapshotId/';
+      preLoaderRoute: typeof ReviewsSnapshotIdIndexRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
+    '/reviews/$snapshotId/diff': {
+      id: '/reviews/$snapshotId/diff';
+      path: '/diff';
+      fullPath: '/reviews/$snapshotId/diff';
+      preLoaderRoute: typeof ReviewsSnapshotIdDiffRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
   }
 }
 
+interface ReviewsSnapshotIdRouteChildren {
+  ReviewsSnapshotIdDiffRoute: typeof ReviewsSnapshotIdDiffRoute;
+  ReviewsSnapshotIdIndexRoute: typeof ReviewsSnapshotIdIndexRoute;
+}
+
+const ReviewsSnapshotIdRouteChildren: ReviewsSnapshotIdRouteChildren = {
+  ReviewsSnapshotIdDiffRoute: ReviewsSnapshotIdDiffRoute,
+  ReviewsSnapshotIdIndexRoute: ReviewsSnapshotIdIndexRoute,
+};
+
+const ReviewsSnapshotIdRouteWithChildren =
+  ReviewsSnapshotIdRoute._addFileChildren(ReviewsSnapshotIdRouteChildren);
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ReviewsSnapshotIdRoute: ReviewsSnapshotIdRoute,
+  ReviewsSnapshotIdRoute: ReviewsSnapshotIdRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

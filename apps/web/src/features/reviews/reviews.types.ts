@@ -16,3 +16,11 @@ export interface iFileTreeFolder {
   files: iSnapshotFile[];
   fileCount: number;
 }
+
+export type iUnit = ORPCOutputs['reviews']['units'][number];
+
+export type iUnitDetail = ORPCOutputs['reviews']['unitDetail'];
+
+export type iUnitUsages = ORPCOutputs['reviews']['unitUsages'];
+
+export type iUnitUsage = iUnitUsages['usages'][number];

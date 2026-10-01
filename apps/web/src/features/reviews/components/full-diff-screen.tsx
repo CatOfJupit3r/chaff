@@ -1,4 +1,6 @@
-import { ExternalIcon } from '@~/components/icons/icons';
+import { Link } from '@tanstack/react-router';
+
+import { ExternalIcon, FocusIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
@@ -71,6 +73,16 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
             onLayoutChange={(layout) => view.update({ layout })}
             isWrapped={view.wrap}
             onToggleWrap={() => view.update({ wrap: !view.wrap })}
+            end={
+              <Link
+                to="/reviews/$snapshotId"
+                params={{ snapshotId }}
+                className="inline-flex h-[26px] items-center gap-2 rounded-sm border border-line-strong bg-surface px-[9px] text-[12px] text-fg hover:bg-hover [&_svg]:size-3.5"
+              >
+                <FocusIcon />
+                Focus
+              </Link>
+            }
           >
             {isAllFiles || !currentFile ? (
               <>

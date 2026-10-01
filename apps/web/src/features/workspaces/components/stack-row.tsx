@@ -57,8 +57,17 @@ export function StackRow({ stack, reviewTargets }: iStackRowProps) {
       <div className="flex items-center gap-4">
         {review.isStarted ? (
           <div className="flex items-center gap-2 font-mono text-[12px] text-muted tabular-nums" title="Units reviewed">
-            <span>0 / {review.unitCount}</span>
-            <span aria-hidden="true" className="h-1 w-14 rounded-full bg-raised" />
+            <span>
+              {review.inspectedUnitCount} / {review.unitCount}
+            </span>
+            <span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-raised">
+              <span
+                className="block h-full bg-good"
+                style={{
+                  width: `${review.unitCount === 0 ? 0 : (review.inspectedUnitCount / review.unitCount) * 100}%`,
+                }}
+              />
+            </span>
           </div>
         ) : null}
         <Button
