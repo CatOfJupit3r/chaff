@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 
+import type { iDigestRepository } from '@~/features/digests/digest.repository';
+import { DrizzleDigestRepository } from '@~/features/digests/drizzle-digest.repository';
 import { DrizzleFindingRepository } from '@~/features/findings/drizzle-finding.repository';
 import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import { DrizzleUnitMarkRepository } from '@~/features/reviews/marks/drizzle-unit-mark.repository';
@@ -15,6 +17,7 @@ import { DrizzleWorkspaceRepository } from '@~/features/workspaces/drizzle-works
 import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repository';
 
 import {
+  DIGEST_REPOSITORY_TOKEN,
   FINDING_REPOSITORY_TOKEN,
   REVIEW_TARGET_REPOSITORY_TOKEN,
   SETTINGS_REPOSITORY_TOKEN,
@@ -31,4 +34,5 @@ export function registerServices() {
   container.registerSingleton<iSnapshotRepository>(SNAPSHOT_REPOSITORY_TOKEN, DrizzleSnapshotRepository);
   container.registerSingleton<iUnitMarkRepository>(UNIT_MARK_REPOSITORY_TOKEN, DrizzleUnitMarkRepository);
   container.registerSingleton<iFindingRepository>(FINDING_REPOSITORY_TOKEN, DrizzleFindingRepository);
+  container.registerSingleton<iDigestRepository>(DIGEST_REPOSITORY_TOKEN, DrizzleDigestRepository);
 }

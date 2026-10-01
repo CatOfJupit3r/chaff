@@ -1,3 +1,4 @@
+import { digests } from './schema/digests.schema';
 import { findingAnchors, findingEvents, findings } from './schema/findings.schema';
 import { reviewTargets } from './schema/review-targets.schema';
 import { settings } from './schema/settings.schema';
@@ -17,4 +18,5 @@ export const schema = {
   findings,
   findingAnchors,
   findingEvents,
+  digests,
 };

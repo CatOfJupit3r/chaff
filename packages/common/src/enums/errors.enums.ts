@@ -19,6 +19,9 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'FINDING_NOT_FOUND',
   'INVALID_FINDING_ANCHOR',
   'INVALID_FINDING_STATUS',
+  'DIGEST_NOT_FOUND',
+  'DIGEST_ALREADY_RUNNING',
+  'DIGEST_RUNNER_UNAVAILABLE',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -42,4 +45,7 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.FINDING_NOT_FOUND]: 'Finding not found',
   [errorCodes.INVALID_FINDING_ANCHOR]: 'The lines to comment on are not part of this snapshot',
   [errorCodes.INVALID_FINDING_STATUS]: 'The finding cannot move to that status',
+  [errorCodes.DIGEST_NOT_FOUND]: 'Digest not found',
+  [errorCodes.DIGEST_ALREADY_RUNNING]: 'A digest is already being written for this snapshot',
+  [errorCodes.DIGEST_RUNNER_UNAVAILABLE]: 'The coding agent could not be found on this computer',
 });

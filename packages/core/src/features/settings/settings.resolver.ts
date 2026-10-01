@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 
 import { accentSchema, codeSizeSchema, themeModeSchema } from '@chaff/common/enums/appearance.enums';
+import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
 
 import type { settings } from '@~/db/schema/settings.schema';
@@ -19,6 +20,7 @@ export class SettingsResolver {
       theme: themeModeSchema.parse(row.theme),
       accent: accentSchema.parse(row.accent),
       codeSize: codeSizeSchema.parse(row.codeSize),
+      digestRunner: digestRunnerSchema.parse(row.digestRunner),
     }),
   });
 }

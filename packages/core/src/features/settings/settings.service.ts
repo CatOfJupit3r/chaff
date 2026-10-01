@@ -25,6 +25,7 @@ export class SettingsService {
       theme: changes.theme ?? current.theme,
       accent: changes.accent ?? current.accent,
       codeSize: changes.codeSize ?? current.codeSize,
+      digestRunner: changes.digestRunner ?? current.digestRunner,
     });
     if (saved.theme !== current.theme) await this.host.applyTheme(saved.theme);
     return saved;

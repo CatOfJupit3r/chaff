@@ -5,6 +5,7 @@ import type { iChaffCore, iCoreOptions } from './core.types';
 import { DatabaseService } from './db/database.service';
 import { registerServices } from './di/container';
 import { CORE_HOST_TOKEN, CORE_OPTIONS_TOKEN } from './di/tokens';
+import { DigestsService } from './features/digests/digests.service';
 import { configureLogger } from './features/logger/logger';
 import { SettingsService } from './features/settings/settings.service';
 import { appRouter } from './routers/app-router';
@@ -23,9 +24,14 @@ export async function createChaffCore(options: iCoreOptions): Promise<iChaffCore
   const databaseService = container.resolve(DatabaseService);
   await databaseService.open();
   await container.resolve(SettingsService).applyStoredTheme();
+  const digestsService = container.resolve(DigestsService);
+  await digestsService.failInterrupted();
 
   return {
     router: appRouter,
-    close: () => databaseService.close(),
+    close: () => {
+      digestsService.stopAll();
+      databaseService.close();
+    },
   };
 }

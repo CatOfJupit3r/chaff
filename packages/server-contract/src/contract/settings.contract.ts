@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import z from 'zod';
 
 import { accentSchema, codeSizeSchema, themeModeSchema } from '@chaff/common/enums/appearance.enums';
+import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
 
 export const settingsSchema = z.object({
@@ -10,6 +11,8 @@ export const settingsSchema = z.object({
   theme: themeModeSchema,
   accent: accentSchema,
   codeSize: codeSizeSchema,
+  /** Coding agent that writes digests. */
+  digestRunner: digestRunnerSchema,
 });
 
 export const settingsContract = oc.router({

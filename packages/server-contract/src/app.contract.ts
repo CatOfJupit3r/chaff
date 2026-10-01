@@ -1,4 +1,5 @@
 import { appContract } from './contract/app.contract';
+import { digestsContract } from './contract/digests.contract';
 import { findingsContract } from './contract/findings.contract';
 import { hostContract } from './contract/host.contract';
 import { reviewsContract } from './contract/reviews.contract';
@@ -7,6 +8,7 @@ import { workspacesContract } from './contract/workspaces.contract';
 
 export const CONTRACT = {
   app: appContract,
+  digests: digestsContract,
   findings: findingsContract,
   host: hostContract,
   reviews: reviewsContract,

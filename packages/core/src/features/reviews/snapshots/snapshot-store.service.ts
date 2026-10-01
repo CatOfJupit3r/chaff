@@ -187,6 +187,38 @@ export class SnapshotStoreService {
     return { sha, author, committedAt: new Date(Number(time) * 1000) };
   }
 
+  /** Commit messages in `baseSha..headSha`, oldest first. */
+  public async commitMessages(workspaceId: string, baseSha: string, headSha: string, limit: number) {
+    const { stdout } = await this.gitService.run(
+      this.storePath(workspaceId),
+      ['log', '--reverse', `--max-count=${limit}`, '--format=%B%x00', `${baseSha}..${headSha}`],
+      { allowFailure: true },
+    );
+    return stdout
+      .split('\0')
+      .map((message) => message.trim())
+      .filter(Boolean);
+  }
+
+  /**
+   * Checks a commit out into a folder of its own, for an agent to read. The checkout belongs to the
+   * store, never to the user's repository.
+   */
+  public async addWorktree(workspaceId: string, sha: string, folder: string) {
+    await this.mutex.run(workspaceId, async () => {
+      await this.gitService.run(this.storePath(workspaceId), ['worktree', 'add', '--detach', '--force', folder, sha]);
+    });
+  }
+
+  public async removeWorktree(workspaceId: string, folder: string) {
+    await this.mutex.run(workspaceId, async () => {
+      const storePath = this.storePath(workspaceId);
+      await this.gitService.run(storePath, ['worktree', 'remove', '--force', folder], { allowFailure: true });
+      await rm(folder, { recursive: true, force: true });
+      await this.gitService.run(storePath, ['worktree', 'prune'], { allowFailure: true });
+    });
+  }
+
   /** Reads files of a commit by path, leaving out missing ones and any larger than `maxBytes`. */
   public async readFiles(workspaceId: string, sha: string, paths: readonly string[], maxBytes: number) {
     const unique = [...new Set(paths)].filter((filePath) => !filePath.includes('\n'));
