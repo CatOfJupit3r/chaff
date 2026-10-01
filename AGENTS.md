@@ -45,6 +45,7 @@ Examples:
 - `packages/server-contract` contains the API contracts used by both apps.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
 - `docs` contains product notes, roadmaps, and design documentation, if present.
+- `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-foreground`, `text-primary`).
 
 ## UI, Theming, and Colors
 

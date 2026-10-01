@@ -25,6 +25,7 @@ Claude Code and any other AGENTS.md-aware agent read from the same skill library
 - `packages/common` - shared utilities, types, constants, and helpers
 - `packages/enumwaii` - enum helper library and its ESLint rules
 - `configs/*` - shared ESLint and Prettier configs
+- `assets/brand` - Chaff icon: `chaff-mark.svg` (single-color, uses `currentColor`) and the dark/light PNG originals
 
 ## Prerequisites
 
