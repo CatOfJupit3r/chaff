@@ -9,7 +9,6 @@ Chaff runs as a server you host (Docker) and open in a browser. The UI is themea
 Claude Code and any other AGENTS.md-aware agent read from the same skill library under `.agents/skills/*/SKILL.md`:
 
 - `AGENTS.md` (with `CLAUDE.md` symlinked to it) is the always-on guide and points into `.agents/skills/`.
-- `.claude/settings.json` configures default tool permissions for Claude Code.
 
 ## Tech Stack
 
