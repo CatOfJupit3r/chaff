@@ -75,6 +75,31 @@ describe('review units', () => {
     expect(hunk).toContain('-  return start;\n+  return start + 1;');
   });
 
+  it('keeps the comment written above a declaration in the same unit', async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feature');
+    repo.commitFiles('add helpers', {
+      'src/math.ts': [
+        "import { clamp } from './clamp';",
+        '',
+        '/** Doubles a number. */',
+        '// Kept tiny on purpose.',
+        'export function double(value: number) {',
+        '  return clamp(value * 2);',
+        '}',
+        '',
+      ].join('\n'),
+    });
+    const { snapshotId } = await startFeatureReview(repo);
+
+    const units = await call(appRouter.reviews.units, { snapshotId });
+
+    expect(units.map((unit) => [unit.title, unit.newStartLine, unit.newEndLine])).toEqual([
+      ['Imports', 1, 1],
+      ['double', 3, 7],
+    ]);
+  });
+
   it('cuts the patch to the unit when the file has other changes', async () => {
     const { snapshotId } = await startFeatureReview(createFeatureRepo());
     const unit = await unitByTitle(snapshotId, 'Scheduler.next');
