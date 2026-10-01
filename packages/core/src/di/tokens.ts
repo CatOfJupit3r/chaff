@@ -10,3 +10,5 @@ export const WORKSPACE_REPOSITORY_TOKEN = Symbol.for('WorkspaceRepository');
 export const SETTINGS_REPOSITORY_TOKEN = Symbol.for('SettingsRepository');
 export const REVIEW_TARGET_REPOSITORY_TOKEN = Symbol.for('ReviewTargetRepository');
 export const SNAPSHOT_REPOSITORY_TOKEN = Symbol.for('SnapshotRepository');
+export const UNIT_MARK_REPOSITORY_TOKEN = Symbol.for('UnitMarkRepository');
+export const FINDING_REPOSITORY_TOKEN = Symbol.for('FindingRepository');

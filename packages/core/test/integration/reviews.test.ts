@@ -10,37 +10,7 @@ import { createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
 import { appRouter, testDataDir } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
-
-const SCHEDULER = `export class Scheduler {
-  next(attempt: number) {
-    return attempt * 2;
-  }
-}
-`;
-
-async function addWorkspace(repo: TestGitRepo) {
-  return call(appRouter.workspaces.add, { path: repo.path });
-}
-
-/** main has the scheduler; `feature` edits it, adds a helper with its test and bumps the config. */
-function createFeatureRepo() {
-  const repo = createTestGitRepo();
-  repo.commitFiles('base', { 'src/scheduler.ts': SCHEDULER, 'config.json': '{ "retries": 1 }\n' });
-  repo.branch('feature');
-  repo.commitFiles('feature work', {
-    'src/scheduler.ts': SCHEDULER.replace('attempt * 2', 'attempt * 3'),
-    'src/backoff.ts': 'export function backoff(attempt: number) {\n  return 2 ** attempt;\n}\n',
-    'src/backoff.test.ts': "it('grows', () => {\n  expect(backoff(2)).toBe(4);\n});\n",
-    'config.json': '{ "retries": 3 }\n',
-  });
-  return repo;
-}
-
-async function startFeatureReview(repo: TestGitRepo, branch = 'feature', parentBranch = 'main') {
-  const workspace = await addWorkspace(repo);
-  const started = await call(appRouter.reviews.start, { workspaceId: workspace.id, branch, parentBranch });
-  return { workspace, ...started };
-}
+import { addWorkspace, createFeatureRepo, SCHEDULER, startFeatureReview } from '../helpers/review-repo';
 
 /** Everything git keeps about refs and the index, to prove a review left the repository alone. */
 function repositoryState(repo: TestGitRepo) {

@@ -15,6 +15,10 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'REVIEW_TARGET_NOT_FOUND',
   'SNAPSHOT_NOT_FOUND',
   'SNAPSHOT_FILE_NOT_FOUND',
+  'UNIT_NOT_FOUND',
+  'FINDING_NOT_FOUND',
+  'INVALID_FINDING_ANCHOR',
+  'INVALID_FINDING_STATUS',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -34,4 +38,8 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.REVIEW_TARGET_NOT_FOUND]: 'Review not found',
   [errorCodes.SNAPSHOT_NOT_FOUND]: 'Snapshot not found',
   [errorCodes.SNAPSHOT_FILE_NOT_FOUND]: 'File not found in this snapshot',
+  [errorCodes.UNIT_NOT_FOUND]: 'Unit not found in this snapshot',
+  [errorCodes.FINDING_NOT_FOUND]: 'Finding not found',
+  [errorCodes.INVALID_FINDING_ANCHOR]: 'The lines to comment on are not part of this snapshot',
+  [errorCodes.INVALID_FINDING_STATUS]: 'The finding cannot move to that status',
 });

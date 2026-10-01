@@ -1,0 +1,122 @@
+import { DIFF_LINE_MARKERS, DIFF_LINE_TYPES } from './diff.enums';
+import type { iDiffLine } from './diff.types';
+
+export interface iLineRange {
+  start: number;
+  end: number;
+}
+
+export interface iUnitPatchInput {
+  /** The file's patch from `git diff`, header included. */
+  patch: string;
+  lines: readonly iDiffLine[];
+  oldRange?: iLineRange;
+  newRange?: iLineRange;
+  /** Full text of each side; context between hunks is read from here. */
+  oldContents?: string;
+  newContents?: string;
+}
+
+interface iAlignedLine extends Omit<iDiffLine, 'hunkIndex'> {
+  /** Next old and new line number at this point, used for hunk headers of one-sided hunks. */
+  oldCursor: number;
+  newCursor: number;
+}
+
+const HUNK_HEADER = '@@';
+
+function toLines(contents: string | undefined) {
+  if (contents === undefined) return [];
+  const lines = contents.split('\n');
+  if (lines.at(-1) === '') lines.pop();
+  return lines;
+}
+
+function isInRange(line: number | undefined, range: iLineRange | undefined) {
+  return line !== undefined && range !== undefined && line >= range.start && line <= range.end;
+}
+
+/** Interleaves the patch with the unchanged lines between its hunks, so every line of both sides appears once. */
+function alignFile(input: iUnitPatchInput): iAlignedLine[] {
+  const newLines = toLines(input.newContents);
+  const oldLines = toLines(input.oldContents);
+  const contextAt = (oldLine: number, newLine: number) => newLines[newLine - 1] ?? oldLines[oldLine - 1] ?? '';
+  const aligned: iAlignedLine[] = [];
+  let oldCursor = 1;
+  let newCursor = 1;
+
+  const fillContext = (untilOld: number, untilNew: number) => {
+    while (oldCursor < untilOld && newCursor < untilNew) {
+      aligned.push({
+        type: DIFF_LINE_TYPES.CONTEXT,
+        oldLine: oldCursor,
+        newLine: newCursor,
+        text: contextAt(oldCursor, newCursor),
+        oldCursor,
+        newCursor,
+      });
+      oldCursor += 1;
+      newCursor += 1;
+    }
+  };
+
+  for (const line of input.lines) {
+    const gap =
+      line.type === DIFF_LINE_TYPES.DELETED
+        ? (line.oldLine ?? oldCursor) - oldCursor
+        : (line.newLine ?? newCursor) - newCursor;
+    fillContext(oldCursor + gap, newCursor + gap);
+    aligned.push({
+      type: line.type,
+      oldLine: line.oldLine,
+      newLine: line.newLine,
+      text: line.text,
+      oldCursor,
+      newCursor,
+    });
+    if (line.type !== DIFF_LINE_TYPES.ADDED) oldCursor += 1;
+    if (line.type !== DIFF_LINE_TYPES.DELETED) newCursor += 1;
+  }
+  const remaining = Math.max(newLines.length - newCursor + 1, oldLines.length - oldCursor + 1, 0);
+  fillContext(oldCursor + remaining, newCursor + remaining);
+  return aligned;
+}
+
+function hunkHeader(lines: readonly iAlignedLine[]) {
+  const [first] = lines;
+  const oldCount = lines.filter((line) => line.type !== DIFF_LINE_TYPES.ADDED).length;
+  const newCount = lines.filter((line) => line.type !== DIFF_LINE_TYPES.DELETED).length;
+  const oldStart = oldCount === 0 ? first.oldCursor - 1 : first.oldCursor;
+  const newStart = newCount === 0 ? first.newCursor - 1 : first.newCursor;
+  return `${HUNK_HEADER} -${oldStart},${oldCount} +${newStart},${newCount} ${HUNK_HEADER}`;
+}
+
+/**
+ * Cuts a file patch down to one unit: every line the unit spans on either side, unchanged lines included,
+ * so a function reads whole with its changes marked. Returns undefined when the unit has no line range.
+ */
+export function buildUnitPatch(input: iUnitPatchInput): string | undefined {
+  if (!input.oldRange && !input.newRange) return undefined;
+  const headerEnd = input.patch.indexOf(`\n${HUNK_HEADER}`);
+  const header = headerEnd === -1 ? input.patch.trimEnd() : input.patch.slice(0, headerEnd);
+
+  const hunks: iAlignedLine[][] = [];
+  let current: iAlignedLine[] = [];
+  for (const line of alignFile(input)) {
+    const isSelected = isInRange(line.newLine, input.newRange) || isInRange(line.oldLine, input.oldRange);
+    if (isSelected) {
+      current.push(line);
+    } else if (current.length > 0) {
+      hunks.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 0) hunks.push(current);
+  if (hunks.length === 0) return undefined;
+
+  const body = hunks.flatMap((hunk) => [
+    hunkHeader(hunk),
+    ...hunk.map((line) => `${DIFF_LINE_MARKERS(line.type)}${line.text}`),
+  ]);
+  return `${[header, ...body].join('\n')}\n`;
+}

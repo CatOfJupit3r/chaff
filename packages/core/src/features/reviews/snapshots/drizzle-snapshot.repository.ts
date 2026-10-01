@@ -3,6 +3,7 @@ import { singleton } from 'tsyringe';
 
 import { DatabaseService } from '@~/db/database.service';
 import { regions, snapshotFiles, snapshots, units } from '@~/db/schema/snapshots.schema';
+import { unitMarks } from '@~/db/schema/unit-marks.schema';
 
 import type { iSnapshotRepository } from './snapshot.repository';
 import { SnapshotResolver } from './snapshot.resolver';
@@ -20,6 +21,7 @@ function chunk<TItem>(items: readonly TItem[]) {
 }
 
 const { patch: _patch, ...fileColumns } = getTableColumns(snapshotFiles);
+const unitWithMarkColumns = { ...getTableColumns(units), mark: unitMarks.mark };
 
 @singleton()
 export class DrizzleSnapshotRepository implements iSnapshotRepository {
@@ -123,6 +125,29 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
       .where(and(eq(snapshotFiles.snapshotId, snapshotId), eq(snapshotFiles.id, fileId)))
       .get();
     return row ? { patch: row.patch ?? undefined } : undefined;
+  }
+
+  public async listUnits(snapshotId: string) {
+    return this.databaseService
+      .getDb()
+      .select(unitWithMarkColumns)
+      .from(units)
+      .leftJoin(unitMarks, eq(unitMarks.unitId, units.id))
+      .where(eq(units.snapshotId, snapshotId))
+      .orderBy(asc(units.ordinal))
+      .all()
+      .map((row) => this.snapshotResolver.toUnitRecord(row));
+  }
+
+  public async findUnit(snapshotId: string, unitId: string) {
+    const row = this.databaseService
+      .getDb()
+      .select(unitWithMarkColumns)
+      .from(units)
+      .leftJoin(unitMarks, eq(unitMarks.unitId, units.id))
+      .where(and(eq(units.snapshotId, snapshotId), eq(units.id, unitId)))
+      .get();
+    return row ? this.snapshotResolver.toUnitRecord(row) : undefined;
   }
 
   private countByFile(rows: { fileId: string; total: number }[]) {

@@ -4,6 +4,7 @@ import type {
   iSnapshotFileRecord,
   iSnapshotFileSummary,
   iSnapshotRecord,
+  iUnitRecord,
 } from './snapshots.types';
 
 export interface iSnapshotRepository {
@@ -14,4 +15,7 @@ export interface iSnapshotRepository {
   listFiles: (snapshotId: string) => Promise<iSnapshotFileSummary[]>;
   findFile: (snapshotId: string, fileId: string) => Promise<iSnapshotFileRecord | undefined>;
   findPatch: (snapshotId: string, fileId: string) => Promise<{ patch?: string } | undefined>;
+  /** The snapshot's units in reading order, with the reviewer's marks. */
+  listUnits: (snapshotId: string) => Promise<iUnitRecord[]>;
+  findUnit: (snapshotId: string, unitId: string) => Promise<iUnitRecord | undefined>;
 }

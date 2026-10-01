@@ -6,7 +6,11 @@ export type iStartReviewInput = iNewReviewTarget;
 export type iSnapshotSummary = Pick<
   iSnapshotRecord,
   'id' | 'version' | 'headSha' | 'fileCount' | 'additions' | 'deletions' | 'regionCount' | 'unitCount' | 'createdAt'
->;
+> & {
+  /** Units marked Looks good, Concern or Question. */
+  inspectedUnitCount: number;
+  laterUnitCount: number;
+};
 
 export interface iReviewTargetResponse {
   id: string;

@@ -1,7 +1,10 @@
+import type { SymbolKind, UnitMark } from '@chaff/common/enums/review.enums';
+
 import type { regions, snapshotFiles, snapshots, units } from '@~/db/schema/snapshots.schema';
 
 type SnapshotRow = typeof snapshots.$inferSelect;
 type SnapshotFileRow = typeof snapshotFiles.$inferSelect;
+type UnitRow = typeof units.$inferSelect;
 
 export interface iSnapshotHeads {
   headSha: string;
@@ -43,4 +46,17 @@ export type iSnapshotFileRecord = Omit<
 export type iSnapshotFileSummary = Omit<iSnapshotFileRecord, 'oldBlobSha' | 'newBlobSha'> & {
   unitCount: number;
   regionCount: number;
+};
+
+export type iUnitRecord = Omit<
+  UnitRow,
+  'snapshotId' | 'symbolKind' | 'oldStartLine' | 'oldEndLine' | 'newStartLine' | 'newEndLine'
+> & {
+  symbolKind?: SymbolKind;
+  oldStartLine?: number;
+  oldEndLine?: number;
+  newStartLine?: number;
+  newEndLine?: number;
+  /** Absent while the reviewer has not decided on the unit. */
+  mark?: UnitMark;
 };

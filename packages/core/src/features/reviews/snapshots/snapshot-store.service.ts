@@ -18,6 +18,9 @@ const FETCH_REF_PREFIX = 'refs/chaff/fetch';
 const SNAPSHOT_REF_PREFIX = 'refs/chaff/snapshots';
 const BLOB_BATCH_SIZE = 200;
 
+/** Matches kept per file by `grep`; enough to show how a symbol is used without reading whole files. */
+const MAX_GREP_HITS_PER_FILE = 20;
+
 /** Options that keep `git diff` output stable whatever the user's git configuration says. */
 const DIFF_OPTIONS = ['--find-renames', '--no-ext-diff', '--no-textconv', '--no-relative', '--ignore-submodules=none'];
 
@@ -134,6 +137,77 @@ export class SnapshotStoreService {
       headSha,
     ]);
     return stdout;
+  }
+
+  /** Whole-word, fixed-string matches of `word` in the commit's text files: path, 1-based line and line text. */
+  public async grep(workspaceId: string, sha: string, word: string) {
+    const { stdout } = await this.gitService.run(
+      this.storePath(workspaceId),
+      [
+        '-c',
+        'core.quotePath=false',
+        'grep',
+        '-z',
+        '-n',
+        '-m',
+        String(MAX_GREP_HITS_PER_FILE),
+        '-w',
+        '-I',
+        '-F',
+        '--full-name',
+        '-e',
+        word,
+        sha,
+        '--',
+      ],
+      { allowFailure: true },
+    );
+    const prefix = `${sha}:`;
+    return stdout
+      .split('\n')
+      .filter((row) => row.startsWith(prefix))
+      .flatMap((row) => {
+        const [filePath, line, ...text] = row.slice(prefix.length).split('\0');
+        const lineNumber = Number(line);
+        return filePath && Number.isInteger(lineNumber)
+          ? [{ path: filePath, line: lineNumber, text: text.join('\0') }]
+          : [];
+      });
+  }
+
+  /** The newest commit in `baseSha..headSha` that touched the path. */
+  public async lastCommit(workspaceId: string, baseSha: string, headSha: string, filePath: string) {
+    const { stdout } = await this.gitService.run(
+      this.storePath(workspaceId),
+      ['log', '-1', '--format=%H%x00%an%x00%at', `${baseSha}..${headSha}`, '--', filePath],
+      { allowFailure: true },
+    );
+    const [sha, author, time] = stdout.trim().split('\0');
+    if (!sha || author === undefined || !time) return undefined;
+    return { sha, author, committedAt: new Date(Number(time) * 1000) };
+  }
+
+  /** Reads files of a commit by path, leaving out missing ones and any larger than `maxBytes`. */
+  public async readFiles(workspaceId: string, sha: string, paths: readonly string[], maxBytes: number) {
+    const unique = [...new Set(paths)].filter((filePath) => !filePath.includes('\n'));
+    if (unique.length === 0) return new Map<string, string>();
+    const resolved = await this.gitService.output(this.storePath(workspaceId), ['cat-file', '--batch-check'], {
+      input: `${unique.map((filePath) => `${sha}:${filePath}`).join('\n')}\n`,
+    });
+    // Output lines follow the input order: "<sha> <type> <size>", or "<name> missing".
+    const blobShas = new Map<string, string>();
+    for (const [index, line] of resolved.split('\n').entries()) {
+      const [blobSha, type] = line.split(' ');
+      const filePath = unique[index];
+      if (filePath && blobSha && type === 'blob') blobShas.set(filePath, blobSha);
+    }
+    const blobs = await this.readBlobs(workspaceId, [...blobShas.values()], maxBytes);
+    const files = new Map<string, string>();
+    for (const [filePath, blobSha] of blobShas) {
+      const blob = blobs.get(blobSha);
+      if (blob) files.set(filePath, blob.toString('utf8'));
+    }
+    return files;
   }
 
   /** Reads blobs from the store by id, leaving out any larger than `maxBytes`. */

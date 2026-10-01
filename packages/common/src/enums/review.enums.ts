@@ -59,3 +59,59 @@ export const unitChangesEnumwaii = new Enumwaii('UnitChange', ['ADDED', 'REMOVED
 export const UNIT_CHANGES = unitChangesEnumwaii.enum;
 export type UnitChange = InferEnumwaii<typeof unitChangesEnumwaii>;
 export const unitChangeSchema = unitChangesEnumwaii.schema;
+
+/** The reviewer's decision on a unit in one snapshot. Every mark but Later counts as inspected. */
+export const unitMarksEnumwaii = new Enumwaii('UnitMark', ['LOOKS_GOOD', 'CONCERN', 'QUESTION', 'LATER']);
+
+export const UNIT_MARKS = unitMarksEnumwaii.enum;
+export type UnitMark = InferEnumwaii<typeof unitMarksEnumwaii>;
+export const unitMarkSchema = unitMarksEnumwaii.schema;
+
+export const IS_INSPECTED_MARK = unitMarksEnumwaii.derive({
+  [UNIT_MARKS.LOOKS_GOOD]: true,
+  [UNIT_MARKS.CONCERN]: true,
+  [UNIT_MARKS.QUESTION]: true,
+  [UNIT_MARKS.LATER]: false,
+});
+
+export const findingKindsEnumwaii = new Enumwaii('FindingKind', ['CONCERN', 'QUESTION', 'NOTE']);
+
+export const FINDING_KINDS = findingKindsEnumwaii.enum;
+export type FindingKind = InferEnumwaii<typeof findingKindsEnumwaii>;
+export const findingKindSchema = findingKindsEnumwaii.schema;
+
+/**
+ * Concerns go Open, Fix proposed, Verified (or Reopened); questions go Open, Answered, Closed.
+ * Withdrawn is the reviewer changing their mind; Unmatched means the anchor was lost in a newer snapshot.
+ */
+export const findingStatusesEnumwaii = new Enumwaii('FindingStatus', [
+  'OPEN',
+  'FIX_PROPOSED',
+  'VERIFIED',
+  'REOPENED',
+  'ANSWERED',
+  'CLOSED',
+  'WITHDRAWN',
+  'UNMATCHED',
+]);
+
+export const FINDING_STATUSES = findingStatusesEnumwaii.enum;
+export type FindingStatus = InferEnumwaii<typeof findingStatusesEnumwaii>;
+export const findingStatusSchema = findingStatusesEnumwaii.schema;
+
+export const IS_ACTIVE_FINDING_STATUS = findingStatusesEnumwaii.derive({
+  [FINDING_STATUSES.OPEN]: true,
+  [FINDING_STATUSES.FIX_PROPOSED]: true,
+  [FINDING_STATUSES.VERIFIED]: false,
+  [FINDING_STATUSES.REOPENED]: true,
+  [FINDING_STATUSES.ANSWERED]: true,
+  [FINDING_STATUSES.CLOSED]: false,
+  [FINDING_STATUSES.WITHDRAWN]: false,
+  [FINDING_STATUSES.UNMATCHED]: true,
+});
+
+export const diffSidesEnumwaii = new Enumwaii('DiffSide', ['OLD', 'NEW']);
+
+export const DIFF_SIDES = diffSidesEnumwaii.enum;
+export type DiffSide = InferEnumwaii<typeof diffSidesEnumwaii>;
+export const diffSideSchema = diffSidesEnumwaii.schema;

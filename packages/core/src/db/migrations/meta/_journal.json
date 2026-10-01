@@ -15,6 +15,13 @@
       "when": 1790891512436,
       "tag": "0001_cultured_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790895010050,
+      "tag": "0002_colossal_ares",
+      "breakpoints": true
     }
   ]
 }

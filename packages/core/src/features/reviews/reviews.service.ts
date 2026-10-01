@@ -2,14 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { IS_INSPECTED_MARK, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 
-import { REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { GitService } from '@~/features/git/git.service';
 import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
 import { KeyedMutex } from '@~/lib/concurrency';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
+import type { iUnitMarkRepository } from './marks/unit-mark.repository';
 import type { iReviewTargetRepository } from './review-targets/review-target.repository';
 import type { iReviewTargetRecord } from './review-targets/review-targets.types';
 import type {
@@ -27,11 +29,6 @@ import type { iSnapshotHeads, iSnapshotRecord } from './snapshots/snapshots.type
 /** Larger files are not sent to the renderer for context expansion. */
 const MAX_CONTENT_BYTES = 5_000_000;
 
-function toSummary(snapshot: iSnapshotRecord): iSnapshotSummary {
-  const { id, version, headSha, fileCount, additions, deletions, regionCount, unitCount, createdAt } = snapshot;
-  return { id, version, headSha, fileCount, additions, deletions, regionCount, unitCount, createdAt };
-}
-
 /**
  * Review targets and their snapshots. Starting a review freezes the branch as a snapshot; later
  * commits only reach the review when it is refreshed, which freezes a new snapshot.
@@ -47,6 +44,7 @@ export class ReviewsService {
     private readonly snapshotStoreService: SnapshotStoreService,
     private readonly snapshotBuilderService: SnapshotBuilderService,
     private readonly gitService: GitService,
+    @inject(UNIT_MARK_REPOSITORY_TOKEN) private readonly unitMarkRepository: iUnitMarkRepository,
   ) {}
 
   public async list(workspaceId?: string): Promise<iReviewTargetResponse[]> {
@@ -59,7 +57,7 @@ export class ReviewsService {
           workspaceId: targetWorkspaceId,
           branch,
           parentBranch,
-          latestSnapshot: latest ? toSummary(latest) : undefined,
+          latestSnapshot: latest ? await this.toSummary(latest) : undefined,
         };
       }),
     );
@@ -111,7 +109,7 @@ export class ReviewsService {
       this.snapshotRepository.listFiles(snapshot.id),
     ]);
     return {
-      ...toSummary(snapshot),
+      ...(await this.toSummary(snapshot)),
       targetId: target.id,
       workspaceId: target.workspaceId,
       branch: target.branch,
@@ -153,6 +151,13 @@ export class ReviewsService {
     return { isBranchMissing: false, newCommitCount: Number(newCommits), isBranchRewritten: false, isParentMoved };
   }
 
+  /** The snapshot and the review it belongs to. */
+  public async getContext(snapshotId: string) {
+    const snapshot = await this.getSnapshotRecord(snapshotId);
+    const target = await this.getTarget(snapshot.targetId);
+    return { snapshot, target };
+  }
+
   public async getFileDiff(snapshotId: string, fileId: string) {
     const file = await this.snapshotRepository.findPatch(snapshotId, fileId);
     if (!file) throw ORPCNotFoundError(errorCodes.SNAPSHOT_FILE_NOT_FOUND);
@@ -183,7 +188,7 @@ export class ReviewsService {
     const snapshotId = randomUUID();
     await this.snapshotStoreService.pin(workspace.id, snapshotId, shas);
     try {
-      return await this.snapshotRepository.create(
+      const snapshot = await this.snapshotRepository.create(
         {
           id: snapshotId,
           targetId: target.id,
@@ -194,10 +199,35 @@ export class ReviewsService {
         },
         content,
       );
+      // Units whose code did not change keep the reviewer's decision.
+      if (latest) await this.unitMarkRepository.carryOver(latest.id, snapshot.id);
+      return snapshot;
     } catch (error) {
       await this.snapshotStoreService.unpin(workspace.id, snapshotId, shas);
       throw error;
     }
+  }
+
+  private async toSummary(snapshot: iSnapshotRecord): Promise<iSnapshotSummary> {
+    const { id, version, headSha, fileCount, additions, deletions, regionCount, unitCount, createdAt } = snapshot;
+    const markCounts = await this.unitMarkRepository.countByMark(id);
+    const inspectedUnitCount = [...markCounts].reduce(
+      (sum, [mark, total]) => (IS_INSPECTED_MARK(mark) ? sum + total : sum),
+      0,
+    );
+    return {
+      id,
+      version,
+      headSha,
+      fileCount,
+      additions,
+      deletions,
+      regionCount,
+      unitCount,
+      inspectedUnitCount,
+      laterUnitCount: markCounts.get(UNIT_MARKS.LATER) ?? 0,
+      createdAt,
+    };
   }
 
   private captureKey(workspaceId: string, branch: string) {

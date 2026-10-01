@@ -1,7 +1,14 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
-import { fileKindSchema, fileStatusSchema } from '@chaff/common/enums/review.enums';
+import {
+  fileKindSchema,
+  fileStatusSchema,
+  symbolKindSchema,
+  unitChangeSchema,
+  unitKindSchema,
+  unitMarkSchema,
+} from '@chaff/common/enums/review.enums';
 
 const idSchema = z.string().min(1).max(64);
 const branchNameSchema = z.string().min(1).max(255);
@@ -15,6 +22,9 @@ export const snapshotSummarySchema = z.object({
   deletions: z.number().int().nonnegative(),
   regionCount: z.number().int().nonnegative(),
   unitCount: z.number().int().nonnegative(),
+  /** Units marked Looks good, Concern or Question. */
+  inspectedUnitCount: z.number().int().nonnegative(),
+  laterUnitCount: z.number().int().nonnegative(),
   createdAt: z.date(),
 });
 
@@ -68,7 +78,45 @@ export const snapshotLiveStatusSchema = z.object({
   isParentMoved: z.boolean(),
 });
 
+export const unitSchema = z.object({
+  id: z.string(),
+  fileId: z.string(),
+  /** Position in reading order across the snapshot. */
+  ordinal: z.number().int().nonnegative(),
+  kind: unitKindSchema,
+  title: z.string(),
+  symbolKind: symbolKindSchema.optional(),
+  isExported: z.boolean(),
+  change: unitChangeSchema,
+  oldStartLine: z.number().int().positive().optional(),
+  oldEndLine: z.number().int().positive().optional(),
+  newStartLine: z.number().int().positive().optional(),
+  newEndLine: z.number().int().positive().optional(),
+  additions: z.number().int().nonnegative(),
+  deletions: z.number().int().nonnegative(),
+  /** Absent while the reviewer has not decided on the unit. */
+  mark: unitMarkSchema.optional(),
+});
+
+export const unitDetailSchema = z.object({
+  /** The unit's lines on both sides with its changes marked, as a patch; null for binary or very large files. */
+  patch: z.string().nullable(),
+  /** Newest commit in the review that touched the unit's file. */
+  lastCommit: z.object({ sha: z.string(), author: z.string(), committedAt: z.date() }).optional(),
+});
+
+export const unitUsageSchema = z.object({
+  path: z.string(),
+  line: z.number().int().positive(),
+  /** Line number of the first entry in `code`. */
+  firstLine: z.number().int().positive(),
+  code: z.array(z.string()),
+  /** The file is part of the changes under review. */
+  isInReview: z.boolean(),
+});
+
 const snapshotIdInput = z.object({ snapshotId: idSchema });
+const unitInput = z.object({ snapshotId: idSchema, unitId: idSchema });
 const fileInput = z.object({ snapshotId: idSchema, fileId: idSchema });
 
 export const reviewsContract = oc.router({
@@ -130,4 +178,45 @@ export const reviewsContract = oc.router({
     })
     .input(fileInput)
     .output(z.object({ oldContents: z.string().nullable(), newContents: z.string().nullable() })),
+
+  units: oc
+    .route({
+      summary: "List a snapshot's units",
+      description: 'Returns every unit in reading order with the mark the reviewer gave it.',
+    })
+    .input(snapshotIdInput)
+    .output(z.array(unitSchema)),
+
+  unitDetail: oc
+    .route({
+      summary: "Get a unit's code",
+      description:
+        'Returns the whole unit on both sides with its changes marked, and the newest commit that touched it.',
+    })
+    .input(unitInput)
+    .output(unitDetailSchema),
+
+  unitUsages: oc
+    .route({
+      summary: 'Find where a unit is used',
+      description:
+        "Searches the snapshot's head for the unit's name as a whole word, outside the unit itself. Matches are by name, not by type.",
+    })
+    .input(unitInput)
+    .output(
+      z.object({
+        /** The name searched for; absent when the unit has no searchable name. */
+        symbol: z.string().optional(),
+        usages: z.array(unitUsageSchema),
+        isTruncated: z.boolean(),
+      }),
+    ),
+
+  setMark: oc
+    .route({
+      summary: 'Mark a unit',
+      description: 'Records the decision on a unit in this snapshot, or clears it when no mark is given.',
+    })
+    .input(unitInput.extend({ mark: unitMarkSchema.optional() }))
+    .output(z.object({ unitId: z.string(), mark: unitMarkSchema.optional() })),
 });
