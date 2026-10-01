@@ -92,7 +92,7 @@ Look specifically for:
 Check whether changes follow project conventions:
 
 - contract-first for shared/server/web changes,
-- shared constants/schemas in `packages/shared` when reused across apps,
+- shared constants and enums in `packages/common`, and API schemas in `packages/server-contract`, when reused across packages,
 - feature-based server and web layout,
 - repository interfaces for persistence-heavy backend domains,
 - direct imports instead of barrel exports,

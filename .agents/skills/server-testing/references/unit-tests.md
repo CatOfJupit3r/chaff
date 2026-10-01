@@ -22,7 +22,7 @@ Write unit tests for:
 ```typescript
 import { describe, it, expect } from 'vitest';
 
-import { myUtilityFunction } from '@~/utils/my-utility';
+import { myUtilityFunction } from '@~/lib/my-utility';
 
 describe('myUtilityFunction', () => {
   it('should transform input correctly', () => {
@@ -77,8 +77,8 @@ test/unit/<utility-name>.test.ts
 
 Examples:
 - `test/unit/matchers.test.ts`
-- `test/unit/validators.test.ts`
-- `test/unit/formatters.test.ts`
+- `test/unit/concurrency.test.ts`
+- `test/unit/orpc-error-wrapper.test.ts`
 
 ## Test Organization
 
@@ -259,8 +259,9 @@ Unit tests use a separate Vitest project configuration:
 ```typescript
 // From vitest.config.ts
 {
-  include: ['test/unit/**/*.test.ts'],
-  exclude: ['test/integration/**'],
+  name: 'unit',
+  include: ['test/unit/**/*.test.ts', 'test/**/*.unit.test.ts'],
+  exclude: ['test/integration/**', 'test/**/*.int.test.ts'],
   setupFiles: ['./test/helpers/matchers.ts'],
   isolate: true, // Each test runs in isolation
 }

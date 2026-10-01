@@ -4,20 +4,20 @@ Commands and options for running tests locally and in different modes.
 
 ## Basic Commands
 
-All commands should be run from `apps/server/` or the monorepo root.
+All commands should be run from the monorepo root.
 
 ### Run All Tests Once
 
 ```bash
-pnpm run test
+pnpm run verify --tests
 ```
 
-Runs all tests (both unit and integration) once and exits.
+Runs type checks, lint, and all tests (both unit and integration) once, then prints a PASS/FAIL summary with an exit code you can trust. Add `--filter @chaff/core` to check only the core.
 
 ### Watch Mode
 
 ```bash
-pnpm run test:watch
+pnpm --filter=@chaff/core run test:watch
 ```
 
 Watches for file changes and re-runs affected tests automatically. This is ideal for development.
@@ -37,7 +37,7 @@ Watches for file changes and re-runs affected tests automatically. This is ideal
 ### UI Mode
 
 ```bash
-pnpm run test:ui
+pnpm --filter=@chaff/core run test:ui
 ```
 
 Opens a browser-based UI for running and debugging tests.
@@ -53,28 +53,30 @@ Access at: `http://localhost:51204/__vitest__/`
 
 ## Running Specific Tests
 
+Arguments after the script name go to Vitest.
+
 ### Run Tests in a Specific File
 
 ```bash
-pnpm run test auth.test.ts
+pnpm --filter=@chaff/core run test:watch workspaces.test.ts
 ```
 
 ### Run Tests Matching a Pattern
 
 ```bash
-pnpm run test --grep "should create a user"
+pnpm --filter=@chaff/core run test:watch -t "adds the repository"
 ```
 
 ### Run Only Integration Tests
 
 ```bash
-pnpm run test test/integration/
+pnpm --filter=@chaff/core run test:watch --project integration
 ```
 
 ### Run Only Unit Tests
 
 ```bash
-pnpm run test test/unit/
+pnpm --filter=@chaff/core run test:watch --project unit
 ```
 
 ## Vitest CLI Options
@@ -82,10 +84,10 @@ pnpm run test test/unit/
 ### Run Tests with Coverage
 
 ```bash
-pnpm run test --coverage
+pnpm --filter=@chaff/core run test --coverage
 ```
 
-Generates a coverage report showing which lines are tested.
+Generates a coverage report showing which lines are tested. `vitest.config.ts` selects the `v8` provider, but `@vitest/coverage-v8` is not installed yet; Vitest asks to install it on first use.
 
 ### Run a Single Test
 
@@ -112,27 +114,27 @@ it.skip('should skip this test', async () => {
 ### Run Failed Tests
 
 ```bash
-pnpm run test --reporter=verbose --reporter=junit --outputFile=test-results.xml
+pnpm --filter=@chaff/core run test --reporter=verbose --reporter=junit --outputFile=test-results.xml
 ```
 
 ## Test Configuration
 
-The test configuration is defined in `apps/server/vitest.config.ts`.
+The test configuration is defined in `packages/core/vitest.config.ts`.
 
 ### Two Test Projects
 
 The config defines two separate projects:
 
-1. **Unit Tests**:
+1. **Unit Tests** (`unit`):
    - Runs tests in `test/unit/**/*.test.ts`
-   - Isolated test execution
-   - No database setup
+   - Isolated test execution (`isolate: true`)
+   - No core or database setup (only the custom matchers)
    - Faster execution
 
-2. **Integration Tests**:
-   - Runs tests in `test/integration/**/*.test.ts` and `test/**/*.test.ts`
-   - Shared database via PGlite with committed Drizzle migrations
-   - Single-threaded execution for stability
+2. **Integration Tests** (`integration`):
+   - Runs every other `test/**/*.test.ts` file
+   - One core per run on an in-memory SQLite database with the committed Drizzle migrations
+   - One file at a time in a single worker (`isolate: false`, `fileParallelism: false`, `maxWorkers: 1`)
    - Longer timeout (10 seconds)
 
 ### Environment Variables
@@ -141,11 +143,10 @@ Tests run with these environment variables (from `vitest.config.ts`):
 
 ```typescript
 NODE_ENV=test
-BETTER_AUTH_SECRET=test-secret
-BETTER_AUTH_URL=http://localhost:3000/auth
-POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/chaff-test
 LOG_LEVEL=error
 ```
+
+There are no `.env` files. Everything else the core needs comes from the `createChaffCore()` options in `test/helpers/instance.ts`.
 
 ## Debugging Tests
 
@@ -169,21 +170,20 @@ Logs will appear in the terminal output.
 
 ### Inspect Test Database
 
-During test development, you can inspect the PGlite database through the Drizzle service:
+During test development, you can inspect the in-memory SQLite database through the database service:
 
 ```typescript
-import { eq } from 'drizzle-orm';
 import { container } from 'tsyringe';
-import { PostgresService } from '@~/db/postgres.service';
-import { sessions } from '@~/db/schema/auth.schema';
+import { DatabaseService } from '@~/db/database.service';
+import { workspaces } from '@~/db/schema/workspaces.schema';
 
 it('should check database state', async () => {
-  const { user } = await createUser();
+  await addWorkspace(createTestGitRepo());
 
   // Add breakpoint here and inspect database
-  const db = container.resolve(PostgresService).getDb();
-  const sessionRows = await db.select().from(sessions).where(eq(sessions.userId, user.id));
-  console.log('Sessions:', sessionRows);
+  const db = container.resolve(DatabaseService).getDb();
+  const rows = db.select().from(workspaces).all();
+  console.log('Workspaces:', rows);
 });
 ```
 
@@ -191,24 +191,24 @@ it('should check database state', async () => {
 
 ### Run Integration Tests Single-Threaded
 
-Integration tests already run single-threaded for stability. This is configured in `vitest.config.ts`:
+Integration tests already run in one worker, one file at a time, because every file shares one core. This is configured in `vitest.config.ts`:
 
 ```typescript
-poolOptions: {
-  threads: {
-    singleThread: true,
-  },
-}
+isolate: false,
+fileParallelism: false,
+maxWorkers: 1,
 ```
 
 ### Fast Database Cleanup
 
-The test setup uses `deleteMany()` instead of `dropDatabase()` for faster cleanup:
+The test setup deletes rows instead of recreating the database, which keeps cleanup fast:
 
 ```typescript
 // test/helpers/setup.ts
-afterEach(async () => {
-  await container.resolve(PostgresService).getDb().execute(sql.raw('TRUNCATE TABLE ... CASCADE'));
+afterEach(() => {
+  container.resolve(DatabaseService).clearAllTables();
+  fakeHost.reset();
+  removeTempDirectories();
 });
 ```
 
@@ -223,12 +223,10 @@ isolate: true,
 
 ## Continuous Integration
 
-Tests run automatically in CI/CD pipelines. The monorepo uses quality gates:
+Pull requests run the same quality gates in CI:
 
 ```bash
-pnpm run check-types  # Type checking
-pnpm run lint         # Linting
-pnpm run test         # All tests
+pnpm run verify --tests  # Type checking, linting, and all tests
 ```
 
 Run these locally before pushing to catch issues early.
@@ -237,12 +235,13 @@ Run these locally before pushing to catch issues early.
 
 | Command | Description |
 |---------|-------------|
-| `pnpm run test` | Run all tests once |
-| `pnpm run test:watch` | Watch mode (re-run on changes) |
-| `pnpm run test:ui` | Visual test runner in browser |
-| `pnpm run test <file>` | Run specific test file |
-| `pnpm run test --grep <pattern>` | Run tests matching pattern |
-| `pnpm run test --coverage` | Run with coverage report |
+| `pnpm run verify --tests` | Type checks, lint, and all tests once |
+| `pnpm run verify --tests --filter @chaff/core` | The same, for the core only |
+| `pnpm --filter=@chaff/core run test:watch` | Watch mode (re-run on changes) |
+| `pnpm --filter=@chaff/core run test:ui` | Visual test runner in browser |
+| `pnpm --filter=@chaff/core run test:watch <file>` | Run specific test file |
+| `pnpm --filter=@chaff/core run test:watch -t <pattern>` | Run tests matching pattern |
+| `pnpm --filter=@chaff/core run test --coverage` | Run with coverage report |
 
 ## Troubleshooting Test Runs
 
@@ -262,16 +261,28 @@ Run these locally before pushing to catch issues early.
 
 ### Database Connection Issues
 
-**Symptoms**: migration or PGlite initialization errors
+**Symptoms**: migration errors while `instance.ts` boots the core, or `The database is not open yet`
 
 **Common causes**:
-1. The committed Drizzle migration is missing or invalid
-2. The test setup did not initialize PGlite
+1. A schema change without a generated migration, or a missing or invalid migration file
+2. A test file imports the database before `test/helpers/instance.ts` booted the core
 
 **Solution**:
-- Check `test/global-setup.ts` is running
-- Verify `test/helpers/postgres-memory.ts` can apply all migrations
+- Run `pnpm run db:generate` after schema changes and commit the files in `packages/core/src/db/migrations`
+- Import `appRouter` or `fakeHost` from `test/helpers/instance.ts` in integration tests
 - Restart test runner
+
+### Git Errors
+
+**Symptoms**: `GIT_UNAVAILABLE`, or git fixtures failing
+
+**Common causes**:
+1. `git` is not installed or not on PATH
+2. A fixture expects a branch that the test repository does not have
+
+**Solution**:
+- Check `git --version` in the same terminal
+- Build repositories with `createTestGitRepo()` and its methods instead of hand-written paths
 
 ### Import Errors
 

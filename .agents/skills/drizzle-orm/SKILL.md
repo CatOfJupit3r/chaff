@@ -1,71 +1,88 @@
 ---
 name: drizzle-orm
-description: Design PostgreSQL schemas, migrations, and typed repository queries with Drizzle ORM.
+description: Design SQLite schemas, migrations, and typed repository queries with Drizzle ORM.
 ---
 
 # Drizzle ORM
 
-Use Drizzle schemas under `apps/server/src/db/schema/` as the source of truth for PostgreSQL tables, indexes, foreign keys, and inferred row types.
+Use Drizzle schemas under `packages/core/src/db/schema/<name>.schema.ts` as the source of truth for SQLite tables, indexes, foreign keys, and inferred row types. Tables are declared with `sqliteTable`, `text`, and `integer` from `drizzle-orm/sqlite-core`; reuse `idPrimaryKey()`, `timestampColumn()`, and `timestamps()` from `packages/core/src/db/schema.helpers.ts`, and add every new table to `schema` in `packages/core/src/db/database-schema.ts`.
 
 - Keep database access behind feature repositories rather than importing tables throughout handlers.
-- Use `drizzle-kit generate` for migrations and commit both the SQL file and migration metadata.
-- Use `POSTGRES_URL` for the runtime database connection.
-- Use the PGlite test helper to apply committed migrations and isolate integration tests with `TRUNCATE ... CASCADE`.
-- Keep Better Auth's `users`, `sessions`, `accounts`, and `verifications` schemas in sync with `@better-auth/drizzle-adapter`.
+- Run `pnpm run db:generate` for migrations and commit both the SQL file and the `meta/` files in `packages/core/src/db/migrations`. `DatabaseService.open()` applies pending migrations when the core starts.
+- The database is Node's built-in `node:sqlite`, wired to Drizzle through `packages/core/src/db/node-sqlite.driver.ts`. Get the instance with `this.databaseService.getDb()`; never open a second connection.
+- Queries are synchronous: end them with `.all()`, `.get()`, `.run()`, or `.returning().get()`. Repository interfaces stay promise-based, so repository methods are still `async`.
+- Transaction bodies must be synchronous. A body that returns a promise throws and is rolled back.
+- Integration tests run the real migrations against an in-memory database (`databasePath: ':memory:'`), and `test/helpers/setup.ts` clears every table after each test with `DatabaseService.clearAllTables()`.
 
 ## Deriving repository response types
 
 Don't hand-write repository response interfaces field-by-field — derive them from `typeof table.$inferSelect` so schema changes propagate automatically. Only override the fields that actually differ (e.g. nullable columns exposed as optional):
 
 ```typescript
-// apps/server/src/features/<feature>/<feature>.types.ts
-import type { someTable } from '@~/db/schema';
+// packages/core/src/features/workspaces/workspaces.types.ts
+import type { workspaces } from '@~/db/schema/workspaces.schema';
 
-type SomeRow = typeof someTable.$inferSelect;
+type WorkspaceRow = typeof workspaces.$inferSelect;
 
-export type iSomeRecordResponse = Omit<SomeRow, 'nullableColumn'> & {
-  nullableColumn?: string;
+export type iWorkspaceRecord = Omit<WorkspaceRow, 'defaultBranch'> & {
+  defaultBranch?: string;
 };
+
+export type iNewWorkspace = Pick<typeof workspaces.$inferInsert, 'name' | 'repoPath' | 'defaultBranch'>;
 ```
 
-Do not add a `export type SomeRecordResponse = iSomeRecordResponse` alias — import and use `iSomeRecordResponse` directly.
+Do not add a `export type WorkspaceRecord = iWorkspaceRecord` alias; import and use `iWorkspaceRecord` directly.
 
 ## Resolvers: turning rows into responses without boilerplate
 
-Don't hand-write a `toResponse(row)` function that copies every field one by one — most of that copying is one of three mechanical operations: pass a field through untouched, turn a nullable column into an optional field (`value ?? undefined`), or drop a column that isn't exposed in the API. Use `createRowResolver` from `@~/lib/row-resolver` to express those declaratively, and group a feature's resolvers in a `<feature>.resolver.ts` file as a `@singleton()` class (mirrors a GraphQL resolver map, and keeps every response-shaping function for a feature in one place). Resolvers are dependency-injected like repositories — not static classes — so they compose with tsyringe the same way `PostgresService` does:
+Don't hand-write a `toResponse(row)` function that copies every field one by one: most of that copying is one of three mechanical operations: pass a field through untouched, turn a nullable column into an optional field (`value ?? undefined`), or drop a column that isn't exposed in the API. Use `createRowResolver` from `@~/lib/row-resolver` to express those declaratively, and group a feature's resolvers in a `<feature>.resolver.ts` file as a `@singleton()` class (mirrors a GraphQL resolver map, and keeps every response-shaping function for a feature in one place). Resolvers are dependency-injected like repositories (not static classes), so they compose with tsyringe the same way `DatabaseService` does:
 
 ```typescript
-// apps/server/src/features/<feature>/<feature>.resolver.ts
+// packages/core/src/features/settings/settings.resolver.ts
 import { singleton } from 'tsyringe';
 
-import type { someTable } from '@~/db/schema';
+import { accentSchema, codeSizeSchema, themeModeSchema } from '@chaff/common/enums/appearance.enums';
+import { editorSchema } from '@chaff/common/enums/editors.enums';
+
+import type { settings } from '@~/db/schema/settings.schema';
 import { createRowResolver } from '@~/lib/row-resolver';
 
-import type { iSomeRecordResponse } from './<feature>.types';
+import type { iSettingsResponse } from './settings.types';
 
-type SomeRow = typeof someTable.$inferSelect;
+type SettingsRow = typeof settings.$inferSelect;
 
 @singleton()
-export class SomeResolver {
-  public toSomeResponse = createRowResolver<SomeRow, iSomeRecordResponse>({
-    optional: ['nullableColumn'], // null -> undefined
-    omit: ['internalColumn'], // dropped entirely, not in iSomeRecordResponse
-    overrides: (row) => ({ someId: row.someId as SomeNarrowedId }), // anything else
+export class SettingsResolver {
+  public toSettingsResponse = createRowResolver<SettingsRow, iSettingsResponse>({
+    omit: ['id', 'updatedAt'], // dropped entirely, not in iSettingsResponse
+    overrides: (row) => ({
+      editor: editorSchema.parse(row.editor), // anything else
+      theme: themeModeSchema.parse(row.theme),
+      accent: accentSchema.parse(row.accent),
+      codeSize: codeSizeSchema.parse(row.codeSize),
+    }),
   });
 }
 ```
 
-Repositories take the resolver as a constructor dependency and call `this.someResolver.toResponse(row)`:
+`WorkspaceResolver` shows the nullable case: `createRowResolver<WorkspaceRow, iWorkspaceRecord>({ optional: ['defaultBranch'] })` turns `null` into `undefined`.
+
+Repositories take the resolver as a constructor dependency and call it on every row they return:
 
 ```typescript
 @singleton()
-export class DrizzleSomeRepository implements iSomeRepository {
+export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
   constructor(
-    private readonly postgresService: PostgresService,
-    private readonly someResolver: SomeResolver,
+    private readonly databaseService: DatabaseService,
+    private readonly workspaceResolver: WorkspaceResolver,
   ) {}
+
+  public async findById(workspaceId: string) {
+    const row = this.databaseService.getDb().select().from(workspaces).where(eq(workspaces.id, workspaceId)).get();
+    return row ? this.workspaceResolver.toWorkspaceRecord(row) : undefined;
+  }
   // ...
 }
 ```
 
-See `apps/server/src/features/auth/auth-user.resolver.ts` (used by `drizzle-auth-user.repository.ts`) for the real example.
+See `packages/core/src/features/workspaces/workspace.resolver.ts` (used by `drizzle-workspace.repository.ts`) and `packages/core/src/features/settings/settings.resolver.ts` (used by `drizzle-settings.repository.ts`) for the real examples.

@@ -4,36 +4,34 @@ Reference for integrating TanStack Query with TanStack Router loaders and contex
 
 ## Prefetch Data in Route Loaders
 
-Load data before rendering to eliminate loading states:
+Load data before rendering to eliminate loading states (`routes/index.tsx`):
 
 ```typescript
 import { createFileRoute } from '@tanstack/react-router';
-import { FINDING_QUERY_OPTIONS } from '@~/features/findings/hooks/use-finding';
 
-export const Route = createFileRoute('/findings/$findingId')({
-  async loader({ context, params }) {
-    // Prefetch data before component renders
-    await context.queryClient.ensureQueryData(
-      FINDING_QUERY_OPTIONS(params.findingId)
-    );
-  },
-  component: FindingPage,
+import { ReviewsScreen } from '@~/features/workspaces/components/reviews-screen';
+import { workspacesQueryOptions } from '@~/features/workspaces/hooks/use-workspaces';
+
+export const Route = createFileRoute('/')({
+  // Prefetch data before component renders
+  loader: async ({ context }) => context.queryClient.ensureQueryData(workspacesQueryOptions),
+  component: ReviewsScreen,
 });
 
-function FindingPage() {
-  const { findingId } = Route.useParams();
-  const { data: finding } = useFinding(findingId);
-  
+export function ReviewsScreen() {
+  const workspaces = useWorkspaces();
+
   // Data is already cached, no loading state!
-  return <FindingDisplay finding={finding} />;
+  // ...
 }
 ```
 
+The router context (`iRouterAppContext` in `routes/__root.tsx`) carries `queryClient` and `tanstackRPC`. The root route loads the settings the same way, so every screen can read them with `useSettings()`.
+
 **Benefits:**
-- ✓ No loading skeleton
-- ✓ Instant page display
-- ✓ Better UX
-- ✓ SEO-friendly (server-side compatible)
+- No loading skeleton
+- Instant page display
+- Better UX
 
 ---
 
@@ -42,22 +40,14 @@ function FindingPage() {
 Load multiple interdependent queries:
 
 ```typescript
-export const Route = createFileRoute('/project/$projectId')({
+export const Route = createFileRoute('/workspaces/$workspaceId')({
   async loader({ context, params }) {
-
     await Promise.all([
-      context.queryClient.ensureQueryData(
-        PROJECT_DETAILS_QUERY_OPTIONS(params.projectId)
-      ),
-      context.queryClient.ensureQueryData(
-        PROJECT_MEMBERS_QUERY_OPTIONS(params.projectId)
-      ),
-      context.queryClient.ensureQueryData(
-        PROJECT_SETTINGS_QUERY_OPTIONS(params.projectId)
-      ),
+      context.queryClient.ensureQueryData(workspacesQueryOptions),
+      context.queryClient.ensureQueryData(branchesQueryOptions(params.workspaceId)),
     ]);
   },
-  component: ProjectPage,
+  component: WorkspaceScreen,
 });
 ```
 
@@ -68,24 +58,18 @@ export const Route = createFileRoute('/project/$projectId')({
 Only prefetch under certain conditions:
 
 ```typescript
-export const Route = createFileRoute('/challenges/:challengeId')({
+export const Route = createFileRoute('/workspaces/$workspaceId')({
   async loader({ context, params }) {
-    const { challengeId } = params;
-    
-    // Prefetch challenge details
-    await context.queryClient.ensureQueryData(
-      CHALLENGE_DETAILS_QUERY_OPTIONS(challengeId)
-    );
-    
-    // Only prefetch steps if in edit mode
-    const isEditMode = new URL(location.href).searchParams.get('edit') === 'true';
-    if (isEditMode) {
-      await context.queryClient.ensureQueryData(
-        CHALLENGE_STEPS_QUERY_OPTIONS(challengeId)
-      );
+    // Prefetch workspace list
+    const workspaces = await context.queryClient.ensureQueryData(workspacesQueryOptions);
+
+    // Only prefetch branches when the folder is still on disk
+    const workspace = workspaces.find((item) => item.id === params.workspaceId);
+    if (workspace?.isAvailable) {
+      await context.queryClient.ensureQueryData(branchesQueryOptions(params.workspaceId));
     }
   },
-  component: ChallengePage,
+  component: WorkspaceScreen,
 });
 ```
 
@@ -93,22 +77,20 @@ export const Route = createFileRoute('/challenges/:challengeId')({
 
 ## Error Handling in Loaders
 
-Handle prefetch errors gracefully:
+A loader that throws renders the router's `defaultErrorComponent`, `RouteError` (`components/layout/route-error.tsx`), which shows the core's message and a retry button. Catch inside the loader only when the screen can render without the data:
 
 ```typescript
-export const Route = createFileRoute('/findings/$findingId')({
+export const Route = createFileRoute('/workspaces/$workspaceId')({
   async loader({ context, params }) {
     try {
-      await context.queryClient.ensureQueryData(
-        FINDING_QUERY_OPTIONS(params.findingId)
-      );
+      await context.queryClient.ensureQueryData(branchesQueryOptions(params.workspaceId));
     } catch (error) {
       // Log error but don't fail the route
-      console.error('Failed to prefetch finding:', error);
+      console.error('Failed to prefetch branches:', error);
       // Route will still render, component shows error state
     }
   },
-  component: FindingPage,
+  component: WorkspaceScreen,
 });
 ```
 
@@ -116,13 +98,13 @@ export const Route = createFileRoute('/findings/$findingId')({
 
 ## Best Practices
 
-**✓ Do:**
+**Do:**
 - Export query options separately (for reuse in loaders)
 - Prefetch in loaders for critical data
 - Use `ensureQueryData` to avoid duplicate requests
 - Handle loader errors gracefully
 
-**✗ Don't:**
+**Don't:**
 - Fetch in component if should be in loader
 - Create query options inline
 - Ignore prefetch errors (they prevent navigation)
@@ -141,4 +123,3 @@ export const Route = createFileRoute('/findings/$findingId')({
 3. **Cache duration**
    - Stale data will refetch on component mount
    - Use with caution for real-time data
-

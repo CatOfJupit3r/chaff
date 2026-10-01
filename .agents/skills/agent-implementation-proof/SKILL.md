@@ -85,26 +85,26 @@ Do not batch-mark all checkboxes at the end. Mark only the item that has passed 
 Prefer narrow commands first:
 
 ```bash
-pnpm --filter=web run check-types
-pnpm --filter=server run check-types
-pnpm --filter=@chaff/shared run check-types
+pnpm run verify --filter web
+pnpm run verify --filter @chaff/core
+pnpm run verify --filter @chaff/server-contract
 ```
 
 Then broaden only when the change crosses packages:
 
 ```bash
-pnpm run check-types
-pnpm run lint
+pnpm run verify
 ```
 
 Run tests based on the changed surface:
 
 | Changed surface | Expected validation |
 |---|---|
-| Server service/router/auth/DB logic | server integration or unit test |
-| Shared contract/schema/constants | shared build/check-types plus dependent package check |
+| Core service/router/git/DB logic | core integration or unit test (`pnpm run verify --tests --filter @chaff/core`) |
+| Shared contract/schema/constants/enums | `pnpm run verify` across packages, since every consumer must still type-check |
 | Web component/hook/state behavior | web test or component-level verification |
-| E2E-critical user flow | Playwright spec or explicit manual QA note |
+| Desktop main/preload behavior | desktop test under `apps/desktop/test/` or explicit manual QA note |
+| End-to-end user flow | explicit manual QA note from the running app (`pnpm run dev`); there is no E2E suite |
 | Docs-only roadmap change | markdown review; no code checks required unless code changed |
 
 ## Completion Report Template

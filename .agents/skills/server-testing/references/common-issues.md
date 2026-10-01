@@ -232,14 +232,14 @@ Test timed out in 10000ms
 #### 1. Missing await
 
 ```typescript
-// ❌ BAD: Forgot await
-it('should create user', () => {
-  createUser();  // Returns promise but not awaited!
+// BAD: Forgot await
+it('should add a repository', () => {
+  call(appRouter.workspaces.add, { path: repo.path });  // Returns promise but not awaited!
 });
 
-// ✅ GOOD: Properly awaited
-it('should create user', async () => {
-  await createUser();
+// GOOD: Properly awaited
+it('should add a repository', async () => {
+  await call(appRouter.workspaces.add, { path: repo.path });
 });
 ```
 
@@ -294,7 +294,7 @@ Cannot find module '@~/some/module'
 
 #### 1. Check Path Alias
 
-Ensure the `@~/` alias is correctly configured in `tsconfig.json`:
+Ensure the `@~/` alias is correctly configured in `tsconfig.json` (and in `resolve.alias` of `vitest.config.ts`):
 
 ```json
 {
@@ -311,11 +311,11 @@ Ensure the `@~/` alias is correctly configured in `tsconfig.json`:
 TypeScript files should omit the `.ts` extension:
 
 ```typescript
-// ✅ GOOD
-import { User } from '@~/db/models/user.model';
+// GOOD
+import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 
-// ❌ BAD
-import { User } from '@~/db/models/user.model.ts';
+// BAD
+import { WorkspacesService } from '@~/features/workspaces/workspaces.service.ts';
 ```
 
 #### 3. Check File Exists
@@ -323,7 +323,7 @@ import { User } from '@~/db/models/user.model.ts';
 Verify the file actually exists at the path:
 
 ```bash
-ls apps/server/src/db/models/user.model.ts
+ls packages/core/src/features/workspaces/workspaces.service.ts
 ```
 
 ## Database Connection Errors
@@ -331,31 +331,36 @@ ls apps/server/src/db/models/user.model.ts
 ### The Error
 
 ```
-PGlite could not apply the test migration
+no such table: workspaces
+```
+
+or
+
+```
+The database is not open yet
 ```
 
 ### Cause
 
-The integration setup did not initialize PGlite or a Drizzle migration failed.
+A schema change has no generated migration, or code touched the database before `test/helpers/instance.ts` booted the core and applied the migrations.
 
 ### Solutions
 
-1. **Verify global setup is configured**:
-   ```typescript
-   // vitest.config.ts
-   globalSetup: ['./test/global-setup.ts'],
+1. **Generate the migration after changing a schema file**:
+   ```bash
+   pnpm run db:generate
    ```
 
-2. **Check the PostgreSQL migration setup**:
-   ```bash
-   pnpm run test
+2. **Import the core instance before touching the database**:
+   ```typescript
+   // Integration tests: boots the core once, with migrations applied
+   import { appRouter } from '../helpers/instance';
    ```
 
 3. **Restart test runner**:
    ```bash
-   # Kill and restart
-   pkill -f vitest
-   pnpm run test
+   # Quit watch mode (q) and start it again
+   pnpm --filter=@chaff/core run test:watch
    ```
 
 ## Type Errors in Tests
@@ -384,24 +389,17 @@ declare module 'vitest' {
 }
 ```
 
-#### 2. Wrong Context Type
+#### 2. Missing Input Argument
 
 ```typescript
-// ❌ BAD: Wrong context structure
-const result = await call(
-  appRouter.index.healthCheck,
-  undefined,
-  { session: { user } }  // Incorrect structure!
-);
+// BAD: Leaving out the input
+const workspaces = await call(appRouter.workspaces.list);  // Expected 2-3 arguments
 
-// ✅ GOOD: Use ctx() from createUser
-const { ctx } = await createUser();
-const result = await call(
-  appRouter.index.healthCheck,
-  undefined,
-  ctx()  // Correct structure
-);
+// GOOD: Pass undefined when the procedure has no input
+const workspaces = await call(appRouter.workspaces.list, undefined);
 ```
+
+There is no context argument to pass: the core has a single local user and no session.
 
 ## Flaky Tests
 
@@ -483,7 +481,7 @@ AssertionError: expected 'actual' to equal 'expected'
 
 1. **Add descriptive messages**:
    ```typescript
-   expect(user.email).toBe('test@example.com', 'User email should match');
+   expect(workspace.defaultBranch, 'default branch should match').toBe('main');
    ```
 
 2. **Use better matchers**:
@@ -509,9 +507,9 @@ If you encounter an error not covered here:
 1. **Check the stack trace** - Identifies where the error occurs
 2. **Read the error message carefully** - Often contains the solution
 3. **Search the codebase** - Look for similar patterns
-4. **Check test setup files** - `test/helpers/setup.ts`, `test/global-setup.ts`
+4. **Check test setup files** - `test/helpers/setup.ts`, `test/helpers/instance.ts`
 5. **Verify environment** - Node version, dependencies installed
-6. **Run type checking** - `pnpm run check-types`
+6. **Run type checking** - `pnpm run verify --filter @chaff/core`
 
 ## Prevention Checklist
 

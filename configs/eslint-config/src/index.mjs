@@ -301,13 +301,13 @@ const TAILWIND_PALETTE =
   'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|mauve|olive|mist|taupe|black|white';
 
 /**
- * Colors must come from theme tokens defined in the app stylesheet (e.g. `bg-background`, `text-destructive`)
+ * Colors must come from theme tokens defined in the app stylesheet (e.g. `bg-canvas`, `text-bad`)
  * so light/dark modes and theming stay consistent.
  */
 const RAW_COLOR_CLASS_RESTRICTIONS = [
   {
     pattern: `^(?:.*:)?!?(?:${TAILWIND_COLOR_UTILITIES})-(?:${TAILWIND_PALETTE})(?:-\\d{2,3})?(?:/.+)?!?$`,
-    message: 'Raw palette color "$0". Use a theme token (bg-background, text-muted-foreground, ...) instead.',
+    message: 'Raw palette color "$0". Use a theme token (bg-canvas, text-muted, ...) instead.',
   },
   {
     pattern: `^(?:.*:)?!?(?:${TAILWIND_COLOR_UTILITIES})-\\[(?:#|rgba?\\(|hsla?\\(|oklch\\(|oklab\\(|color:).*\\](?:/.+)?!?$`,
