@@ -10,6 +10,8 @@ export default {
   directories: { output: 'release', buildResources: 'build' },
   files: ['dist/**/*', 'package.json', '!dist/**/*.map'],
   asar: true,
+  // The tree-sitter runtime reads its .wasm files with fs at run time.
+  asarUnpack: ['dist/tree-sitter/**'],
   npmRebuild: false,
   nodeGypRebuild: false,
   publish: null,

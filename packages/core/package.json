@@ -16,10 +16,11 @@
   },
   "prettier": "@chaff/prettier-config",
   "dependencies": {
-    "@orpc/server": "catalog:",
-    "@chaff/enumwaii": "workspace:*",
     "@chaff/common": "workspace:*",
+    "@chaff/enumwaii": "workspace:*",
     "@chaff/server-contract": "workspace:*",
+    "@orpc/server": "catalog:",
+    "@vscode/tree-sitter-wasm": "0.3.1",
     "drizzle-orm": "^0.45.2",
     "reflect-metadata": "0.2.2",
     "safe-stable-stringify": "2.5.0",

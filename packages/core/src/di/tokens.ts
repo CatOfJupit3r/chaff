@@ -8,3 +8,5 @@ export const CORE_HOST_TOKEN = Symbol.for('CoreHost');
 
 export const WORKSPACE_REPOSITORY_TOKEN = Symbol.for('WorkspaceRepository');
 export const SETTINGS_REPOSITORY_TOKEN = Symbol.for('SettingsRepository');
+export const REVIEW_TARGET_REPOSITORY_TOKEN = Symbol.for('ReviewTargetRepository');
+export const SNAPSHOT_REPOSITORY_TOKEN = Symbol.for('SnapshotRepository');

@@ -8,6 +8,8 @@ export interface iCoreOptions {
   migrationsDir: string;
   /** SQLite file path; defaults to `<dataDir>/chaff.db`. `:memory:` is accepted. */
   databasePath?: string;
+  /** Folder with `tree-sitter.js`, `tree-sitter.wasm` and the grammars; defaults to the installed package. */
+  treeSitterDir?: string;
   /** Log file path; logs go to the console only when omitted. */
   logFilePath?: string;
   /** Version string reported by `app.info`. */

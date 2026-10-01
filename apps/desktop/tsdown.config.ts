@@ -1,11 +1,15 @@
 import { access, cp, rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { defineConfig } from 'tsdown';
 import type { UserConfig } from 'tsdown';
 
 /** Built files the main process reads at runtime, copied next to the bundle so dev and packaged paths match. */
+const TREE_SITTER_DIRECTORY = path.dirname(createRequire(import.meta.url).resolve('@vscode/tree-sitter-wasm'));
+
 const RUNTIME_RESOURCES = [
   { from: '../../packages/core/src/db/migrations', to: 'dist/migrations', isRequired: true },
+  { from: TREE_SITTER_DIRECTORY, to: 'dist/tree-sitter', isRequired: true },
   // Missing while developing against the Vite dev server; `pnpm run build` builds it first.
   { from: '../web/dist', to: 'dist/renderer', isRequired: false },
 ].map((resource) => ({

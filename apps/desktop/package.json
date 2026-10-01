@@ -28,6 +28,7 @@
     "@orpc/server": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "@vscode/tree-sitter-wasm": "0.3.1",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
     "eslint": "catalog:",

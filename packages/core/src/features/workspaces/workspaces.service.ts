@@ -6,6 +6,7 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 
 import { WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { GitService } from '@~/features/git/git.service';
+import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import { isDirectory, pathExists } from '@~/lib/file-system';
 import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
 
@@ -21,6 +22,7 @@ export class WorkspacesService {
     @inject(WORKSPACE_REPOSITORY_TOKEN) private readonly workspaceRepository: iWorkspaceRepository,
     private readonly gitService: GitService,
     private readonly branchesService: BranchesService,
+    private readonly snapshotStoreService: SnapshotStoreService,
   ) {}
 
   public async list(): Promise<iWorkspaceResponse[]> {
@@ -55,6 +57,7 @@ export class WorkspacesService {
   public async remove(workspaceId: string) {
     const isDeleted = await this.workspaceRepository.delete(workspaceId);
     if (!isDeleted) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
+    await this.snapshotStoreService.removeStore(workspaceId);
     return { workspaceId };
   }
 

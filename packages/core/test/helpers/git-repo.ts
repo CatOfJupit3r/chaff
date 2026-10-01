@@ -52,6 +52,22 @@ export class TestGitRepo {
     return this.git('rev-parse', 'HEAD');
   }
 
+  /** Writes, replaces or (with null) deletes several files and commits them together; returns the commit sha. */
+  public commitFiles(message: string, files: Record<string, string | Buffer | null>) {
+    for (const [file, content] of Object.entries(files)) {
+      const filePath = path.join(this.path, file);
+      if (content === null) {
+        rmSync(filePath, { force: true });
+      } else {
+        mkdirSync(path.dirname(filePath), { recursive: true });
+        writeFileSync(filePath, content);
+      }
+    }
+    this.git('add', '--all');
+    this.git('commit', '--quiet', '-m', message);
+    return this.git('rev-parse', 'HEAD');
+  }
+
   public branch(name: string, startPoint = 'HEAD') {
     this.git('switch', '--quiet', '-c', name, startPoint);
   }

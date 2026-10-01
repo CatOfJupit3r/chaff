@@ -39,6 +39,7 @@ async function start() {
   core = await createChaffCore({
     dataDir: app.getPath('userData'),
     migrationsDir: APP_PATHS.migrations,
+    treeSitterDir: APP_PATHS.treeSitter,
     logFilePath: path.join(app.getPath('logs'), 'chaff.log'),
     appVersion: app.getVersion(),
     host: new ElectronCoreHost(() => mainWindow),
