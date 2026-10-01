@@ -11,3 +11,9 @@ export interface iGitResult {
   stderr: string;
   exitCode: number;
 }
+
+export interface iGitBufferResult {
+  stdout: Buffer;
+  stderr: string;
+  exitCode: number;
+}

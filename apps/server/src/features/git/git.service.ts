@@ -8,7 +8,7 @@ import { pathExists } from '@~/lib/file-system';
 import { ORPCBadRequestError, ORPCInternalServerError } from '@~/lib/orpc-error-wrapper';
 
 import { GitCommandError } from './git.errors';
-import type { iGitResult, iGitRunOptions } from './git.types';
+import type { iGitBufferResult, iGitResult, iGitRunOptions } from './git.types';
 
 const MAX_OUTPUT_BYTES = 512 * 1024 * 1024;
 
@@ -33,46 +33,13 @@ export class GitService {
   }
 
   public async run(cwd: string, args: string[], options: iGitRunOptions = {}): Promise<iGitResult> {
-    const startedAt = performance.now();
-    const result = await new Promise<iGitResult>((resolve, reject) => {
-      const child = execFile(
-        'git',
-        args,
-        {
-          cwd,
-          encoding: 'utf8',
-          maxBuffer: MAX_OUTPUT_BYTES,
-          windowsHide: true,
-          env: {
-            ...process.env,
-            GIT_TERMINAL_PROMPT: '0',
-            GIT_OPTIONAL_LOCKS: '0',
-            LC_ALL: 'C',
-            ...options.env,
-          },
-        },
-        (error, stdout, stderr) => {
-          if (error && typeof error.code !== 'number') {
-            void toSpawnError(error, cwd).then(reject);
-            return;
-          }
-          resolve({ stdout, stderr, exitCode: typeof error?.code === 'number' ? error.code : 0 });
-        },
-      );
-      if (options.input !== undefined) child.stdin?.end(options.input);
-    });
+    const result = await this.execute(cwd, args, options);
+    return { ...result, stdout: result.stdout.toString('utf8') };
+  }
 
-    this.logger.debug('git', {
-      args: args.slice(0, 6),
-      cwd,
-      exitCode: result.exitCode,
-      durationMs: Math.round(performance.now() - startedAt),
-    });
-
-    if (result.exitCode !== 0 && !options.allowFailure) {
-      throw new GitCommandError(args, result.exitCode, result.stderr);
-    }
-    return result;
+  /** Same as `run`, with stdout left as raw bytes for binary output such as `cat-file --batch`. */
+  public async runBuffer(cwd: string, args: string[], options: iGitRunOptions = {}): Promise<iGitBufferResult> {
+    return this.execute(cwd, args, options);
   }
 
   /** Trimmed stdout of a command that must succeed. */
@@ -89,5 +56,52 @@ export class GitService {
     } catch {
       return null;
     }
+  }
+
+  private async execute(cwd: string, args: string[], options: iGitRunOptions): Promise<iGitBufferResult> {
+    const startedAt = performance.now();
+    const result = await new Promise<iGitBufferResult>((resolve, reject) => {
+      const child = execFile(
+        'git',
+        args,
+        {
+          cwd,
+          encoding: 'buffer',
+          maxBuffer: MAX_OUTPUT_BYTES,
+          windowsHide: true,
+          env: {
+            ...process.env,
+            GIT_TERMINAL_PROMPT: '0',
+            GIT_OPTIONAL_LOCKS: '0',
+            LC_ALL: 'C',
+            ...options.env,
+          },
+        },
+        (error, stdout, stderr) => {
+          if (error && typeof error.code !== 'number') {
+            void toSpawnError(error, cwd).then(reject);
+            return;
+          }
+          resolve({
+            stdout,
+            stderr: stderr.toString('utf8'),
+            exitCode: typeof error?.code === 'number' ? error.code : 0,
+          });
+        },
+      );
+      if (options.input !== undefined) child.stdin?.end(options.input);
+    });
+
+    this.logger.debug('git', {
+      args: args.slice(0, 6),
+      cwd,
+      exitCode: result.exitCode,
+      durationMs: Math.round(performance.now() - startedAt),
+    });
+
+    if (result.exitCode !== 0 && !options.allowFailure) {
+      throw new GitCommandError(args, result.exitCode, result.stderr);
+    }
+    return result;
   }
 }

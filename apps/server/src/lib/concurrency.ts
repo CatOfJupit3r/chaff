@@ -18,3 +18,23 @@ export async function mapWithConcurrency<TItem, TResult>(
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return results;
 }
+
+/** Runs tasks that share a key one after another; tasks with different keys run concurrently. */
+export class KeyedMutex {
+  private readonly tails = new Map<string, Promise<unknown>>();
+
+  public async run<TResult>(key: string, task: () => Promise<TResult>): Promise<TResult> {
+    const previous = this.tails.get(key) ?? Promise.resolve();
+    const current = previous.then(task);
+    const tail = current.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.tails.set(key, tail);
+    try {
+      return await current;
+    } finally {
+      if (this.tails.get(key) === tail) this.tails.delete(key);
+    }
+  }
+}

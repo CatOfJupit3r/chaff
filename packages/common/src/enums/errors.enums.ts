@@ -9,6 +9,12 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'NOT_A_GIT_REPOSITORY',
   'GIT_UNAVAILABLE',
   'UNSUPPORTED_EXTERNAL_URL',
+  'BRANCH_NOT_FOUND',
+  'INVALID_PARENT_BRANCH',
+  'NO_COMMON_ANCESTOR',
+  'REVIEW_TARGET_NOT_FOUND',
+  'SNAPSHOT_NOT_FOUND',
+  'SNAPSHOT_FILE_NOT_FOUND',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -22,4 +28,10 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.NOT_A_GIT_REPOSITORY]: 'This folder is not a git repository',
   [errorCodes.GIT_UNAVAILABLE]: 'git is not installed or not on PATH',
   [errorCodes.UNSUPPORTED_EXTERNAL_URL]: 'This link cannot be opened',
+  [errorCodes.BRANCH_NOT_FOUND]: 'Branch not found in the repository',
+  [errorCodes.INVALID_PARENT_BRANCH]: 'A branch cannot be reviewed against itself',
+  [errorCodes.NO_COMMON_ANCESTOR]: 'The branch and its parent share no history',
+  [errorCodes.REVIEW_TARGET_NOT_FOUND]: 'Review not found',
+  [errorCodes.SNAPSHOT_NOT_FOUND]: 'Snapshot not found',
+  [errorCodes.SNAPSHOT_FILE_NOT_FOUND]: 'File not found in this snapshot',
 });
