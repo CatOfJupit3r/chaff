@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { EventBus } from '@~/features/events/event-bus';

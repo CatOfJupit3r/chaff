@@ -13,7 +13,7 @@
     "dev:web": "pnpm --filter=web run dev",
     "dev:common": "pnpm --filter=@chaff/common run dev",
     "dev:server-contract": "pnpm --filter=@chaff/server-contract run dev",
-    "db:generate": "pnpm --filter=server run db:generate",
+    "db:generate": "pnpm --filter=@chaff/core run db:generate",
     "lint": "pnpm --recursive --stream --no-bail run lint",
     "lint:fix": "pnpm run lint",
     "verify": "tsx scripts/verify.ts",

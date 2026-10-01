@@ -5,7 +5,7 @@ import type { UserConfig } from 'tsdown';
 
 /** Built files the main process reads at runtime, copied next to the bundle so dev and packaged paths match. */
 const RUNTIME_RESOURCES = [
-  { from: '../server/src/db/migrations', to: 'dist/migrations', isRequired: true },
+  { from: '../../packages/core/src/db/migrations', to: 'dist/migrations', isRequired: true },
   // Missing while developing against the Vite dev server; `pnpm run build` builds it first.
   { from: '../web/dist', to: 'dist/renderer', isRequired: false },
 ].map((resource) => ({
