@@ -8,24 +8,24 @@ Load data before rendering to eliminate loading states:
 
 ```typescript
 import { createFileRoute } from '@tanstack/react-router';
-import { USER_PROFILE_QUERY_OPTIONS } from '@~/features/user/hooks/use-user-profile';
+import { FINDING_QUERY_OPTIONS } from '@~/features/findings/hooks/use-finding';
 
-export const Route = createFileRoute('/profile/$userId')({
+export const Route = createFileRoute('/findings/$findingId')({
   async loader({ context, params }) {
     // Prefetch data before component renders
     await context.queryClient.ensureQueryData(
-      USER_PROFILE_QUERY_OPTIONS(params.userId)
+      FINDING_QUERY_OPTIONS(params.findingId)
     );
   },
-  component: ProfilePage,
+  component: FindingPage,
 });
 
-function ProfilePage() {
-  const { userId } = Route.useParams();
-  const { data: profile } = useUserProfile(userId);
+function FindingPage() {
+  const { findingId } = Route.useParams();
+  const { data: finding } = useFinding(findingId);
   
   // Data is already cached, no loading state!
-  return <ProfileDisplay profile={profile} />;
+  return <FindingDisplay finding={finding} />;
 }
 ```
 
@@ -96,19 +96,19 @@ export const Route = createFileRoute('/challenges/:challengeId')({
 Handle prefetch errors gracefully:
 
 ```typescript
-export const Route = createFileRoute('/profile/$userId')({
+export const Route = createFileRoute('/findings/$findingId')({
   async loader({ context, params }) {
     try {
       await context.queryClient.ensureQueryData(
-        USER_PROFILE_QUERY_OPTIONS(params.userId)
+        FINDING_QUERY_OPTIONS(params.findingId)
       );
     } catch (error) {
       // Log error but don't fail the route
-      console.error('Failed to prefetch profile:', error);
+      console.error('Failed to prefetch finding:', error);
       // Route will still render, component shows error state
     }
   },
-  component: ProfilePage,
+  component: FindingPage,
 });
 ```
 

@@ -17,9 +17,7 @@ const commonTestConfig = {
     NODE_ENV: 'test',
     BETTER_AUTH_SECRET: 'test-secret',
     BETTER_AUTH_URL: 'http://localhost:3000/auth',
-    VALKEY_HOST: 'localhost',
-    VALKEY_PORT: '6379',
-    POSTGRES_URL: 'postgresql://postgres:postgres@localhost:5432/startername-test',
+    POSTGRES_URL: 'postgresql://postgres:postgres@localhost:5432/chaff-test',
     LOG_LEVEL: 'error',
   },
   coverage: {

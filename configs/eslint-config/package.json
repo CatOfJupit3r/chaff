@@ -1,9 +1,9 @@
 {
-  "name": "@startername/eslint-config",
+  "name": "@chaff/eslint-config",
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "Shared ESLint configuration for startername monorepo",
+  "description": "Shared ESLint configuration for chaff monorepo",
   "exports": {
     ".": "./src/index.mjs"
   },
@@ -13,7 +13,7 @@
   "dependencies": {
     "@eslint/compat": "^2.1.0",
     "@eslint/js": "^9.39.2",
-    "@startername/enumwaii": "workspace:*",
+    "@chaff/enumwaii": "workspace:*",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@tanstack/eslint-plugin-query": "^5.101.2",
     "@tanstack/eslint-plugin-router": "^1.162.0",

@@ -1,3 +1,3 @@
-# @startername/eslint-config
+# @chaff/eslint-config
 
-Shared ESLint configuration for startername monorepo projects.
+Shared ESLint configuration for chaff monorepo projects.

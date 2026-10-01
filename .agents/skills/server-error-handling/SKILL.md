@@ -19,7 +19,7 @@ function errorWrapper(code: ErrorCodesType, additionalData?: Record<string, unkn
 
 ```typescript
 import { ORPCUnauthorizedError } from '@~/lib/orpc-error-wrapper';
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 
 if (!context.session) {
   throw ORPCUnauthorizedError(errorCodes.UNAUTHORIZED);
@@ -33,7 +33,7 @@ This prevents information leakage by not revealing whether a resource exists whe
 
 ```typescript
 import { ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 
 // VISIBILITIES, USER_ROLES, and COMMUNITY_MEMBER_ROLES are imported enumwaii accessors.
 const challenge = await ChallengeModel.findById(challengeId);
@@ -49,7 +49,7 @@ Only use when the user has some level of access but is restricted by permissions
 
 ```typescript
 import { ORPCForbiddenError } from '@~/lib/orpc-error-wrapper';
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 
 const community = await CommunityModel.findById(communityId);
 if (!community) {
@@ -67,7 +67,7 @@ if (community.ownerId !== userId) {
 
 ```typescript
 import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 
 if (!isValidEmail(email)) {
   throw ORPCBadRequestError(errorCodes.INVALID_EMAIL_FORMAT);
@@ -79,7 +79,7 @@ if (!isValidEmail(email)) {
 
 ```typescript
 import { ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 
 const challenge = await ChallengeModel.findById(challengeId);
 if (challenge.isCompleted) {
@@ -185,7 +185,7 @@ const allErrors = {
 ### 2. Use the error code in your handler/service
 
 ```typescript
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
 
 if (someCondition) {
@@ -264,7 +264,7 @@ Use `expectDefined` for internal invariants such as a database `returning()` row
 
 ### Choosing `tryCatch` versus a catch block
 
-Use `tryCatch` and the generic `handleError` from `@startername/common/helpers/error-handling.helper` for framework-neutral error flow. `tryCatch` provides Go-like `{ data, error }` branching when the caller needs to inspect the error and continue, return a fallback, record a metric, or perform cleanup. It is appropriate for adapters such as Valkey operations and optional context reads.
+Use `tryCatch` and the generic `handleError` from `@chaff/common/helpers/error-handling.helper` for framework-neutral error flow. `tryCatch` provides Go-like `{ data, error }` branching when the caller needs to inspect the error and continue, return a fallback, record a metric, or perform cleanup. It is appropriate for adapters such as external API calls and optional context reads.
 
 Prefer `handleUnexpectedError` or the procedure boundary when the operation should simply fail the request. Keep a local `try-catch` only when the catch has meaningful control flow, such as retrying a unique-key collision or translating one known external error while allowing other errors to be normalized. Do not use `tryCatch` and then immediately throw a generic error without inspecting its result.
 

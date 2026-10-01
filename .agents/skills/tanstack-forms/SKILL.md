@@ -293,7 +293,7 @@ export function createFieldMap<T extends Record<string, unknown>>(
 
 // features/presets/components/preset-create-dialog.tsx
 import { createFieldMap } from '@~/lib/form-utils';
-import { PRESET_TYPES } from '@startername/shared/constants/presets';
+import { PRESET_TYPES } from '@chaff/shared/constants/presets';
 import { PresetInfoFieldGroup } from '../forms/preset-info-field-group';
 
 // Define field mapping once (top-level constant)
@@ -355,7 +355,7 @@ export const characterEditSchema = characterFormSchema.extend({
 });
 ```
 
-For an enum-backed form field, import the named enumwaii accessor (for example `PRESET_TYPES` from `@startername/shared/constants/presets`) and use its members in `defaultValues`, select options, submit payloads, and test fixtures. Use the enumwaii `.schema` only for validation and the inferred type for annotations; never write raw values or reach through the schema for members. See the **enumwaii** skill.
+For an enum-backed form field, import the named enumwaii accessor (for example `PRESET_TYPES` from `@chaff/shared/constants/presets`) and use its members in `defaultValues`, select options, submit payloads, and test fixtures. Use the enumwaii `.schema` only for validation and the inferred type for annotations; never write raw values or reach through the schema for members. See the **enumwaii** skill.
 
 ## Available Field Components
 

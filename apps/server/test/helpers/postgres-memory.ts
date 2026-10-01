@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 import { schema } from '@~/db/database-schema';
 
-const testPostgresDbKey = Symbol.for('startername.test.postgres.db');
-const testPostgresReadyKey = Symbol.for('startername.test.postgres.ready');
+const testPostgresDbKey = Symbol.for('chaff.test.postgres.db');
+const testPostgresReadyKey = Symbol.for('chaff.test.postgres.ready');
 
 type TestPostgresDatabase = PgliteDatabase<typeof schema> & { $client: PGlite };
 type TestPostgresGlobals = typeof globalThis & {

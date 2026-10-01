@@ -7,8 +7,6 @@ import {
   usersRelations,
   verifications,
 } from './schema/auth.schema';
-import { userAchievements } from './schema/user-achievement.schema';
-import { userProfiles } from './schema/user-profile.schema';
 
 export const schema = {
   users,
@@ -18,6 +16,4 @@ export const schema = {
   accounts,
   accountsRelations,
   verifications,
-  userAchievements,
-  userProfiles,
 };

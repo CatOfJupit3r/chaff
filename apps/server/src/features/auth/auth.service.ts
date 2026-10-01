@@ -1,11 +1,9 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { betterAuth } from 'better-auth';
 import { username } from 'better-auth/plugins';
-import type Redis from 'ioredis';
 import { singleton } from 'tsyringe';
 
-import { errorCodes, errorMessages } from '@startername/common/enums/errors.enums';
-import { isNil } from '@startername/common/helpers/std-utils';
+import { errorCodes, errorMessages } from '@chaff/common/enums/errors.enums';
 
 import env from '@~/constants/env';
 import { PostgresService } from '@~/db/postgres.service';
@@ -18,13 +16,10 @@ import {
   usersRelations,
   verifications,
 } from '@~/db/schema/auth.schema';
-import { EventBus } from '@~/features/events/event-bus';
-import { UserAfterRegisteredListener } from '@~/features/events/listeners/user.listeners';
 import { UnexpectedServerError } from '@~/lib/orpc-error-wrapper';
 
 import { LoggerFactory } from '../logger/logger.factory';
-import type { iWithLogger, LoggerType } from '../logger/logger.types';
-import { devImpersonatePlugin } from './better-auth-plugins/dev-impersonate.plugin';
+import type { iWithLogger } from '../logger/logger.types';
 
 function createDatabaseAdapter(postgresService: PostgresService) {
   return drizzleAdapter(postgresService.getDb(), {
@@ -42,29 +37,12 @@ function createDatabaseAdapter(postgresService: PostgresService) {
   });
 }
 
-const createInstance = (
-  postgresService: PostgresService,
-  logger: LoggerType,
-  valkey: Redis | Nil,
-  eventBus: EventBus,
-) =>
+const createInstance = (postgresService: PostgresService) =>
   betterAuth({
     database: createDatabaseAdapter(postgresService),
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [process.env.CORS_ORIGIN ?? ''],
-    plugins: [username(), devImpersonatePlugin()],
-    secondaryStorage: !isNil(valkey)
-      ? {
-          get: async (key) => valkey.get(key),
-          set: async (key, value, ttl) => {
-            if (ttl) await valkey.set(key, value, 'EX', ttl);
-            else await valkey.set(key, value);
-          },
-          delete: async (key) => {
-            await valkey.del(key);
-          },
-        }
-      : undefined,
+    plugins: [username()],
     emailAndPassword: {
       enabled: true,
     },
@@ -85,15 +63,6 @@ const createInstance = (
     experimental: {
       joins: false,
     },
-    databaseHooks: {
-      user: {
-        create: {
-          async after(user) {
-            await eventBus.emit(UserAfterRegisteredListener, { userId: user.id });
-          },
-        },
-      },
-    },
   });
 
 @singleton()
@@ -105,13 +74,12 @@ export class AuthService implements iWithLogger {
   constructor(
     loggerFactory: LoggerFactory,
     private readonly postgresService: PostgresService,
-    private readonly eventBus: EventBus,
   ) {
     this.logger = loggerFactory.create('auth');
   }
 
-  public connect(valkey: Redis | Nil) {
-    this.instance = createInstance(this.postgresService, this.logger, valkey, this.eventBus);
+  public connect() {
+    this.instance = createInstance(this.postgresService);
   }
 
   public getInstance() {

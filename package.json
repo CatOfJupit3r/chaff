@@ -1,9 +1,9 @@
 {
-  "name": "startername",
+  "name": "chaff",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "docker compose -f ./docker-compose.dev.yml --profile postgres up -d --wait && pnpm --parallel --filter=server --filter=web --filter=@startername/common --filter=@startername/server-contract run dev",
+    "dev": "docker compose -f ./docker-compose.dev.yml --profile postgres up -d --wait && pnpm --parallel --filter=server --filter=web --filter=@chaff/common --filter=@chaff/server-contract run dev",
     "build": "pnpm --recursive run build",
     "test": "pnpm --recursive --stream run test",
     "check-types": "pnpm --recursive --stream --no-bail run check-types",
@@ -11,8 +11,8 @@
     "prettier": "pnpm run prettify",
     "dev:web": "pnpm --filter=web run dev",
     "dev:server": "pnpm --filter=server run dev",
-    "dev:common": "pnpm --filter=@startername/common run dev",
-    "dev:server-contract": "pnpm --filter=@startername/server-contract run dev",
+    "dev:common": "pnpm --filter=@chaff/common run dev",
+    "dev:server-contract": "pnpm --filter=@chaff/server-contract run dev",
     "db:generate": "pnpm --filter=server run db:generate",
     "db:migrate": "pnpm --filter=server run db:migrate",
     "db:push": "pnpm --filter=server run db:push",
@@ -24,7 +24,7 @@
     "clean:modules": "tsx scripts/clean.ts",
     "prepare": "husky",
     "commit": "cz",
-    "build:deps": "pnpm --filter=@startername/server-contract... run build",
+    "build:deps": "pnpm --filter=@chaff/server-contract... run build",
     "update:workspaces": "pnpm update --interactive --recursive"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 import sortImports from '@trivago/prettier-plugin-sort-imports';
 /**
- * Shared Prettier Configuration for startername Monorepo
+ * Shared Prettier Configuration for chaff Monorepo
  * 
  * This is the base Prettier configuration used across all workspaces.
  * Individual workspaces can extend this configuration by importing it.
@@ -37,7 +37,7 @@ const config = {
   importOrder: [
     '<THIRD_PARTY_MODULES>',
     // Workspace library imports
-    createWorkspacePattern('startername'),
+    createWorkspacePattern('chaff'),
     // Project-specific path aliases
     '^@~/(.*)$',
     // Relative imports

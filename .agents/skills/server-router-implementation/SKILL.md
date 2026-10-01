@@ -19,7 +19,7 @@ Basic structure:
 ```typescript
 import { publicProcedure, protectedProcedure } from '@~/lib/orpc';
 import { base } from './base';
-import { myNamespaceContract } from '@startername/shared/contract';
+import { myNamespaceContract } from '@chaff/shared/contract';
 import { resolve } from '@~/di';
 import { TOKENS } from '@~/di/tokens';
 
@@ -67,19 +67,19 @@ publicProcedure
 Use for endpoints that require authentication. Access user info via `context.session`:
 
 ```typescript
-import { errorCodes } from '@startername/shared';
+import { errorCodes } from '@chaff/shared';
 import { ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
-import { UserProfileService } from '@~/features/user-profile/user-profile.service';
+import { FindingsService } from '@~/features/findings/findings.service';
 import { container } from '@~/di';
 
 protectedProcedure
-  .use(contract.getUserProfile)
+  .use(contract.listMyFindings)
   .handler(async ({ input, context }) => {
     const userId = context.session.user.id;
-    const userProfileService = container.resolve(UserProfileService);
-    const profile = await userProfileService.getProfileByUserId(userId);
+    const findingsService = container.resolve(FindingsService);
+    const findings = await findingsService.listFindingsByOwner(userId);
 
-    return profile;
+    return findings;
   });
 ```
 

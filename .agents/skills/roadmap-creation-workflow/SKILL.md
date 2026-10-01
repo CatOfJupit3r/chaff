@@ -251,7 +251,7 @@ Common commands:
 ```bash
 pnpm --filter=web run check-types
 pnpm --filter=server run check-types
-pnpm --filter=@startername/shared run check-types
+pnpm --filter=@chaff/shared run check-types
 pnpm run check-types
 pnpm run lint
 pnpm run test

@@ -68,4 +68,4 @@ export class DrizzleSomeRepository implements iSomeRepository {
 }
 ```
 
-See `apps/server/src/features/auth/auth-user.resolver.ts`, `apps/server/src/features/achievements/user-achievement.resolver.ts`, and `apps/server/src/features/user/user-profile.resolver.ts` for real examples.
+See `apps/server/src/features/auth/auth-user.resolver.ts` (used by `drizzle-auth-user.repository.ts`) for the real example.

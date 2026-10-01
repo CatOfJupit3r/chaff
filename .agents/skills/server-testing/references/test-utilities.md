@@ -9,24 +9,26 @@ The most important role of test utilities is **building a library of specialized
 ### Fixture Philosophy
 
 ```typescript
+// Hypothetical `findings` feature
+
 // ❌ BAD: Test has to know how to set up complex scenarios
-it('should select badge', async () => {
-  const { ctx, user } = await createUser();
+it('should dismiss a finding', async () => {
+  const { ctx } = await createUser();
   
-  // How do we grant achievements? This couples the test to implementation
-  await call(appRouter.achievements.grant, { achievementId: 'BETA' }, ctx());
-  await call(appRouter.achievements.grant, { achievementId: 'TESTER' }, ctx());
+  // How do we create findings? This couples the test to implementation
+  const finding = await call(appRouter.findings.createFinding, { title: 'Unused export' }, ctx());
+  await call(appRouter.findings.createFinding, { title: 'Dead branch' }, ctx());
   
-  const result = await call(appRouter.user.updateUserBadge, { badgeId: 'BETA_BADGE' }, ctx());
-  expect(result.selectedBadge).toBe('BETA_BADGE');
+  const result = await call(appRouter.findings.dismissFinding, { findingId: finding.id }, ctx());
+  expect(result.isDismissed).toBe(true);
 });
 
 // ✅ GOOD: Fixture expresses intent, test is clean
-it('should select badge', async () => {
-  const { ctx } = await createUserWithAchievements(['BETA', 'TESTER']);
+it('should dismiss a finding', async () => {
+  const { ctx, findings } = await createUserWithFindings(2);
   
-  const result = await call(appRouter.user.updateUserBadge, { badgeId: 'BETA_BADGE' }, ctx());
-  expect(result.selectedBadge).toBe('BETA_BADGE');
+  const result = await call(appRouter.findings.dismissFinding, { findingId: findings[0].id }, ctx());
+  expect(result.isDismissed).toBe(true);
 });
 ```
 
@@ -87,7 +89,8 @@ Import pre-loaded instances directly for convenience:
 import { app, appRouter, auth } from '../helpers/instance';
 
 // Use directly in tests
-const result = await call(appRouter.user.getUserProfile, null, ctx());
+const result = await call(appRouter.index.healthCheck, undefined, ctx());
+const res = await app.request('/health', { method: 'GET' });
 ```
 
 ## Custom Matchers
@@ -142,32 +145,32 @@ export async function createAdminUser() {
 }
 
 /**
- * User with specific achievements granted
+ * User with N findings created (hypothetical `findings` feature)
  */
-export async function createUserWithAchievements(achievementIds: string[]) {
+export async function createUserWithFindings(count: number) {
   const user = await createUser();
 
-  // Grant achievements via endpoints
-  await Promise.all(
-    achievementIds.map((id) =>
-      call(appRouter.achievements.grant, { achievementId: id }, user.ctx())
+  // Create findings via endpoints
+  const findings = await Promise.all(
+    Array.from({ length: count }, (_, i) =>
+      call(appRouter.findings.createFinding, { title: `Finding ${i}` }, user.ctx())
     )
   );
 
-  return user;
+  return { ...user, findings };
 }
 
 /**
- * User with specific badge selected and required achievements
+ * User with one dismissed finding
  */
-export async function createUserWithBadge(badgeId: string) {
+export async function createUserWithDismissedFinding() {
   // Compose existing fixtures
-  const { ctx, user } = await createUserWithAchievements(['required_achievement']);
+  const { ctx, user, findings } = await createUserWithFindings(1);
   
-  // Set the badge via endpoint
-  await call(appRouter.user.updateUserBadge, { badgeId }, ctx());
+  // Dismiss via endpoint
+  const finding = await call(appRouter.findings.dismissFinding, { findingId: findings[0].id }, ctx());
   
-  return { ctx, user };
+  return { ctx, user, finding };
 }
 ```
 
@@ -238,10 +241,11 @@ export function createChallengeData(overrides = {}) {
   };
 }
 
-export function createProfileData(overrides = {}) {
+export function createFindingData(overrides = {}) {
   return {
-    bio: 'Test bio',
-    avatarUrl: 'https://example.com/avatar.png',
+    title: 'Test finding',
+    summary: 'Test summary',
+    filePath: 'apps/server/src/example.ts',
     ...overrides,
   };
 }
@@ -283,7 +287,7 @@ declare module 'vitest' {
 }
 
 // Usage
-expect(profile).toHaveValidTimestamps();
+expect(finding).toHaveValidTimestamps();
 ```
 
 ### Pattern: API Client Helpers
@@ -320,28 +324,31 @@ export async function makeAuthenticatedRequest(
 
 ## Test Database Helpers
 
-Direct database manipulation for test setup:
+Direct database manipulation for test setup (tables are already truncated between tests by `test/helpers/setup.ts`):
 
 ```typescript
-import { UserModel } from '@~/db/models/user.model';
-import { UserProfileModel } from '@~/db/models/user-profile.model';
+import { eq } from 'drizzle-orm';
+import { container } from 'tsyringe';
+import { PostgresService } from '@~/db/postgres.service';
+import { sessions } from '@~/db/schema/auth.schema';
+import { findings } from '@~/db/schema/findings.schema'; // hypothetical feature table
 
-// Clean specific collections
+// Clean specific rows
 export async function cleanUserData(userId: string) {
+  const db = container.resolve(PostgresService).getDb();
   await Promise.all([
-    UserProfileModel.deleteMany({ userId }),
-    UserAchievementModel.deleteMany({ userId }),
+    db.delete(sessions).where(eq(sessions.userId, userId)),
+    db.delete(findings).where(eq(findings.ownerId, userId)),
   ]);
 }
 
 // Seed test data
-export async function seedAchievements() {
-  const achievements = [
-    { id: 'FIRST_LOGIN', label: 'First Login', description: '...' },
-    { id: 'BETA_TESTER', label: 'Beta Tester', description: '...' },
-  ];
-
-  await AchievementModel.insertMany(achievements);
+export async function seedFindings(ownerId: string) {
+  const db = container.resolve(PostgresService).getDb();
+  await db.insert(findings).values([
+    { ownerId, title: 'Unused export', summary: '...' },
+    { ownerId, title: 'Dead branch', summary: '...' },
+  ]);
 }
 ```
 
@@ -366,8 +373,8 @@ describe('Feature with Shared Setup', () => {
 
   it('uses shared testUser', async () => {
     const result = await call(
-      appRouter.user.getUserProfile,
-      null,
+      appRouter.index.healthCheck,
+      undefined,
       testUser.ctx()
     );
     expect(result).toBeDefined();
@@ -425,8 +432,8 @@ export async function waitFor(
 
 // Usage
 await waitFor(async () => {
-  const user = await UserModel.findById(userId);
-  return user?.status === 'ACTIVE';
+  const user = await authUserRepository.findUserById(userId);
+  return user !== null;
 });
 ```
 
@@ -446,7 +453,7 @@ await waitFor(async () => {
 
 ```typescript
 // ✅ GOOD: Clear purpose from name
-export async function createUserWithAchievements(ids: string[]) { }
+export async function createUserWithFindings(count: number) { }
 export async function createAdminUser() { }
 export async function createTeamWithMembers() { }
 export async function createCompletedChallenge() { }
@@ -461,11 +468,11 @@ export async function prepareData() { }
 
 When building your fixture library, consider creating:
 - ✅ Basic user creation (`createUser`)
-- ✅ Specialized user types (`createAdminUser`, `createUserWithAchievements`)
+- ✅ Specialized user types (`createAdminUser`, `createUserWithFindings`)
 - ✅ Complex scenarios (`createTeamWithMembers`, `createCompletedChallenge`)
-- ✅ Data factories (`createChallengeData`, `createProfileData`)
+- ✅ Data factories (`createChallengeData`, `createFindingData`)
 - ✅ Custom matchers (`toHaveValidTimestamps`, `toBeValidId`)
-- ✅ Database helpers (`seedAchievements`, `cleanUserData`)
+- ✅ Database helpers (`seedFindings`, `cleanUserData`)
 - ✅ Async utilities (`waitFor`, `waitForCondition`)
 
 ## Anti-Patterns to Avoid

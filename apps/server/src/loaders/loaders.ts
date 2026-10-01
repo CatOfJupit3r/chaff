@@ -3,10 +3,8 @@ import { container } from 'tsyringe';
 import { registerServices } from '@~/di/container';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
 
-import achievementsLoader from './achievements.loader';
 import authLoader from './auth.loader';
 import databaseLoader from './database.loader';
-import eventsLoader from './events.loader';
 import honoLoader from './hono.loader';
 
 const isTest = process.env.NODE_ENV === 'test';
@@ -26,12 +24,6 @@ async function bootstrap() {
   logger?.info('Loading authentication...');
   const instance = await authLoader();
   logger?.info('Authentication loaded.');
-  logger?.info('Loading events...');
-  await eventsLoader();
-  logger?.info('Events loaded.');
-  logger?.info('Loading achievements...');
-  await achievementsLoader();
-  logger?.info('Achievements loaded.');
   logger?.info('Loading Hono framework...');
   const { app, appRouter } = await honoLoader();
 

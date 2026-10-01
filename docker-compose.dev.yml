@@ -1,12 +1,12 @@
 name:
-  startername
+  chaff
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: startername-postgres
+    container_name: chaff-postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=startername
+      - POSTGRES_DB=chaff
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
@@ -16,17 +16,11 @@ services:
     profiles:
       - postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d startername"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chaff"]
       interval: 2s
       timeout: 5s
       retries: 10
       start_period: 5s
-  valkey:
-    image: valkey/valkey:8.0-alpine
-    container_name: startername-valkey
-    restart: unless-stopped
-    ports:
-      - 6379:6379
 
 volumes:
   postgres-data:

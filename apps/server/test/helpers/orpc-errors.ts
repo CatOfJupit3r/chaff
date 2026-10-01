@@ -1,7 +1,7 @@
 import { expect } from 'vitest';
 
-import { errorMessages } from '@startername/common/enums/errors.enums';
-import type { ErrorCodesType } from '@startername/common/enums/errors.enums';
+import { errorMessages } from '@chaff/common/enums/errors.enums';
+import type { ErrorCodesType } from '@chaff/common/enums/errors.enums';
 
 interface iORPCErrorLike {
   message?: string;

@@ -12,8 +12,8 @@ import { logger } from 'hono/logger';
 import { isEmpty } from 'lodash-es';
 import { container } from 'tsyringe';
 
-import { Enumwaii } from '@startername/enumwaii/enumwaii';
-import type { InferEnumwaii } from '@startername/enumwaii/enumwaii';
+import { Enumwaii } from '@chaff/enumwaii/enumwaii';
+import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
 import env from '@~/constants/env';
 import { AuthService } from '@~/features/auth/auth.service';
@@ -22,7 +22,6 @@ import { requestContextMiddleware } from '@~/features/logger/logger.middleware';
 import type { iRequestContext } from '@~/features/logger/logger.types';
 import { getORPCErrorMetadata, isORPCError, shouldLogORPCError } from '@~/lib/orpc-error-wrapper';
 import { appRouter } from '@~/routers/app-router';
-import nonContractRouter from '@~/routers/non-contract.router';
 
 interface iCreateContextOptions {
   context: HonoContext<iRequestContext>;
@@ -112,8 +111,6 @@ export default async function honoLoader() {
     }),
   );
   app.on(['POST', 'GET'], '/auth/*', async (c) => auth.handler(c.req.raw));
-
-  app.route('/', nonContractRouter);
 
   const apiHandler = new OpenAPIHandler(appRouter, {
     plugins: [

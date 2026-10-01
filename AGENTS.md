@@ -4,7 +4,7 @@ applyTo: '**/*.ts'
 
 # Workspace Guide
 
-This repository is a pnpm monorepo starter (`startername`). Treat this file as the primary workspace guide for agentic work and the always-on source of project standards.
+This repository is **Chaff**, a self-hosted, stack-aware review workspace for AI-written GitLab merge requests, built as a pnpm monorepo. Treat this file as the primary workspace guide for agentic work and the always-on source of project standards.
 
 ## Answer and Code Changes Guidelines
 
@@ -45,6 +45,23 @@ Examples:
 - `packages/server-contract` contains the API contracts used by both apps.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
 - `docs` contains product notes, roadmaps, and design documentation, if present.
+- `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-foreground`, `text-primary`).
+
+## UI, Theming, and Colors
+
+- Chaff ships with **light and dark modes**, and the UI must stay customizable: every color, radius, and font comes from theme tokens so a theme can be swapped by changing CSS variables only.
+- Theme tokens are CSS variables declared in `apps/web/src/index.css` (`:root` for light, `.dark` for dark) and exposed to Tailwind through `@theme inline` (e.g. `--color-success: var(--success)`).
+- ALWAYS use Tailwind token classes for colors (`bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-success`, `bg-overlay/50`, ...). NEVER use raw palette classes (`bg-red-500`, `text-white`, `dark:bg-gray-950`) or arbitrary color values (`bg-[#fff]`, `text-[oklch(...)]`) in components.
+- If no existing token fits, add one: declare the variable in both `:root` and `.dark`, map it in `@theme inline`, then use the new class. Do not hardcode a color "just this once".
+- Never branch on the theme in component code for colors (`dark:text-red-400`); the token already carries both values.
+- ESLint enforces this in `apps/web` via `better-tailwindcss/no-restricted-classes` (see `configs/eslint-config/src/index.mjs`).
+  ```tsx
+  // BAD
+  <span className="text-red-600 dark:text-red-400">Failed</span>
+
+  // GOOD
+  <span className="text-destructive">Failed</span>
+  ```
 
 ## Core Conventions
 
@@ -94,7 +111,7 @@ Examples:
   ```
 - Repository response types should be derived from the Drizzle schema (`typeof table.$inferSelect`) with `Omit`/`Pick`/intersections rather than hand-duplicating every column. See the **drizzle-orm** skill.
 - Don't hand-write a field-by-field `toResponse(row)` mapper in a repository. Build it with `createRowResolver` (`@~/lib/row-resolver`) and group a feature's mappers on a `<feature>.resolver.ts` resolver class. Resolvers are `@singleton()` and constructor-injected into repositories like any other dependency (e.g. `PostgresService`) — never static classes/methods. See the **drizzle-orm** skill.
-- If your variable is reused across server and client, define it in `packages/common/src/constants` and import it from `@startername/common/constants`. Only do this for non-sensitive data.
+- If your variable is reused across server and client, define it in `packages/common/src/constants` and import it from `@chaff/common/constants`. Only do this for non-sensitive data.
 - When resolving warnings or errors, prefer addressing the root cause instead of using `// @ts-ignore` or `as unknown as <Type>`. Use these only as a last resort with a comment explaining why.
 - If you encounter eslint warnings, run `pnpm run lint` to fix them in the file.
 - Use `satisfies` clauses to ensure object shapes without losing type inference. Example:
@@ -111,8 +128,8 @@ Examples:
 
 - Copy `.env.example` to `.env` in `apps/server` and `apps/web`; server validates configuration with `zod` in `src/constants/env.ts`.
 - The Better Auth server is mounted under `/auth/*` and expects HTTPS cookies (`sameSite: 'none'`, `secure: true`); keep this in mind when testing locally.
-- Aliases: `@~/` resolves to `apps/server/src` or `apps/web/src` depending on the package; `@startername/common` surfaces shared utilities and types, while `@startername/server-contract` surfaces API contracts.
-- PostgreSQL runs at `postgresql://postgres:postgres@localhost:5432/startername` by default; adjust via `POSTGRES_URL` and update docker-compose if ports change.
+- Aliases: `@~/` resolves to `apps/server/src` or `apps/web/src` depending on the package; `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
+- PostgreSQL runs at `postgresql://postgres:postgres@localhost:5432/chaff` by default; adjust via `POSTGRES_URL` and update docker-compose if ports change.
 - Node.js v24 is required; use nvm or similar to manage Node versions.
 - pnpm ≥10.0.0 is the package manager; use `corepack enable` to activate it.
 
@@ -217,8 +234,6 @@ skills:
     load: ".agents/skills/tanstack-forms/SKILL.md"
   - task: "Integrating TanStack Query with oRPC for data fetching and mutations"
     load: ".agents/skills/tanstack-query-integration/SKILL.md"
-  - task: "Implementing semantic Tiptap editor extensions with atomic nodes and serialization"
-    load: ".agents/skills/tiptap-editor-architecture/SKILL.md"
   - task: "Reviewing code changes with a bug-finding mindset before handoff"
     load: ".agents/skills/review-code/SKILL.md"
 <!-- intent-skills:end -->

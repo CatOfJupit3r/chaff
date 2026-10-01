@@ -1,5 +1,5 @@
 /**
- * Shared lint-staged configuration for startername monorepo
+ * Shared lint-staged configuration for chaff monorepo
  *
  * This configuration runs linting and formatting on staged files before commit.
  * It's optimized for a monorepo structure with TypeScript/JavaScript files.

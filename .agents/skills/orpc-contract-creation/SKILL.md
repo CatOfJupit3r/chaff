@@ -101,8 +101,8 @@ pnpm run check-types
 ## Contract conventions
 
 ### Naming
-- Use camelCase for procedure names: `getUserProfile`, `listChallenges`
-- Use kebab-case for URL paths: `/user-profile`, `/list-challenges`
+- Use camelCase for procedure names: `getReviewSummary`, `listChallenges`
+- Use kebab-case for URL paths: `/review-summary`, `/list-challenges`
 - Namespace contracts match their domain: `userContract`, `challengeContract`
 
 ### Documentation
@@ -119,7 +119,7 @@ pnpm run check-types
 - Contracts don't define error schemas - these are handled by error wrappers
 - All error codes must be defined in `packages/shared/src/enums/errors.enums.ts`
 - Handlers use custom error wrappers from `apps/server/src/lib/orpc-error-wrapper.ts`
-- Import error codes via: `import { errorCodes } from '@startername/shared';`
+- Import error codes via: `import { errorCodes } from '@chaff/shared';`
 
 ## Common patterns
 

@@ -97,18 +97,23 @@ export async function createAdminUser() {
   return user;
 }
 
+// ============================================================================
+// Example: Feature Fixtures (hypothetical `findings` feature)
+// In a real feature, put these in test/integration/findings.fixtures.ts
+// ============================================================================
+
 /**
- * Creates a user with specific achievements via API
- * 
+ * Creates a user with N findings via API
+ *
  * NOTE: Fixture calls endpoints to ensure full API testing
  */
-export async function createUserWithAchievements(achievementIds: string[]) {
+export async function createUserWithFindings(count: number) {
   const user = await createUser();
 
-  // Fixture grants achievements via API endpoints
+  // Fixture creates findings via API endpoints
   // await Promise.all(
-  //   achievementIds.map((id) =>
-  //     call(appRouter.achievements.grant, { achievementId: id }, user.ctx())
+  //   Array.from({ length: count }, (_, i) =>
+  //     call(appRouter.findings.createFinding, { title: `Finding ${i}` }, user.ctx())
   //   )
   // );
 
@@ -116,54 +121,56 @@ export async function createUserWithAchievements(achievementIds: string[]) {
 }
 
 /**
- * Creates a user with a profile via API
- * 
- * NOTE: Fixture calls endpoint to create profile
+ * Creates a user with one finding via API
+ *
+ * NOTE: Fixture calls endpoint to create the finding
  */
-export async function createUserWithProfile() {
+export async function createUserWithFinding() {
   const user = await createUser();
 
-  // Fixture calls endpoint to get/create profile
-  // const profile = await call(appRouter.user.getUserProfile, null, user.ctx());
-
-  return {
-    ...user,
-    profile: user, // In real implementation, return actual profile object
-  };
-}
-
-/**
- * Creates a user and updates their bio via API
- * 
- * NOTE: Fixture handles profile creation AND bio update
- */
-export async function createUserWithBio(bio: string) {
-  const user = await createUser();
-
-  // Fixture calls endpoint to update profile
-  // const profile = await call(
-  //   appRouter.user.updateUserProfile,
-  //   { bio },
+  // const finding = await call(
+  //   appRouter.findings.createFinding,
+  //   { title: 'Test finding' },
   //   user.ctx()
   // );
 
   return {
     ...user,
-    profile: { bio }, // In real implementation, return actual profile
+    finding: { id: crypto.randomUUID(), summary: '', ownerId: user.user.id }, // In real implementation, return the created finding
   };
 }
 
 /**
- * Creates a user with maximum-length bio via API
- * 
+ * Creates a user with a finding and updates its summary via API
+ *
+ * NOTE: Fixture handles finding creation AND summary update
+ */
+export async function createUserWithFindingSummary(summary: string) {
+  const { finding, ...user } = await createUserWithFinding();
+
+  // const updatedFinding = await call(
+  //   appRouter.findings.updateFinding,
+  //   { id: finding.id, summary },
+  //   user.ctx()
+  // );
+
+  return {
+    ...user,
+    finding: { ...finding, summary }, // In real implementation, return the updated finding
+  };
+}
+
+/**
+ * Creates a user with a maximum-length finding summary via API
+ *
  * NOTE: Fixture encapsulates the constraint
  */
-export async function createUserWithMaxBio(bio: string) {
-  if (bio.length > 500) {
-    throw new Error('Bio exceeds maximum length of 500 characters');
+export async function createUserWithMaxSummary(summary: string) {
+  if (summary.length > 500) {
+    throw new Error('Summary exceeds maximum length of 500 characters');
   }
 
-  return createUserWithBio(bio);
+  return createUserWithFindingSummary(summary);
 }
 
 // ============================================================================
@@ -184,12 +191,13 @@ export function createChallengeData(overrides = {}) {
 }
 
 /**
- * Creates test profile data
+ * Creates test finding data
  */
-export function createProfileData(overrides = {}) {
+export function createFindingData(overrides = {}) {
   return {
-    bio: 'Test bio',
-    avatarUrl: 'https://example.com/avatar.png',
+    title: 'Test finding',
+    summary: 'Test summary',
+    filePath: 'apps/server/src/example.ts',
     ...overrides,
   };
 }
@@ -236,25 +244,21 @@ export async function makeAuthenticatedRequest(
  * Cleans up all data for a specific user
  */
 export async function cleanUserData(userId: string) {
-  // Example - adjust to your models
-  // await Promise.all([
-  //   UserProfileModel.deleteMany({ userId }),
-  //   UserAchievementModel.deleteMany({ userId }),
-  //   UserBadgeModel.deleteMany({ userId }),
-  // ]);
+  // Example - adjust to your tables (setup.ts already truncates between tests)
+  // const db = container.resolve(PostgresService).getDb();
+  // await db.delete(findings).where(eq(findings.ownerId, userId));
 }
 
 /**
- * Seeds test achievements into the database
+ * Seeds test findings into the database
  */
-export async function seedAchievements() {
-  // Example - adjust to your models
-  // const achievements = [
-  //   { id: 'FIRST_LOGIN', label: 'First Login', description: '...' },
-  //   { id: 'BETA_TESTER', label: 'Beta Tester', description: '...' },
-  // ];
-  // 
-  // await AchievementModel.insertMany(achievements);
+export async function seedFindings(ownerId: string) {
+  // Example - adjust to your tables
+  // const db = container.resolve(PostgresService).getDb();
+  // await db.insert(findings).values([
+  //   { ownerId, title: 'Unused export', summary: '...' },
+  //   { ownerId, title: 'Dead branch', summary: '...' },
+  // ]);
 }
 
 // ============================================================================

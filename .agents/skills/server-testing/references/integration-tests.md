@@ -17,22 +17,24 @@ The most important principle: **Always create specialized fixtures for test setu
 Fixtures **should** call endpoints via `call()`, but tests **should not**. This separation keeps tests clean and focused.
 
 ```typescript
+// Hypothetical `findings` feature used throughout this reference
+
 // ❌ BAD: Test has to know how to set up scenarios
-it('should update user badge', async () => {
+it('should dismiss a finding', async () => {
   // Creating tight coupling between test and setup logic
-  await call(appRouter.achievements.grant, { achievementId: 'BETA' }, ctx());
-  await call(appRouter.user.grantBadge, { badgeId: 'BETA_BADGE' }, ctx());
+  const review = await call(appRouter.reviews.createReview, { title: 'PR 42' }, ctx());
+  const finding = await call(appRouter.findings.createFinding, { reviewId: review.id, title: 'Unused export' }, ctx());
   
-  const result = await call(appRouter.user.updateUserBadge, { badgeId: 'BETA_TESTER' }, ctx());
+  const result = await call(appRouter.findings.dismissFinding, { findingId: finding.id }, ctx());
   expect(result).toBeDefined();
 });
 
 // ✅ GOOD: Fixture encapsulates setup, test focuses on behavior
-it('should update user badge', async () => {
+it('should dismiss a finding', async () => {
   // Clear intent, fixture handles all the complexity
-  const { ctx } = await createUserWithAchievements(['BETA']);
+  const { ctx, findings } = await createUserWithFindings(1);
   
-  const result = await call(appRouter.user.updateUserBadge, { badgeId: 'BETA_TESTER' }, ctx());
+  const result = await call(appRouter.findings.dismissFinding, { findingId: findings[0].id }, ctx());
   expect(result).toBeDefined();
 });
 ```
@@ -91,22 +93,22 @@ export async function createAdminUser() {
   return user;
 }
 
-export async function createUserWithAchievements(achievementIds: string[]) {
+export async function createUserWithFindings(count: number) {
   const user = await createUser();
-  // Grant achievements via endpoints
-  await Promise.all(
-    achievementIds.map(id =>
-      call(appRouter.achievements.grant, { achievementId: id }, user.ctx())
+  // Create findings via endpoints
+  const findings = await Promise.all(
+    Array.from({ length: count }, (_, i) =>
+      call(appRouter.findings.createFinding, { title: `Finding ${i}` }, user.ctx())
     )
   );
-  return user;
+  return { ...user, findings };
 }
 
-export async function createUserWithBadge(badgeId: string) {
-  const user = await createUserWithAchievements(['required_achievement']);
-  // Select badge via endpoint
-  await call(appRouter.user.updateUserBadge, { badgeId }, user.ctx());
-  return user;
+export async function createUserWithDismissedFinding() {
+  const user = await createUserWithFindings(1);
+  // Dismiss via endpoint
+  const finding = await call(appRouter.findings.dismissFinding, { findingId: user.findings[0].id }, user.ctx());
+  return { ...user, finding };
 }
 ```
 
@@ -142,22 +144,23 @@ export async function setupCompletedUserChallenge() {
 ### Using Fixtures in Tests
 
 ```typescript
-describe('Badge System', () => {
-  it('should have badge selected when user has achievement', async () => {
+describe('Finding Dismissal', () => {
+  it('should mark the finding as dismissed', async () => {
     // Use specialized fixture - immediately clear what this test needs
-    const { ctx, user } = await createUserWithBadge('BETA_BADGE');
+    const { finding } = await createUserWithDismissedFinding();
 
     // Test verifies the state, not the setup
-    expect(user.selectedBadge).toBe('BETA_BADGE');
+    expect(finding.isDismissed).toBe(true);
   });
 
-  it('should reject badge without achievement', async () => {
-    // Use basic fixture - this user has no achievements
+  it('should reject dismissing another user\'s finding', async () => {
+    const { findings } = await createUserWithFindings(1);
+    // Use basic fixture - this user owns no findings
     const { ctx } = await createUser();
 
     // Test the actual behavior
     await expect(
-      call(appRouter.user.updateUserBadge, { badgeId: 'BETA_BADGE' }, ctx())
+      call(appRouter.findings.dismissFinding, { findingId: findings[0].id }, ctx())
     ).rejects.toThrow();
   });
 });
@@ -173,13 +176,13 @@ Most tests should use specialized fixtures. The test verifies behavior, the fixt
 
 ```typescript
 // ✅ GOOD: Fixture creates scenario, test verifies behavior
-it('should have valid profile for admin user', async () => {
+it('should list all findings for admin user', async () => {
+  await createUserWithFindings(2);
   const { ctx } = await createAdminUser();
   
   // Test only verifies the outcome
-  const profile = await call(appRouter.user.getUserProfile, null, ctx());
-  expect(profile).toBeDefined();
-  expect(profile.role).toBe('ADMIN');
+  const findings = await call(appRouter.findings.listAllFindings, {}, ctx());
+  expect(findings).toHaveLength(2);
 });
 ```
 
@@ -188,19 +191,14 @@ it('should have valid profile for admin user', async () => {
 Test that unauthorized access is rejected:
 
 ```typescript
-it('should reject badge selection without achievement', async () => {
-  const { ctx } = await createUser(); // Basic user, no achievements
+it('should reject listing all findings for a non-admin user', async () => {
+  const { ctx } = await createUser(); // Basic user, no admin role
 
   // Test the actual rejection behavior
-  await expect(
-    call(appRouter.user.updateUserBadge, { badgeId: 'BETA_BADGE' }, ctx())
-  ).rejects.toThrow('You do not have the required achievement');
-});
-```
-
-  await expect(
-    call(appRouter.user.updateUserBadge, { badgeId: 'BETA_TESTER' }, ctx())
-  ).rejects.toThrow('You do not have the required achievement');
+  await expectORPCError(
+    call(appRouter.findings.listAllFindings, {}, ctx()),
+    { code: errorCodes.UNAUTHORIZED },
+  );
 });
 ```
 
@@ -251,19 +249,19 @@ it('should show completed challenges', async () => {
 Test edge cases by using specialized fixtures that handle the scenario:
 
 ```typescript
-// Create a fixture that gets/creates profile
-export async function createUserWithProfileAccess() {
+// Create a fixture that lists findings for a fresh user
+export async function createUserWithFindingsAccess() {
   const user = await createUser();
   // Fixture calls the endpoint
-  // const profile = await call(appRouter.user.getUserProfile, null, user.ctx());
-  return { ...user };
+  const findings = await call(appRouter.findings.listMyFindings, {}, user.ctx());
+  return { ...user, findings };
 }
 
-// Test just verifies the fixture worked
-it('should auto-create profile on first access', async () => {
-  const { ctx } = await createUserWithProfileAccess();
+// Test just verifies the edge case
+it('should return an empty list for a user with no findings', async () => {
+  const { findings } = await createUserWithFindingsAccess();
 
-  expect(ctx).toBeDefined();
+  expect(findings).toEqual([]);
 });
 ```
 
@@ -272,37 +270,36 @@ it('should auto-create profile on first access', async () => {
 Create specialized fixtures for validation scenarios:
 
 ```typescript
-// Fixture that sets up a user with a specific bio
-export async function createUserWithBio(bio: string) {
+// Fixture that sets up a finding with a specific summary
+export async function createFindingWithSummary(summary: string) {
   const user = await createUser();
-  // Fixture calls the endpoint to validate and set bio
-  // await call(appRouter.user.updateUserProfile, { bio }, user.ctx());
-  return { ...user, bio };
+  // Fixture calls the endpoint to validate and set the summary
+  const finding = await call(appRouter.findings.createFinding, { title: 'Finding', summary }, user.ctx());
+  return { ...user, finding };
 }
 
 // Test just verifies the fixture created the scenario
-it('should validate bio max length (500 chars)', async () => {
-  const maxBio = 'a'.repeat(500);
+it('should accept summary at max length (500 chars)', async () => {
+  const maxSummary = 'a'.repeat(500);
   
-  // Fixture ensures the max-length bio exists
-  const { bio } = await createUserWithBio(maxBio);
+  // Fixture ensures the max-length summary exists
+  const { finding } = await createFindingWithSummary(maxSummary);
   
-  expect(bio.length).toBe(500);
+  expect(finding.summary.length).toBe(500);
 });
 
 // Test validation failure with a separate fixture
-export async function createInvalidUserBio() {
-  const longBio = 'a'.repeat(501);
-  const user = await createUser();
+export async function createInvalidFindingSummary() {
+  const longSummary = 'a'.repeat(501);
   
   // Fixture attempts invalid operation and captures error
   return {
-    promise: createUserWithBio(longBio),
+    promise: createFindingWithSummary(longSummary),
   };
 }
 
-it('should reject bio exceeding max length', async () => {
-  const { promise } = await createInvalidUserBio();
+it('should reject summary exceeding max length', async () => {
+  const { promise } = await createInvalidFindingSummary();
   
   await expect(promise).rejects.toThrow();
 });
@@ -313,29 +310,26 @@ it('should reject bio exceeding max length', async () => {
 Test boundary conditions using specialized fixtures:
 
 ```typescript
-// Fixture for empty bio scenario
-export async function createUserWithEmptyBio() {
-  const user = await createUser();
-  // Fixture calls endpoint to set empty bio
-  // await call(appRouter.user.updateUserProfile, { bio: '' }, user.ctx());
-  return user;
+// Fixture for empty summary scenario
+export async function createFindingWithEmptySummary() {
+  return createFindingWithSummary('');
 }
 
 it('should handle empty input gracefully', async () => {
-  // Fixture sets up the scenario with empty bio
-  const { ctx } = await createUserWithEmptyBio();
+  // Fixture sets up the scenario with empty summary
+  const { finding } = await createFindingWithEmptySummary();
   
-  // Test verifies the user was created with no bio
-  expect(ctx).toBeDefined();
+  // Test verifies the finding was created with no summary
+  expect(finding.summary).toBe('');
 });
 
 // Fixture for missing resource scenario
 export async function attemptMissingResourceOperation() {
   const { ctx } = await createUser();
   
-  // Fixture tries to operate on non-existent profile
+  // Fixture tries to operate on a non-existent finding
   return {
-    promise: call(appRouter.user.deleteProfile, null, ctx()),
+    promise: call(appRouter.findings.deleteFinding, { findingId: crypto.randomUUID() }, ctx()),
   };
 }
 
@@ -351,43 +345,39 @@ it('should reject operations on missing resources', async () => {
 Use specialized fixtures to encapsulate complex setup:
 
 ```typescript
-// Fixture that creates user with all achievements via API
-export async function createUserWithAllAchievements() {
+// Fixture that creates a review with findings in every severity via API
+export async function createReviewWithAllSeverities() {
   const user = await createUser();
+  const review = await call(appRouter.reviews.createReview, { title: 'PR 42' }, user.ctx());
   
-  // Fixture grants achievements via endpoints
-  // await Promise.all(
-  //   ACHIEVEMENT_IDS.map(id =>
-  //     call(appRouter.achievements.grant, { achievementId: id }, user.ctx())
-  //   )
-  // );
+  // Fixture creates one finding per severity via endpoints
+  // (findingSeveritiesEnumwaii is a hypothetical Enumwaii declared in the findings feature)
+  await Promise.all(
+    findingSeveritiesEnumwaii.values.map((severity) =>
+      call(appRouter.findings.createFinding, { reviewId: review.id, title: severity, severity }, user.ctx())
+    )
+  );
   
-  return user;
+  return { ...user, review };
 }
 
-describe('Badge System with Achievements', () => {
-  it('should allow badge selection when user has achievements', async () => {
-    // Fixture creates user with all achievements
-    const { ctx } = await createUserWithAllAchievements();
+describe('Review Summary', () => {
+  it('should count findings per severity', async () => {
+    // Fixture creates a review with every severity
+    const { ctx, review } = await createReviewWithAllSeverities();
     
-    // Test verifies user can select badge (verification happens in assertion below)
-    const result = { selectedBadge: 'BETA_TESTER' }; // Would come from actual call
-    expect(result.selectedBadge).toBe('BETA_TESTER');
+    const summary = await call(appRouter.reviews.getReviewSummary, { reviewId: review.id }, ctx());
+    expect(summary.totalFindings).toBe(findingSeveritiesEnumwaii.values.length);
   });
 
-  it('should restrict badge selection without achievements', async () => {
-    // Fixture creates basic user without achievements
+  it('should reject summary for a review the user cannot access', async () => {
+    const { review } = await createReviewWithAllSeverities();
+    // Basic user without access to that review
     const { ctx } = await createUser();
     
-    // Test verifies rejection - fixture would encapsulate this call
-    // In real implementation, fixture would attempt the call and we'd verify it rejects
-    const testScenario = async () => {
-      // Fixture would make this call
-      // return await call(appRouter.user.updateUserBadge, { badgeId: 'BETA_TESTER' }, ctx());
-      throw new Error('You do not have the required achievement');
-    };
-    
-    await expect(testScenario()).rejects.toThrow('You do not have the required achievement');
+    await expect(
+      call(appRouter.reviews.getReviewSummary, { reviewId: review.id }, ctx())
+    ).rejects.toThrow();
   });
 });
 ```
@@ -421,25 +411,24 @@ test/integration/<feature-name>.test.ts
 ```
 
 Examples:
-- `auth.test.ts`
-- `user-profile.test.ts`
-- `achievements.test.ts`
-- `badges.test.ts`
+- `auth.test.ts` (exists)
+- `index.test.ts` (exists)
+- `findings.test.ts` (hypothetical feature)
 
 ### Describe Blocks
 
 Organize by feature and then by procedure:
 
 ```typescript
-describe('User Profile API', () => {
-  describe('getUserProfile', () => {
-    it('should auto-create user profile', async () => {});
-    it('should fail if profile does not exist', async () => {});
+describe('Findings API', () => {
+  describe('getFinding', () => {
+    it('should return the finding for its owner', async () => {});
+    it('should fail with FINDING_NOT_FOUND if the finding does not exist', async () => {});
   });
 
-  describe('updateUserProfile', () => {
-    it('should update user profile', async () => {});
-    it('should validate bio max length', async () => {});
+  describe('updateFinding', () => {
+    it('should update the finding', async () => {});
+    it('should validate summary max length', async () => {});
   });
 });
 ```

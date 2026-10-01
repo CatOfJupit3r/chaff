@@ -3,7 +3,7 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import type { Type } from 'typescript';
 
 const createRule = ESLintUtils.RuleCreator(
-  (ruleName) => `https://github.com/startername/startername/tree/main/packages/enumwaii#${ruleName}`,
+  (ruleName) => `https://github.com/CatOfJupit3r/chaff/tree/main/packages/enumwaii#${ruleName}`,
 );
 
 const COMPARISON_OPERATORS = new Set(['==', '===', '!=', '!==']);

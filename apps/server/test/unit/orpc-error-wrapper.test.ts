@@ -1,7 +1,7 @@
 import { ORPCError } from '@orpc/server';
 import { describe, expect, it } from 'vitest';
 
-import { errorCodes } from '@startername/common/enums/errors.enums';
+import { errorCodes } from '@chaff/common/enums/errors.enums';
 
 import {
   ORPCBadRequestError,
@@ -17,10 +17,10 @@ import {
 describe('ORPC error wrapper', () => {
   it('creates a typed error with safe payload and metadata', () => {
     const error = ORPCBadRequestError(
-      errorCodes.BADGE_NOT_FOUND,
-      { field: 'badgeId' },
+      errorCodes.USER_NOT_FOUND,
+      { field: 'userId' },
       {
-        operation: 'user.updateBadge',
+        operation: 'user.find',
         context: { source: 'test' },
       },
     );
@@ -28,12 +28,12 @@ describe('ORPC error wrapper', () => {
     expect(error).toBeInstanceOf(ORPCError);
     expect(error.code).toBe('BAD_REQUEST');
     expect(error.data).toMatchObject({
-      code: errorCodes.BADGE_NOT_FOUND,
-      field: 'badgeId',
+      code: errorCodes.USER_NOT_FOUND,
+      field: 'userId',
     });
     expect(getORPCErrorMetadata(error)).toEqual({
       kind: ORPC_ERROR_KINDS.INFO,
-      operation: 'user.updateBadge',
+      operation: 'user.find',
       context: { source: 'test' },
     });
     expect(shouldLogORPCError(error)).toBe(false);
@@ -72,7 +72,7 @@ describe('ORPC error wrapper', () => {
   });
 
   it('preserves an existing expected ORPC error', async () => {
-    const expected = ORPCNotFoundError(errorCodes.USER_PROFILE_NOT_FOUND);
+    const expected = ORPCNotFoundError(errorCodes.USER_NOT_FOUND);
 
     await expect(handleUnexpectedError(() => Promise.reject(expected))).rejects.toBe(expected);
   });

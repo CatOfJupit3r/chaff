@@ -317,12 +317,12 @@ mutationOptions({
 
 ❌ **Don't create manual keys:**
 ```typescript
-const key = ['user', 'profile', userId]; // WRONG
+const key = ['findings', 'detail', findingId]; // WRONG
 ```
 
 ✅ **Do use generated keys:**
 ```typescript
-const key = tanstackRPC.user.getUserProfile.queryKey({ input: { userId } }); // CORRECT
+const key = tanstackRPC.findings.getFinding.queryKey({ input: { findingId } }); // CORRECT
 ```
 
 ❌ **Don't inline options:**

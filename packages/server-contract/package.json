@@ -1,5 +1,5 @@
 {
-  "name": "@startername/server-contract",
+  "name": "@chaff/server-contract",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -24,12 +24,12 @@
     "test": "echo 'No tests for server contract library yet'",
     "prepare": "tsdown"
   },
-  "prettier": "@startername/prettier-config",
+  "prettier": "@chaff/prettier-config",
   "devDependencies": {
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "@startername/eslint-config": "workspace:*",
-    "@startername/prettier-config": "workspace:*",
+    "@chaff/eslint-config": "workspace:*",
+    "@chaff/prettier-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "tsdown": "catalog:",
@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@orpc/contract": "catalog:",
-    "@startername/common": "workspace:*",
+    "@chaff/common": "workspace:*",
     "zod": "catalog:"
   }
 }

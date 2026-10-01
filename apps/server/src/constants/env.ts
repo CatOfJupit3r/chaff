@@ -34,14 +34,7 @@ const envSchema = z.object({
   AUTH_COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).optional().default('lax'),
 
   // DB CONFIG
-  POSTGRES_URL: z.string().optional().default('postgresql://postgres:postgres@localhost:5432/startername'),
-
-  // VALKEY / REDIS CONFIG
-  VALKEY_HOST: z.string().optional().default('localhost'),
-  VALKEY_PORT: z.coerce.number().optional().default(6379),
-  VALKEY_USERNAME: z.string().optional(),
-  VALKEY_PASSWORD: z.string().optional(),
-  VALKEY_DB: z.coerce.number().int().optional().default(0),
+  POSTGRES_URL: z.string().optional().default('postgresql://postgres:postgres@localhost:5432/chaff'),
 
   // SERVER CONFIG
   SERVER_PORT: z.coerce.number().int().min(1).max(65535).optional().default(5050),

@@ -1,4 +1,4 @@
-# @startername/enumwaii
+# @chaff/enumwaii
 
 Enum library for this starter. Goal: make magic strings impossible to sneak past the compiler, and make invalid values crash at runtime boundaries, while staying trivially serializable.
 
@@ -7,7 +7,7 @@ See [docs/reference/enumwaii-guide.md](../../docs/reference/enumwaii-guide.md) f
 ## Shape
 
 ```ts
-import { Enumwaii, type InferEnumwaii } from '@startername/enumwaii/enumwaii';
+import { Enumwaii, type InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
 const userRolesEnumwaii = new Enumwaii('UserRole', ['ADMIN', 'USER', 'GUEST']);
 
@@ -67,7 +67,7 @@ Type-aware rule that closes the `role === 'ADMIN'` hole. It flags `==`/`===`/`!=
 Wire it into a flat config (requires type-aware linting, i.e. `projectService`):
 
 ```js
-import { noRawEnumComparisonRule } from '@startername/enumwaii/eslint-rules/no-raw-enum-comparison';
+import { noRawEnumComparisonRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-comparison';
 
 export default [
   {

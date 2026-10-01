@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "prettier": "@startername/prettier-config",
+  "prettier": "@chaff/prettier-config",
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@dnd-kit/core": "6.3.1",
@@ -23,9 +23,9 @@
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/tanstack-query": "catalog:",
-    "@startername/common": "workspace:*",
-    "@startername/enumwaii": "workspace:*",
-    "@startername/server-contract": "workspace:*",
+    "@chaff/common": "workspace:*",
+    "@chaff/enumwaii": "workspace:*",
+    "@chaff/server-contract": "workspace:*",
     "@tailwindcss/vite": "4.3.2",
     "@tanstack/devtools-vite": "0.8.1",
     "@tanstack/pacer": "0.21.1",
@@ -40,7 +40,6 @@
     "@tanstack/react-router-ssr-query": "1.167.1",
     "@tanstack/react-start": "1.168.27",
     "@uidotdev/usehooks": "2.4.1",
-    "axios": "1.18.1",
     "better-auth": "catalog:",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -59,8 +58,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@startername/eslint-config": "workspace:*",
-    "@startername/prettier-config": "workspace:*",
+    "@chaff/eslint-config": "workspace:*",
+    "@chaff/prettier-config": "workspace:*",
     "@tanstack/router-plugin": "1.168.19",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

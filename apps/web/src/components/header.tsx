@@ -7,7 +7,7 @@ import { ModeToggle } from './mode-toggle';
 import { Logo } from './ui/logo';
 import UserMenu from './user-menu';
 
-const HEADER_LINKS = [{ to: '/dashboard', label: 'Dashboard', authRequired: true, icon: LuHouse }] as const;
+const HEADER_LINKS = [{ to: '/dashboard', label: 'Reviews', authRequired: true, icon: LuHouse }] as const;
 
 export default function Header() {
   const { isLoggedIn } = useMe();
@@ -19,7 +19,7 @@ export default function Header() {
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2 text-lg font-semibold transition-opacity hover:opacity-80">
             <Logo className="size-6 text-primary" />
-            <span className="hidden sm:inline-block">startername</span>
+            <span className="hidden sm:inline-block">Chaff</span>
           </Link>
         </div>
 

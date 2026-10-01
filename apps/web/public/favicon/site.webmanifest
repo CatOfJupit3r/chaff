@@ -1,6 +1,6 @@
 {
-  "name": "startername",
-  "short_name": "startername",
+  "name": "Chaff",
+  "short_name": "Chaff",
   "icons": [
     {
       "src": "/favicon/web-app-manifest-192x192.png",
@@ -16,6 +16,6 @@
     }
   ],
   "theme_color": "#000000",
-  "background_color": "#ffffff",
+  "background_color": "#000000",
   "display": "standalone"
 }

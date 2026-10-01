@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { tryCatch } from '@startername/common/helpers/error-handling.helper';
+import { tryCatch } from '@chaff/common/helpers/error-handling.helper';
 
 describe('error-handling helpers', () => {
   it('returns synchronous data or error without throwing', () => {
