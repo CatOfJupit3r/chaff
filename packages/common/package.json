@@ -1,5 +1,5 @@
 {
-  "name": "@startername/common",
+  "name": "@chaff/common",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -32,12 +32,12 @@
     "test": "echo 'No tests for common library yet'",
     "prepare": "tsdown"
   },
-  "prettier": "@startername/prettier-config",
+  "prettier": "@chaff/prettier-config",
   "devDependencies": {
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "@startername/eslint-config": "workspace:*",
-    "@startername/prettier-config": "workspace:*",
+    "@chaff/eslint-config": "workspace:*",
+    "@chaff/prettier-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "tsdown": "catalog:",
@@ -47,7 +47,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@startername/enumwaii": "workspace:*",
+    "@chaff/enumwaii": "workspace:*",
     "zod": "catalog:"
   }
 }

@@ -2,7 +2,7 @@ import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 import type { TSESTree } from '@typescript-eslint/utils';
 
 const createRule = ESLintUtils.RuleCreator(
-  (ruleName) => `https://github.com/startername/startername/tree/main/packages/enumwaii#${ruleName}`,
+  (ruleName) => `https://github.com/CatOfJupit3r/chaff/tree/main/packages/enumwaii#${ruleName}`,
 );
 
 const isRawStringNode = (node: TSESTree.Node): boolean =>

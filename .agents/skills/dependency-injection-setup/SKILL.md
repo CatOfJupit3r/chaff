@@ -61,9 +61,10 @@ export const myHandler = async (input, context) => {
 For service-to-service dependencies, inject via constructor:
 
 ```typescript
-import { singleton } from 'tsyringe';
+import { inject, singleton } from 'tsyringe';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
-import { UserService } from '@~/features/user/user.service';
+import { AUTH_USER_REPOSITORY_TOKEN } from '@~/di/tokens';
+import type { iAuthUserRepository } from '@~/features/auth/auth-user.repository';
 
 @singleton()
 export class NotificationService {
@@ -71,13 +72,13 @@ export class NotificationService {
 
   constructor(
     loggerFactory: LoggerFactory,
-    private readonly userService: UserService,
+    @inject(AUTH_USER_REPOSITORY_TOKEN) private readonly authUserRepository: iAuthUserRepository,
   ) {
     this.logger = loggerFactory.create('notification-service');
   }
 
   public async notifyUser(userId: string, message: string) {
-    const user = await this.userService.findById(userId);
+    const user = await this.authUserRepository.findUserById(userId);
     if (!user) {
       this.logger.warn('User not found', { userId });
       return;

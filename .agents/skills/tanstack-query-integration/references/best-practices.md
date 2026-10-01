@@ -37,10 +37,10 @@ Export return types so mutations can type-check cache updates:
 ```typescript
 import type { ORPCOutputs } from "@~/utils/orpc";
 
-export type UserProfileQueryReturnType = ORPCOutputs["user"]["getUserProfile"];
+export type FindingQueryReturnType = ORPCOutputs["findings"]["getFinding"];
 
 // Later in mutation
-ctx.client.setQueryData<UserProfileQueryReturnType>(key, newData);
+ctx.client.setQueryData<FindingQueryReturnType>(key, newData);
 ```
 
 **Benefits:**
@@ -61,27 +61,27 @@ Never inline query options. Export them for:
 
 ```typescript
 // Export query options
-export const USER_PROFILE_QUERY_OPTIONS = (userId: string) =>
-    tanstackRPC.user.getUserProfile.queryOptions({
-        input: { userId },
+export const FINDING_QUERY_OPTIONS = (findingId: string) =>
+    tanstackRPC.findings.getFinding.queryOptions({
+        input: { findingId },
     });
 
-export const USER_PROFILE_QUERY_KEY = (userId: string) =>
-    tanstackRPC.user.getUserProfile.queryKey({
-        input: { userId },
+export const FINDING_QUERY_KEY = (findingId: string) =>
+    tanstackRPC.findings.getFinding.queryKey({
+        input: { findingId },
     });
 
 // Use in hook
-export function useUserProfile(userId: string) {
-    return useQuery(USER_PROFILE_QUERY_OPTIONS(userId));
+export function useFinding(findingId: string) {
+    return useQuery(FINDING_QUERY_OPTIONS(findingId));
 }
 
 // Use in loader
-await context.queryClient.ensureQueryData(USER_PROFILE_QUERY_OPTIONS(userId));
+await context.queryClient.ensureQueryData(FINDING_QUERY_OPTIONS(findingId));
 
 // Use in mutation
 void ctx.client.invalidateQueries({
-    queryKey: USER_PROFILE_QUERY_KEY(userId),
+    queryKey: FINDING_QUERY_KEY(findingId),
 });
 ```
 
@@ -92,13 +92,13 @@ void ctx.client.invalidateQueries({
 ❌ **Don't**: Create query keys manually
 
 ```typescript
-const key = ["user", "profile", userId]; // WRONG
+const key = ["findings", "detail", findingId]; // WRONG
 ```
 
 ✅ **Do**: Use generated keys from tanstackRPC
 
 ```typescript
-const key = tanstackRPC.user.getUserProfile.queryKey({ input: { userId } }); // CORRECT
+const key = tanstackRPC.findings.getFinding.queryKey({ input: { findingId } }); // CORRECT
 ```
 
 **Why:** Guarantees consistency with server contracts. Manual keys lead to mismatches.
@@ -203,20 +203,20 @@ Use route loaders to eliminate loading states:
 
 ```tsx
 // In route
-export const Route = createFileRoute("/profile/$userId")({
+export const Route = createFileRoute("/findings/$findingId")({
     async loader({ context, params }) {
         await context.queryClient.ensureQueryData(
-            userProfileQueryOptions(params.userId),
+            FINDING_QUERY_OPTIONS(params.findingId),
         );
     },
-    component: ProfilePage,
+    component: FindingPage,
 });
 
 // Component renders instantly with cached data
-function ProfilePage() {
-    const { userId } = Route.useParams();
-    const { data } = useUserProfile(userId); // Already cached!
-    return <div>{data.name}</div>;
+function FindingPage() {
+    const { findingId } = Route.useParams();
+    const { data } = useFinding(findingId); // Already cached!
+    return <div>{data.title}</div>;
 }
 ```
 
@@ -230,34 +230,34 @@ Use the generated types from contracts:
 import type { ORPCInputs, ORPCOutputs } from "@~/utils/orpc";
 
 // Input types
-type GetUserInput = ORPCInputs["user"]["getUserProfile"];
+type GetFindingInput = ORPCInputs["findings"]["getFinding"];
 
 // Output types
-type GetUserOutput = ORPCOutputs["user"]["getUserProfile"];
+type GetFindingOutput = ORPCOutputs["findings"]["getFinding"];
 
 // In hooks
-export const userQueryOptions = (input: GetUserInput) =>
-    tanstackRPC.user.getUserProfile.queryOptions({ input });
+export const findingQueryOptions = (input: GetFindingInput) =>
+    tanstackRPC.findings.getFinding.queryOptions({ input });
 ```
 
 ## 10. Define query options, mutation options and keys as CONSTANT_CASE functions
 
 ```typescript
 // Query options
-export const USER_PROFILE_QUERY_OPTIONS = (userId: string) =>
-    tanstackRPC.user.getUserProfile.queryOptions({
-        input: { userId },
+export const FINDING_QUERY_OPTIONS = (findingId: string) =>
+    tanstackRPC.findings.getFinding.queryOptions({
+        input: { findingId },
     });
 
 // Query key
-export const USER_PROFILE_QUERY_KEY = (userId: string) =>
-    tanstackRPC.user.getUserProfile.queryKey({
-        input: { userId },
+export const FINDING_QUERY_KEY = (findingId: string) =>
+    tanstackRPC.findings.getFinding.queryKey({
+        input: { findingId },
     });
 
 // Mutation options
-export const UPDATE_USER_PROFILE_MUTATION_OPTIONS = (userId: string) =>
-    tanstackRPC.user.updateUserProfile.mutationOptions({
-        input: { userId },
+export const UPDATE_FINDING_MUTATION_OPTIONS = (findingId: string) =>
+    tanstackRPC.findings.updateFinding.mutationOptions({
+        input: { findingId },
     });
 ```

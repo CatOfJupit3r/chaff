@@ -1,9 +1,9 @@
 {
-  "name": "@startername/prettier-config",
+  "name": "@chaff/prettier-config",
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "description": "Shared Prettier configuration for startername monorepo",
+  "description": "Shared Prettier configuration for chaff monorepo",
   "main": "./prettier.config.mjs",
   "exports": {
     ".": "./prettier.config.mjs"

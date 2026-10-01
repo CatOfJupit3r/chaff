@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { LuUser, LuSettings, LuLogOut } from 'react-icons/lu';
+import { LuLogOut } from 'react-icons/lu';
 
 import {
   DropdownMenu,
@@ -54,15 +54,6 @@ export default function UserMenu() {
           <DropdownMenuItem disabled className="text-xs text-muted-foreground">
             {user.email}
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem render={<Link to="/profile" className="flex w-full cursor-pointer items-center gap-2" />}>
-            <LuUser className="size-4" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem render={<Link to="/settings" className="flex w-full cursor-pointer items-center gap-2" />}>
-            <LuSettings className="size-4" />
-            Settings
-          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -70,7 +61,7 @@ export default function UserMenu() {
             <Link
               to="/auth"
               search={{ redirect: location.pathname }}
-              className="flex w-full cursor-pointer items-center gap-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+              className="flex w-full cursor-pointer items-center gap-2 text-destructive hover:text-destructive/80"
               onClick={handleSignOut}
             />
           }

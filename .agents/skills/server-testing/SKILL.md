@@ -11,7 +11,7 @@ Write comprehensive tests for the server using Vitest with a focus on integratio
 
 1. **Prefer Integration Tests**: Test features end-to-end through routers and services
 2. **Unit Tests for Utilities Only**: Reserve unit tests for pure functions and helpers
-3. **Use Specialized Fixtures**: Always create and reuse domain-specific fixtures for test setup. Instead of calling endpoints directly (which couples tests to API contracts), build fixtures like `createUser()`, `createUserWithAchievements()`, etc. This makes tests more maintainable and intent-clear
+3. **Use Specialized Fixtures**: Always create and reuse domain-specific fixtures for test setup. Instead of calling endpoints directly (which couples tests to API contracts), build fixtures like `createUser()` (in `test/integration/utilities.ts`) and feature-specific ones such as a hypothetical `createUserWithFindings()`. This makes tests more maintainable and intent-clear
 4. **Clean Database Between Tests**: Automatic cleanup ensures test isolation
 5. **Type-Safe Testing**: Use oRPC's `call()` for invoking routers with full type safety
 
@@ -46,10 +46,10 @@ All commands should be run from `apps/server/` or the monorepo root.
 apps/server/test/
 ├── integration/           # Integration tests (preferred)
 │   ├── auth.test.ts
-│   ├── user-profile.test.ts
-│   ├── achievements.test.ts
-│   └── utilities.ts      # Shared test helpers
+│   ├── index.test.ts
+│   └── utilities.ts      # Shared test helpers (createUser, createRandomUser)
 ├── unit/                 # Unit tests (utilities only)
+│   ├── event-bus.test.ts
 │   └── matchers.test.ts
 └── helpers/              # Test setup and configuration
     ├── setup.ts          # Database and environment setup
@@ -88,7 +88,8 @@ import { call } from '@orpc/server';
 import { describe, it, expect } from 'vitest';
 
 import { appRouter } from '../helpers/instance';
-import { createUser, createUserWithAchievements } from './utilities';
+import { createUser } from './utilities';
+import { createUserWithFindings } from './findings.fixtures'; // hypothetical feature fixture
 
 describe('Feature Name', () => {
   it('should perform action successfully', async () => {
@@ -107,9 +108,9 @@ describe('Feature Name', () => {
     expect(result.someField).toBe('expected value');
   });
 
-  it('should handle users with achievements', async () => {
+  it('should handle users with existing findings', async () => {
     // Use specialized fixture for specific test scenario
-    const { ctx, user } = await createUserWithAchievements(['ACHIEVEMENT_1']);
+    const { ctx, user } = await createUserWithFindings(3);
 
     const result = await call(
       appRouter.feature.restrictedAction,
@@ -131,7 +132,7 @@ describe('Feature Name', () => {
 });
 ```
 
-**Key Pattern**: Create specialized fixtures (`createUser`, `createUserWithAchievements`, etc.) instead of calling endpoints directly. This keeps tests:
+**Key Pattern**: Create specialized fixtures (`createUser`, `createUserWithFindings`, etc.) instead of calling endpoints directly. This keeps tests:
 - Focused on what's being tested
 - Independent from API implementation details
 - Easier to maintain when fixtures change

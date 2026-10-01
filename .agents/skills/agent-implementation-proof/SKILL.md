@@ -87,7 +87,7 @@ Prefer narrow commands first:
 ```bash
 pnpm --filter=web run check-types
 pnpm --filter=server run check-types
-pnpm --filter=@startername/shared run check-types
+pnpm --filter=@chaff/shared run check-types
 ```
 
 Then broaden only when the change crosses packages:

@@ -18,6 +18,6 @@ export default defineConfig({
   schema: './src/db/schema/*.ts',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.POSTGRES_URL ?? 'postgresql://postgres:postgres@localhost:5432/startername',
+    url: process.env.POSTGRES_URL ?? 'postgresql://postgres:postgres@localhost:5432/chaff',
   },
 });

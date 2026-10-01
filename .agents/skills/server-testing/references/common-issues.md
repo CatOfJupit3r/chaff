@@ -160,21 +160,21 @@ export function getServiceInstance() {
 **Before** (circular dependency):
 
 ```typescript
-// user.service.ts
-import { AchievementService } from './achievement.service';
+// reviews.service.ts (hypothetical)
+import { FindingsService } from './findings.service';
 
-export class UserService {
-  async createUser() {
-    // uses AchievementService
+export class ReviewsService {
+  async createReview() {
+    // uses FindingsService
   }
 }
 
-// achievement.service.ts
-import { UserService } from './user.service';  // Circular!
+// findings.service.ts
+import { ReviewsService } from './reviews.service';  // Circular!
 
-export class AchievementService {
-  async grantAchievement() {
-    // uses UserService
+export class FindingsService {
+  async createFinding() {
+    // uses ReviewsService
   }
 }
 ```
@@ -182,29 +182,31 @@ export class AchievementService {
 **After** (fixed with DI):
 
 ```typescript
-// user.service.ts
+// reviews.service.ts
 import { injectable, inject } from 'tsyringe';
-import { TOKENS } from './tokens';
+import { FINDINGS_SERVICE_TOKEN } from '@~/di/tokens';
+import type { iFindingsService } from './findings.service.types';
 
 @injectable()
-export class UserService {
+export class ReviewsService {
   constructor(
-    @inject(TOKENS.AchievementService)
-    private achievementService: IAchievementService
+    @inject(FINDINGS_SERVICE_TOKEN)
+    private findingsService: iFindingsService
   ) {}
 
-  async createUser() {
-    // uses this.achievementService
+  async createReview() {
+    // uses this.findingsService
   }
 }
 
-// achievement.service.ts
+// findings.service.ts
 import { injectable } from 'tsyringe';
+import type { iFindingsService } from './findings.service.types';
 
 @injectable()
-export class AchievementService implements IAchievementService {
-  async grantAchievement() {
-    // no direct import of UserService
+export class FindingsService implements iFindingsService {
+  async createFinding() {
+    // no direct import of ReviewsService
   }
 }
 ```
@@ -387,16 +389,16 @@ declare module 'vitest' {
 ```typescript
 // ❌ BAD: Wrong context structure
 const result = await call(
-  appRouter.user.getProfile,
-  null,
+  appRouter.index.healthCheck,
+  undefined,
   { session: { user } }  // Incorrect structure!
 );
 
 // ✅ GOOD: Use ctx() from createUser
 const { ctx } = await createUser();
 const result = await call(
-  appRouter.user.getProfile,
-  null,
+  appRouter.index.healthCheck,
+  undefined,
   ctx()  // Correct structure
 );
 ```

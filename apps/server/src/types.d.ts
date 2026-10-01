@@ -1,3 +1,3 @@
-/// <reference types="@startername/common/globals" />
+/// <reference types="@chaff/common/globals" />
 
 export {};

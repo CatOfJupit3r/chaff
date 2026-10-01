@@ -1,44 +1,31 @@
-# Ultimate Starter
+# Chaff
 
-This starter is designed for me by me with all the shiny new things! (as of now)
+Chaff is a self-hosted, stack-aware review workspace for AI-written changes. It loads GitLab merge requests (including stacks of MRs that build on each other), lets you review them one change, function, or line range at a time, captures concerns in a keystroke, and brings you back only to what changed after the agent pushes fixes.
 
-To finish setup, run `Replace All` to replace `startername` with name of your project.
-Also, make sure to customize `AGENTS.md` with a description of your project
-so that agentic tools work efficiently.
+Chaff runs as a server you host (Docker) and open in a browser. The UI is themeable and ships with light and dark modes.
 
 ## Agentic Tooling
 
-Both GitHub Copilot and Claude Code (or any AGENTS.md-aware agent) read from the same skill library under `.agents/skills/*/SKILL.md`:
+Claude Code and any other AGENTS.md-aware agent read from the same skill library under `.agents/skills/*/SKILL.md`:
 
-- `.github/copilot-instructions.md` and `.github/agents/*.md` (Copilot custom agents) point into `.agents/skills/`.
-- `AGENTS.md` (with `CLAUDE.md` symlinked to it) is the always-on guide for Claude Code and other AGENTS.md-aware tools, and points into the same `.agents/skills/` directory.
+- `AGENTS.md` (with `CLAUDE.md` symlinked to it) is the always-on guide and points into `.agents/skills/`.
 - `.claude/settings.json` configures default tool permissions for Claude Code.
-
-Update `.agents/skills/` once and both flows pick up the change.
-
-## Project Overview
-
-- **Contract-first development.** API endpoints start as shared `zod` schemas in `packages/server-contract`, ensuring server and client stay type-safe.
-- **Real-time challenge lifecycle.** Hono-based routes expose public and authenticated procedures, backed by PostgreSQL via Drizzle ORM.
-- **Typed React client.** The web app consumes the generated oRPC client, TanStack Router, and Query utilities for fully typed data interactions.
-- **Developer-focused tooling.** Node.js 24, pnpm workspaces, and Husky hooks enable quick local feedback loops and consistent commits.
 
 ## Tech Stack
 
 - **Runtime & Tooling:** Node.js 24, pnpm workspaces, Commitizen, Husky
-- **Backend:** TypeScript, Hono, oRPC, Drizzle ORM/PostgreSQL, Better Auth, Zod, Vitest
-- **Frontend:** React 19, Vite, TanStack Stack/Query/Form, Tailwind CSS, Vitest
-- **Server Contracts:** `@startername/server-contract` with oRPC + OpenAPI generation
+- **Backend:** TypeScript, Hono, oRPC, Drizzle ORM/PostgreSQL, Better Auth, tsyringe, Zod, Vitest
+- **Frontend:** React 19, Vite, TanStack Start/Router/Query/Form, Base UI, Tailwind CSS (theme tokens only), Vitest
+- **Shared:** `@chaff/server-contract` (oRPC contracts + OpenAPI), `@chaff/common` (shared helpers and enums), `@chaff/enumwaii` (typed closed string sets + ESLint rules)
 
 ## Repository Structure
 
-- `apps/server` – Node.js + Hono API, oRPC routers, Drizzle schema, Better Auth setup
-- `apps/web` – React 19 client, TanStack Router tree, authentication flows, Tailwind config
-- `packages/server-contract` – API contract definitions and schema exports
-- `packages/common` – Shared utilities, types, constants, and helpers
-- `docs` – Product requirements, roadmap, risk registers, and supporting documentation
-- `postgres-data` – Docker-managed PostgreSQL volume (keep uncommitted)
-- `tsconfig*.json` – TypeScript project references
+- `apps/server` - Hono API, oRPC routers, Drizzle schema, Better Auth setup
+- `apps/web` - React 19 client, TanStack Router tree, auth flows, theme tokens in `src/index.css`
+- `packages/server-contract` - API contract definitions and schema exports
+- `packages/common` - shared utilities, types, constants, and helpers
+- `packages/enumwaii` - enum helper library and its ESLint rules
+- `configs/*` - shared ESLint and Prettier configs
 
 ## Prerequisites
 
@@ -75,8 +62,8 @@ npm install -g pnpm@11.5.0
 ## Getting Started
 
 ```bash
-git clone https://github.com/CatOfJupit3r/startername.git
-cd startername
+git clone https://github.com/CatOfJupit3r/chaff.git
+cd chaff
 pnpm install
 ```
 
@@ -124,4 +111,5 @@ pnpm install
 - Keep `pnpm run dev` active regularly to keep local PostgreSQL available.
 - Avoid rebasing on `main`; prefer merging.
 - Use the shared contract utilities (`tanstackRPC` helpers, shared schemas) instead of duplicating types or query keys.
-- When extending the API, register new routes in `apps/server/src/routers/index.ts` and add error codes to `apps/server/src/enums/errors.ts`.
+- When extending the API, register new routers in `apps/server/src/routers/app-router.ts` and add error codes to `packages/common/src/enums/errors.enums.ts`.
+- Use theme token classes for every color (`bg-background`, `text-destructive`, ...); raw Tailwind palette colors fail lint.

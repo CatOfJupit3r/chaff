@@ -1,82 +1,75 @@
 // Example: Complete Integration Test with Fixtures (Fixture-First Approach)
-// Location: apps/server/test/integration/user-profile.test.ts
+// Location: apps/server/test/integration/findings.test.ts
+// (hypothetical `findings` feature; see test/integration/auth.test.ts for a real test)
 //
 // KEY PRINCIPLE: Tests use fixtures, fixtures call endpoints.
 // This keeps tests clean and focused on behavior verification.
 
 import { describe, it, expect } from 'vitest';
 
+import { createUser } from './utilities';
 import {
-  createUser,
-  createUserWithProfile,
-  createUserWithBio,
-  createUserWithMaxBio,
-} from './utilities';
+  createUserWithFinding,
+  createUserWithFindingSummary,
+  createUserWithMaxSummary,
+} from './findings.fixtures';
 
-describe('User Profile API', () => {
-  describe('getUserProfile', () => {
-    it('should auto-create user profile on first access', async () => {
-      // Fixture handles all setup and profile creation
-      const { profile } = await createUserWithProfile();
+describe('Findings API', () => {
+  describe('createFinding', () => {
+    it('should create a finding owned by the caller', async () => {
+      // Fixture handles all setup and finding creation
+      const { user, finding } = await createUserWithFinding();
 
       // Test just verifies the behavior
-      expect(profile).not.toBeNil();
-      expect(profile.bio).toBe('');
-      expect(profile.userId).toBeDefined();
-      expect(profile._id).toBeDefined();
+      expect(finding).not.toBeNil();
+      expect(finding.summary).toBe('');
+      expect(finding.ownerId).toBe(user.id);
+      expect(finding.id).toBeDefined();
     });
 
-    it('should return profile consistently on multiple accesses', async () => {
-      // Fixture ensures profile exists
-      const { profile: firstProfile } = await createUserWithProfile();
+    it('should create distinct findings on repeated calls', async () => {
+      const { finding: firstFinding } = await createUserWithFinding();
+      const { finding: secondFinding } = await createUserWithFinding();
 
-      // Another fixture call verifies consistency
-      const { profile: secondProfile } = await createUserWithProfile();
-
-      expect(secondProfile._id).toBe(firstProfile._id);
+      expect(secondFinding.id).not.toBe(firstFinding.id);
     });
   });
 
-  describe('updateUserProfile', () => {
-    it('should update user bio', async () => {
-      // Fixture handles user creation AND bio update
-      const { user, profile } = await createUserWithBio('This is my new bio');
+  describe('updateFinding', () => {
+    it('should update finding summary', async () => {
+      // Fixture handles user creation AND summary update
+      const { user, finding } = await createUserWithFindingSummary('Unused export in auth module');
 
       // Test verifies the result
-      expect(profile.bio).toBe('This is my new bio');
-      expect(profile.userId).toBe(user.id);
+      expect(finding.summary).toBe('Unused export in auth module');
+      expect(finding.ownerId).toBe(user.id);
     });
 
-    it('should validate bio max length (500 chars)', async () => {
-      const { ctx } = await createUser();
-      const longBio = 'a'.repeat(501);
+    it('should validate summary max length (500 chars)', async () => {
+      const longSummary = 'a'.repeat(501);
 
       // Test validates error behavior
       // Note: The validation error is tested at the endpoint boundary
       // Fixture prevents invalid data from being created
       await expect(
-        createUserWithBio(longBio)
+        createUserWithFindingSummary(longSummary)
       ).rejects.toThrow();
     });
 
-    it('should allow bio with exactly 500 chars', async () => {
-      const maxBio = 'a'.repeat(500);
+    it('should allow summary with exactly 500 chars', async () => {
+      const maxSummary = 'a'.repeat(500);
 
-      // Fixture handles maximum-length bio creation
-      const { profile } = await createUserWithMaxBio(maxBio);
+      // Fixture handles maximum-length summary creation
+      const { finding } = await createUserWithMaxSummary(maxSummary);
 
-      expect(profile.bio).toBe(maxBio);
-      expect(profile.bio.length).toBe(500);
+      expect(finding.summary).toBe(maxSummary);
+      expect(finding.summary.length).toBe(500);
     });
 
-    it('should preserve user identity across profile updates', async () => {
-      // Create user with first bio
-      const { user: user1 } = await createUserWithBio('First bio');
+    it('should keep findings of different users independent', async () => {
+      const { user: user1 } = await createUserWithFindingSummary('First summary');
+      const { user: user2 } = await createUserWithFindingSummary('Second summary');
 
-      // Create another user with different bio
-      const { user: user2 } = await createUserWithBio('Second bio');
-
-      // Test verifies they're independent
       expect(user1.id).not.toBe(user2.id);
     });
   });

@@ -12,8 +12,8 @@
     "rootDirs": ["."],
     "paths": {
       "@~/*": ["./src/*"],
-      "@startername/common/*": ["../../packages/common/src/*"],
-      "@startername/server-contract/*": ["../../packages/server-contract/src/*"]
+      "@chaff/common/*": ["../../packages/common/src/*"],
+      "@chaff/server-contract/*": ["../../packages/server-contract/src/*"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

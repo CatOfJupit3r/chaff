@@ -12,7 +12,6 @@ import Header from '@~/components/header';
 import { getInitialThemeClass, getStoredTheme } from '@~/components/themes/helpers';
 import { ThemeProvider } from '@~/components/themes/theme-provider';
 import ToasterContainer from '@~/components/toastifications/toaster-container';
-import { DevImpersonatePanel } from '@~/features/dev-tools/components/dev-impersonate-panel';
 import { meQueryOptions } from '@~/features/user/hooks/use-me';
 import { seo } from '@~/utils/seo';
 import type { tanstackRPC } from '@~/utils/tanstack-orpc';
@@ -41,8 +40,8 @@ export const Route = createRootRouteWithContext<iRouterAppContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       ...seo({
-        title: 'startername',
-        description: 'startername is a web application',
+        title: 'Chaff',
+        description: 'Stack-aware review workspace for AI-written merge requests',
         image: '/social-preview.png',
       }),
     ],
@@ -66,12 +65,6 @@ const PLUGINS: ComponentProps<typeof TanStackDevtools>['plugins'] = [
   {
     name: 'TanStack Router',
     render: <TanStackRouterDevtoolsPanel />,
-    defaultOpen: false,
-  },
-  {
-    id: 'dev-impersonate',
-    name: 'Dev Impersonate',
-    render: <DevImpersonatePanel />,
     defaultOpen: false,
   },
   formDevtoolsPlugin(),

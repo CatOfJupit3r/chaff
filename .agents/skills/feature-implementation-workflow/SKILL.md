@@ -139,7 +139,7 @@ After each meaningful unit of work, run the narrowest relevant validation comman
 ```bash
 pnpm run verify --filter web
 pnpm run verify --filter server
-pnpm run verify --filter @startername/shared
+pnpm run verify --filter @chaff/shared
 ```
 
 Run the unscoped command when changes cross packages:

@@ -2,13 +2,13 @@
 name: enumwaii
 description: >
   Mandatory: declare and consume closed sets of string values (statuses, roles, modes,
-  kinds, event types) with `@startername/enumwaii`, never `z.enum` or raw string unions.
+  kinds, event types) with `@chaff/enumwaii`, never `z.enum` or raw string unions.
   Read before writing, editing, or reviewing any enum-like value.
 ---
 
 # Enumwaii
 
-`@startername/enumwaii` (`packages/enumwaii`) is this repository's only convention for closed sets of string values. It keeps members as ordinary strings at runtime while making raw literals and values from unrelated enums fail type checking. This skill is mandatory reading before declaring, comparing, or reviewing any enum-like value — do not use `z.enum`, TypeScript `enum`, or a plain `as const` object for this purpose.
+`@chaff/enumwaii` (`packages/enumwaii`) is this repository's only convention for closed sets of string values. It keeps members as ordinary strings at runtime while making raw literals and values from unrelated enums fail type checking. This skill is mandatory reading before declaring, comparing, or reviewing any enum-like value — do not use `z.enum`, TypeScript `enum`, or a plain `as const` object for this purpose.
 
 Use it for domain values that cross layers or drive behavior: statuses, kinds, modes, roles, event types, sources, actions, and tabs. Keep genuinely open-ended data as `string`.
 
@@ -21,7 +21,7 @@ Internal enum values MUST use `CONSTANT_CASE` (for example, `READY_TO_CREATE`, `
 Declare an enum once, then export its members, type, and schema from the same module.
 
 ```ts
-import { Enumwaii, type InferEnumwaii } from '@startername/enumwaii/enumwaii';
+import { Enumwaii, type InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
 const storyStageModesEnumwaii = new Enumwaii('StoryStageMode', ['REGULAR', 'READER', 'CINEMATIC']);
 
@@ -30,7 +30,7 @@ export type StoryStageMode = InferEnumwaii<typeof storyStageModesEnumwaii>;
 export const storyStageModeSchema = storyStageModesEnumwaii.schema;
 ```
 
-`new Enumwaii(...)` is the only declaration form. Use a unique, stable PascalCase enum name — it is part of the type identity. Place shared, non-sensitive enums in `packages/shared/src/constants` and import them from `@startername/shared/constants`; feature-local values stay with their feature.
+`new Enumwaii(...)` is the only declaration form. Use a unique, stable PascalCase enum name — it is part of the type identity. Place shared, non-sensitive enums in `packages/shared/src/constants` and import them from `@chaff/shared/constants`; feature-local values stay with their feature.
 
 ## Use members, never raw values
 
@@ -105,8 +105,8 @@ Do not create a second enum merely because it happens to have the same values �
 Enable both bundled ESLint rules in every config that touches enum values:
 
 ```js
-import { noRawEnumComparisonRule } from '@startername/enumwaii/eslint-rules/no-raw-enum-comparison';
-import { noRawEnumMemberRule } from '@startername/enumwaii/eslint-rules/no-raw-enum-member';
+import { noRawEnumComparisonRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-comparison';
+import { noRawEnumMemberRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-member';
 
 export default [
   {

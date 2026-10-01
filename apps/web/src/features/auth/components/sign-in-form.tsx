@@ -42,7 +42,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
       </form.AppForm>
 
       <div className="text-center">
-        <Button variant="link" onClick={onSwitchToSignUp} className="text-lime-300 hover:text-lime-400">
+        <Button variant="link" onClick={onSwitchToSignUp}>
           Need an account? Sign Up
         </Button>
       </div>

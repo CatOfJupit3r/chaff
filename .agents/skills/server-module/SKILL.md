@@ -52,14 +52,14 @@ tables, or query builders.
 Start with a flat feature directory when the feature is small:
 
 ```text
-apps/server/src/features/achievements/
-  achievements.service.ts
-  achievements.constants.ts
-  achievements.types.ts
-  user-achievement.repository.ts
-  drizzle-user-achievement.repository.ts
-  user-achievement.resolver.ts
-  user-achievement.types.ts
+apps/server/src/features/findings/
+  findings.service.ts
+  findings.constants.ts
+  findings.types.ts
+  finding.repository.ts
+  drizzle-finding.repository.ts
+  finding.resolver.ts
+  finding.repository.types.ts
 ```
 
 When a feature contains distinct subdomains, create nested modules rather than

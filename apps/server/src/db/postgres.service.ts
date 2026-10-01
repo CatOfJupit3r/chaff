@@ -7,7 +7,7 @@ import env from '@~/constants/env';
 
 import { schema } from './database-schema';
 
-const testPostgresDbKey = Symbol.for('startername.test.postgres.db');
+const testPostgresDbKey = Symbol.for('chaff.test.postgres.db');
 
 type TestPostgresDatabase = NodePgDatabase<typeof schema>;
 type TestPostgresGlobals = typeof globalThis & {

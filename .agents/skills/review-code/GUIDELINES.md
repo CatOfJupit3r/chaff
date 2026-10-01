@@ -67,7 +67,7 @@ function calculateTotal(items: Item[]) {
 
 ### No `enum`, No `z.enum`, Prefer `Enumwaii`
 
-Use `Enumwaii` from `@startername/enumwaii/enumwaii` for every reusable closed set. It keeps members as plain strings at runtime while rejecting raw literals and values from unrelated enums at the type level. See the **enumwaii** skill — mandatory reading before touching any enum-like value. Internal values MUST be `CONSTANT_CASE`.
+Use `Enumwaii` from `@chaff/enumwaii/enumwaii` for every reusable closed set. It keeps members as plain strings at runtime while rejecting raw literals and values from unrelated enums at the type level. See the **enumwaii** skill — mandatory reading before touching any enum-like value. Internal values MUST be `CONSTANT_CASE`.
 
 **Bad:**
 
@@ -88,7 +88,7 @@ export const userRolesSchema = z.enum(['ADMIN', 'USER', 'GUEST']);
 **Good:**
 
 ```typescript
-import { Enumwaii, type InferEnumwaii } from '@startername/enumwaii/enumwaii';
+import { Enumwaii, type InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
 const userRolesEnumwaii = new Enumwaii('UserRole', ['ADMIN', 'USER', 'GUEST']);
 export const USER_ROLES = userRolesEnumwaii.enum;
@@ -271,7 +271,7 @@ export const characterErrorCodes = {
 
 // In router/service
 import { ORPCNotFoundError } from "@~/lib/orpc-error-wrapper";
-import { characterErrorCodes } from "@startername/shared";
+import { characterErrorCodes } from "@chaff/shared";
 
 if (!character) {
     throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND);
@@ -511,14 +511,14 @@ export const MAX_NAME_LENGTH = 200;
 export const MAX_NAME_LENGTH = 200;
 
 // Usage in both apps
-import { MAX_NAME_LENGTH } from "@startername/shared/constants";
+import { MAX_NAME_LENGTH } from "@chaff/shared/constants";
 ```
 
 **Note:** Only extract non-sensitive data shared between server and client.
 
-### Use Valkey Service Cache Instead of Custom Implementation
+### No Ad-Hoc In-Memory Caches in Services
 
-Never implement custom caching when Valkey Service is available.
+There is no shared cache layer in this repo. Do not add per-service `Map`-based caches to paper over slow queries; they leak memory, go stale, and diverge across instances. Fix the query (indexes, narrower selects, batching) first. If a real cache becomes necessary, introduce it as a dedicated `@singleton()` service behind an interface and DI token so every caller shares one implementation.
 
 **Bad:**
 
@@ -537,12 +537,10 @@ class MyService {
 
 ```typescript
 class MyService {
-    constructor(private valkeyService: ValkeyService) {}
+    constructor(@inject(DATA_REPOSITORY_TOKEN) private dataRepository: iDataRepository) {}
 
     async getData(key: string) {
-        const cached = await this.valkeyService.get(key);
-        if (cached) return cached;
-        // ...
+        return this.dataRepository.findByKey(key); // indexed lookup, no hidden cache
     }
 }
 ```
@@ -553,7 +551,7 @@ Use `@injectable` by default. Only use `@singleton` when truly needed (database 
 
 **@singleton** - Use when:
 
-- Service maintains global state (EventBus, DatabaseService, ValkeyService)
+- Service maintains global state (EventBus, PostgresService)
 - Service is expensive to initialize
 - Service manages system resources (LoggerFactory)
 - Event listeners need to be registered once (EventServices)
@@ -817,7 +815,7 @@ Tests must validate meaningful behavior, not implementation details or trivial l
 **Bad (useless):**
 
 ```typescript
-import { someEnum } from "@startername/shared";
+import { someEnum } from "@chaff/shared";
 
 it("should return true when true is passed", () => {
     expect(identity(true)).toBe(true);
@@ -857,32 +855,32 @@ Calling services should only be done in unit tests for service logic, never in i
 **Bad:**
 
 ```typescript
-it("should create user", async () => {
-    const user = await UserModel.create({ name: "Test" }); // Direct model call
-    const updatedUser = await UserService.updateUser({
-        id: user.id,
-        name: "New Name",
+it("should update finding", async () => {
+    const finding = await FindingModel.create({ title: "Test" }); // Direct model call
+    const updatedFinding = await findingsService.updateFinding({
+        id: finding.id,
+        title: "New Title",
     }); // Call service method
-    expect(updatedUser.name).toBe("New Name");
+    expect(updatedFinding.title).toBe("New Title");
 });
 ```
 
 **Good:**
 
 ```typescript
-it("should create user", async () => {
-    const user = await call(
-        appRouter.users.createUser,
-        { name: "Test" },
+it("should update finding", async () => {
+    const finding = await call(
+        appRouter.findings.createFinding,
+        { title: "Test" },
         ctx(),
     );
-    const updatedUser = await call(
-        appRouter.users.updateUser,
-        { id: user.id, name: "New Name" },
+    const updatedFinding = await call(
+        appRouter.findings.updateFinding,
+        { id: finding.id, title: "New Title" },
         ctx(),
     );
-    expect(user.name).toBe("Test");
-    expect(updatedUser.name).toBe("New Name");
+    expect(finding.title).toBe("Test");
+    expect(updatedFinding.title).toBe("New Title");
 });
 ```
 
@@ -939,7 +937,7 @@ All errors must use custom error wrappers from `apps/server/src/lib/orpc-error-w
 
 ```typescript
 import { ORPCNotFoundError } from "@~/lib/orpc-error-wrapper";
-import { characterErrorCodes } from "@startername/shared";
+import { characterErrorCodes } from "@chaff/shared";
 
 if (!character || character.userId !== userId) {
     throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND);

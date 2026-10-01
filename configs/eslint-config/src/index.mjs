@@ -1,5 +1,5 @@
 /**
- * Shared ESLint Configuration Factory for startername Monorepo
+ * Shared ESLint Configuration Factory for chaff Monorepo
  * 
  * This module provides a factory function to create ESLint configurations
  * for different project types (backend, web) with consistent rules across
@@ -7,8 +7,8 @@
  */
 import { includeIgnoreFile } from '@eslint/compat';
 import js from '@eslint/js';
-import { noRawEnumComparisonRule } from '@startername/enumwaii/eslint-rules/no-raw-enum-comparison';
-import { noRawEnumMemberRule } from '@startername/enumwaii/eslint-rules/no-raw-enum-member';
+import { noRawEnumComparisonRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-comparison';
+import { noRawEnumMemberRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-member';
 import { configs, plugins, rules } from 'eslint-config-airbnb-extended';
 import { rules as prettierConfigRules } from 'eslint-config-prettier';
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript';
@@ -115,7 +115,7 @@ const getBaseConfig = (options) => {
           ignore: [
             '^@~/',
             // Workspace packages (prevent false positives)
-            createWorkspaceIgnorePattern('startername'),
+            createWorkspaceIgnorePattern('chaff'),
             createWorkspaceIgnorePattern('shared'),
           ],
         },
@@ -288,6 +288,26 @@ const importPlugin = async (pluginName) => {
 
 };
 
+const TAILWIND_COLOR_UTILITIES =
+  'bg|text|border(?:-[xytrblse])?|divide|outline|ring(?:-offset)?|inset-ring|shadow|inset-shadow|drop-shadow|text-shadow|from|via|to|fill|stroke|decoration|caret|accent|placeholder';
+const TAILWIND_PALETTE =
+  'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|mauve|olive|mist|taupe|black|white';
+
+/**
+ * Colors must come from theme tokens defined in the app stylesheet (e.g. `bg-background`, `text-destructive`)
+ * so light/dark modes and theming stay consistent.
+ */
+const RAW_COLOR_CLASS_RESTRICTIONS = [
+  {
+    pattern: `^(?:.*:)?!?(?:${TAILWIND_COLOR_UTILITIES})-(?:${TAILWIND_PALETTE})(?:-\\d{2,3})?(?:/.+)?!?$`,
+    message: 'Raw palette color "$0". Use a theme token (bg-background, text-muted-foreground, ...) instead.',
+  },
+  {
+    pattern: `^(?:.*:)?!?(?:${TAILWIND_COLOR_UTILITIES})-\\[(?:#|rgba?\\(|hsla?\\(|oklch\\(|oklab\\(|color:).*\\](?:/.+)?!?$`,
+    message: 'Arbitrary color value "$0". Add a theme token in the app stylesheet and use it instead.',
+  },
+];
+
 /**
  * Create ESLint configuration for web/React projects
  * 
@@ -345,6 +365,7 @@ export const createWebConfig = async (options = {}) => {
           ...tailwindcssPlugin.configs['correctness-error'].rules,
           'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
           'better-tailwindcss/no-unregistered-classes': 'off',
+          'better-tailwindcss/no-restricted-classes': ['error', { restrict: RAW_COLOR_CLASS_RESTRICTIONS }],
         }),
         ...(reactRefreshPlugin && {
           'react-refresh/only-export-components': 'error',

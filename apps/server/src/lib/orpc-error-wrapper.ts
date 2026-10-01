@@ -1,10 +1,10 @@
 import { ORPCError } from '@orpc/server';
 
-import { errorCodes, errorMessages } from '@startername/common/enums/errors.enums';
-import type { ErrorCodesType } from '@startername/common/enums/errors.enums';
-import { handleError } from '@startername/common/helpers/error-handling.helper';
-import { Enumwaii } from '@startername/enumwaii/enumwaii';
-import type { InferEnumwaii } from '@startername/enumwaii/enumwaii';
+import { errorCodes, errorMessages } from '@chaff/common/enums/errors.enums';
+import type { ErrorCodesType } from '@chaff/common/enums/errors.enums';
+import { handleError } from '@chaff/common/helpers/error-handling.helper';
+import { Enumwaii } from '@chaff/enumwaii/enumwaii';
+import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
 const orpcErrorKindsEnumwaii = new Enumwaii('ORPCErrorKind', ['INFO', 'UNEXPECTED']);
 
@@ -36,7 +36,7 @@ export class UnexpectedServerError extends Error {
   }
 }
 
-const ORPC_ERROR_METADATA = Symbol.for('@startername/orpc-error-metadata');
+const ORPC_ERROR_METADATA = Symbol.for('@chaff/orpc-error-metadata');
 
 type iORPCErrorWithMetadata = ORPCError<string, unknown> & {
   [ORPC_ERROR_METADATA]?: iORPCErrorMetadata;

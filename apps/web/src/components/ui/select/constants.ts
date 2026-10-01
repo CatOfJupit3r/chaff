@@ -105,7 +105,7 @@ export const DEFAULT_SELECT_STYLES: StylesConfig<iOptionType, boolean, GroupBase
       background: 'transparent',
     },
     '::-webkit-scrollbar-thumb': {
-      background: 'hsl(var(--border))',
+      background: 'var(--color-border)',
     },
     '::-webkit-scrollbar-thumb:hover': {
       background: 'transparent',

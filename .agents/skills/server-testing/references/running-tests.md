@@ -56,13 +56,13 @@ Access at: `http://localhost:51204/__vitest__/`
 ### Run Tests in a Specific File
 
 ```bash
-pnpm run test user-profile.test.ts
+pnpm run test auth.test.ts
 ```
 
 ### Run Tests Matching a Pattern
 
 ```bash
-pnpm run test --grep "should update user profile"
+pnpm run test --grep "should create a user"
 ```
 
 ### Run Only Integration Tests
@@ -143,7 +143,7 @@ Tests run with these environment variables (from `vitest.config.ts`):
 NODE_ENV=test
 BETTER_AUTH_SECRET=test-secret
 BETTER_AUTH_URL=http://localhost:3000/auth
-POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/startername-test
+POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/chaff-test
 LOG_LEVEL=error
 ```
 
@@ -172,12 +172,18 @@ Logs will appear in the terminal output.
 During test development, you can inspect the PGlite database through the Drizzle service:
 
 ```typescript
+import { eq } from 'drizzle-orm';
+import { container } from 'tsyringe';
+import { PostgresService } from '@~/db/postgres.service';
+import { sessions } from '@~/db/schema/auth.schema';
+
 it('should check database state', async () => {
-  const { ctx, user } = await createUser();
+  const { user } = await createUser();
 
   // Add breakpoint here and inspect database
-  const profile = await UserProfileModel.findOne({ userId: user.id });
-  console.log('Profile:', profile);
+  const db = container.resolve(PostgresService).getDb();
+  const sessionRows = await db.select().from(sessions).where(eq(sessions.userId, user.id));
+  console.log('Sessions:', sessionRows);
 });
 ```
 

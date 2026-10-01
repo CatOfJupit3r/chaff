@@ -59,5 +59,3 @@
 // export const EXAMPLE_SERVICE_TOKEN = Symbol.for('ExampleService');
 
 export const AUTH_USER_REPOSITORY_TOKEN = Symbol.for('AuthUserRepository');
-export const USER_ACHIEVEMENT_REPOSITORY_TOKEN = Symbol.for('UserAchievementRepository');
-export const USER_PROFILE_REPOSITORY_TOKEN = Symbol.for('UserProfileRepository');

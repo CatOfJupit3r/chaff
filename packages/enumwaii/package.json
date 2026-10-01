@@ -1,5 +1,5 @@
 {
-  "name": "@startername/enumwaii",
+  "name": "@chaff/enumwaii",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -20,10 +20,10 @@
     "test": "vitest run",
     "prepare": "tsdown"
   },
-  "prettier": "@startername/prettier-config",
+  "prettier": "@chaff/prettier-config",
   "devDependencies": {
-    "@startername/eslint-config": "workspace:*",
-    "@startername/prettier-config": "workspace:*",
+    "@chaff/eslint-config": "workspace:*",
+    "@chaff/prettier-config": "workspace:*",
     "@types/node": "catalog:",
     "@typescript-eslint/parser": "8.63.0",
     "@typescript/native-preview": "catalog:",
