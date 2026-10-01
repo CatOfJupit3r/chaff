@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. The desktop shell, local branch stacks, frozen snapshots and the Full diff screen work today. Focus review, findings, GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks, frozen snapshots, Focus review, the Full diff and findings work today. The AI digest, GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -50,6 +50,20 @@ Every repository you add, with its local branch stacks. Click a branch in the ch
   <img src="docs/screenshots/reviews-light.png" alt="Reviews screen listing a three-branch local stack and a single-branch stack" />
 </picture>
 
+### Focus review
+
+One unit at a time: a function, a type or a section of a file, shown whole with its changes marked, the commit that last touched it, and the places that use it. Resolve the card with **Looks good** (G) or **Later** (L), or write a **Concern** (C) or **Question** (Q) and keep reading. Notes become findings pinned to the code. **U** undoes, **I** opens the list of every unit, and the last card tallies what you decided and walks you through the ones you put off.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-dark.png" />
+  <img src="docs/screenshots/focus-light.png" alt="Focus review showing one function with its code, usages tab and the decision dock" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-note-dark.png" />
+  <img src="docs/screenshots/focus-note-light.png" alt="Writing a concern on the unit in Focus review" />
+</picture>
+
 ### Full diff
 
 One branch against its parent, with a resizable file tree (or flat list) and a filter. Switch between one file at a time and all files in one scroll, unified or split, with word-level highlights, syntax colors and expandable context.
@@ -62,6 +76,22 @@ One branch against its parent, with a resizable file tree (or flat list) and a f
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/all-files-dark.png" />
   <img src="docs/screenshots/all-files-light.png" alt="Full diff with all files in one continuous scroll" />
+</picture>
+
+The bar beside each changed line shows the decision on its unit, and the file list shows how far each file got. Click the **+** beside a line (or pick a range first) to write a concern, question or note on exactly those lines.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/diff-notes-dark.png" />
+  <img src="docs/screenshots/diff-notes-light.png" alt="Full diff with decision bars and two findings under the lines they point at" />
+</picture>
+
+### Findings
+
+Everything you flagged, across every review. Each finding keeps your comment verbatim and the lines it points at as they were, so it still makes sense after the branch is rebased. Withdraw what you changed your mind about; nothing counts as resolved until you verify it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/findings-dark.png" />
+  <img src="docs/screenshots/findings-light.png" alt="Findings screen with the list on the left and the quoted code and comment on the right" />
 </picture>
 
 ### New changes while you review
@@ -96,14 +126,14 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Add repositories from disk, read-only | Works |
 | Local branch stacks with suggested parents | Works |
 | Frozen snapshots in Chaff's own git store | Works |
-| Regions, Function and Section units (tree-sitter, 13 languages) | Works; counted on Reviews, reviewed one at a time once Focus review lands |
+| Regions, Function and Section units (tree-sitter, 13 languages) | Works |
 | Full diff: tree or list, one or all files, unified or split, wrap, context | Works |
 | New commits, rewritten branches and moved parents detected; Update | Works |
 | Open in VS Code, Insiders or Cursor | Works |
 | Light and dark themes, accent, code size | Works |
-| Focus review: one unit at a time, keyboard decisions, Later queue | Planned |
-| Viewed and Reviewed marks, coverage of every region | Planned |
-| Findings (Concern, Question, Note) anchored to code | Planned |
+| Focus review: one unit at a time, keyboard decisions, undo, Later queue | Works |
+| Decisions on every unit, shown in Full diff with line coverage | Works |
+| Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | Stack overview with parent editing and cumulative view | Planned |
 | GitLab merge requests and stacked MRs | Planned |
 | GitHub pull requests, exported as a pending review | Planned |
