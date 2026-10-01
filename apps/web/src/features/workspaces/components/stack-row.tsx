@@ -1,13 +1,29 @@
+import { Button } from '@~/components/ui/button';
 import { ListRow } from '@~/components/ui/list';
 import { Pill } from '@~/components/ui/pill';
+import { useStartReview } from '@~/features/reviews/hooks/use-start-review';
+import type { iReviewTarget } from '@~/features/reviews/reviews.types';
+import { summarizeStackReview } from '@~/features/reviews/stack-review.utils';
+import type { iStackLink } from '@~/features/reviews/stack-review.utils';
 import { pluralize } from '@~/utils/pluralize';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
 import type { iLocalStack } from '../workspaces.types';
 import { BranchChain } from './branch-chain';
 
-export function StackRow({ stack }: { stack: iLocalStack }) {
+interface iStackRowProps {
+  stack: iLocalStack;
+  reviewTargets: readonly iReviewTarget[];
+}
+
+export function StackRow({ stack, reviewTargets }: iStackRowProps) {
   const { workspace, base, branches, tip, commitCount } = stack;
+  const review = summarizeStackReview(stack, reviewTargets);
+  const startReview = useStartReview();
+
+  const open = ({ branch, parentBranch }: iStackLink) => {
+    if (parentBranch) startReview.mutate({ workspaceId: workspace.id, branch: branch.name, parentBranch });
+  };
 
   return (
     <ListRow>
@@ -27,11 +43,32 @@ export function StackRow({ stack }: { stack: iLocalStack }) {
               </>
             ) : null}
           </span>
+          <span>{pluralize(commitCount, 'commit')}</span>
           <span>updated {formatRelativeTime(tip.committedAt)}</span>
         </div>
-        {branches.length > 1 ? <BranchChain branches={branches} /> : null}
+        {branches.length > 1 ? (
+          <BranchChain
+            links={review.links}
+            nextBranch={review.isStarted ? review.next?.branch.name : undefined}
+            onOpen={open}
+          />
+        ) : null}
       </div>
-      <span className="font-mono text-[12px] text-muted tabular-nums">{pluralize(commitCount, 'commit')}</span>
+      <div className="flex items-center gap-4">
+        {review.isStarted ? (
+          <div className="flex items-center gap-2 font-mono text-[12px] text-muted tabular-nums" title="Units reviewed">
+            <span>0 / {review.unitCount}</span>
+            <span aria-hidden="true" className="h-1 w-14 rounded-full bg-raised" />
+          </div>
+        ) : null}
+        <Button
+          variant={review.isStarted ? 'primary' : 'default'}
+          disabled={!review.next?.parentBranch || startReview.isPending}
+          onClick={() => review.next && open(review.next)}
+        >
+          {review.isStarted ? 'Continue' : 'Start'}
+        </Button>
+      </div>
     </ListRow>
   );
 }

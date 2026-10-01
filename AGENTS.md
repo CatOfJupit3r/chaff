@@ -128,8 +128,9 @@ Examples:
 
 ## Environment and Configuration
 
-- There are no `.env` files and no login. Everything Chaff stores lives in one SQLite file (`chaff.db`, through Node's built-in `node:sqlite`) in Electron's `userData` folder; development runs use a separate `Chaff Dev` folder. Migrations in `packages/core/src/db/migrations` are applied when the core starts.
-- Repositories are read with the system `git` from PATH. Chaff never writes to a user's repository: no checkouts, branch or ref changes, index or stash writes.
+- There are no `.env` files and no login. Chaff's records live in one SQLite file (`chaff.db`, through Node's built-in `node:sqlite`) in Electron's `userData` folder; development runs use a separate `Chaff Dev` folder. Migrations in `packages/core/src/db/migrations` are applied when the core starts.
+- Reviews are frozen as snapshots: the branch and its parent are fetched into a bare store per repository (`stores/<workspaceId>.git` next to `chaff.db`) and pinned under `refs/chaff/snapshots/<id>`, so a review keeps working after the branch is rebased or deleted. Units come from tree-sitter grammars (`@vscode/tree-sitter-wasm`), which the desktop build copies to `dist/tree-sitter`.
+- Repositories are read with the system `git` from PATH. Chaff never writes to a user's repository: no checkouts, branch or ref changes, index or stash writes. Fetching into the store reads the repository; every write goes to the store.
 - Aliases: `@~/` resolves to `packages/core/src` or `apps/web/src` depending on the package (in `apps/desktop` it points at the core, so desktop code uses relative imports); `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
 - Node.js 24.13 is required (Electron 44 embeds Node 24 as well); use nvm or similar to manage Node versions.
 - pnpm 11.5.0 is the package manager; use `corepack enable` to activate it.

@@ -232,3 +232,22 @@
     }
   }
 }
+
+/* Diff viewer: its fonts, sizes and change colors follow the theme tokens (line backgrounds are mixed from the change colors). */
+diffs-container {
+  --diffs-font-family: --theme(--font-mono);
+  --diffs-header-font-family: --theme(--font-sans);
+  --diffs-font-size: var(--code-size);
+  --diffs-line-height: var(--code-lh);
+  --diffs-addition-color-override: var(--good);
+  --diffs-deletion-color-override: var(--bad);
+  --diffs-bg-addition-override: color-mix(in srgb, var(--good) 55%, var(--canvas));
+  --diffs-bg-deletion-override: color-mix(in srgb, var(--bad) 55%, var(--canvas));
+  --diffs-fg-number-override: var(--faint);
+  --diffs-fg-number-addition-override: var(--add-ln);
+  --diffs-fg-number-deletion-override: var(--del-ln);
+  --diffs-bg-context-override: var(--canvas);
+  --diffs-bg-context-gutter-override: var(--canvas);
+  --diffs-bg-separator-override: var(--raised);
+  --diffs-bg-hover-override: var(--hover);
+}

@@ -1,0 +1,18 @@
+import type { ORPCOutputs } from '@~/utils/orpc';
+
+export type iReviewTarget = ORPCOutputs['reviews']['list'][number];
+
+export type iSnapshot = ORPCOutputs['reviews']['snapshot'];
+
+export type iSnapshotFile = iSnapshot['files'][number];
+
+export type iSnapshotLiveStatus = ORPCOutputs['reviews']['liveStatus'];
+
+/** A folder in the changed-file tree; chains of folders with a single child folder are merged into one. */
+export interface iFileTreeFolder {
+  name: string;
+  path: string;
+  folders: iFileTreeFolder[];
+  files: iSnapshotFile[];
+  fileCount: number;
+}

@@ -2,7 +2,7 @@
 
 Chaff is a stack-aware review workspace for AI-written changes. It reads stacks of branches that build on each other straight from repositories on your computer (and, later, GitLab merge requests), lets you review them one change, function, or line range at a time, captures concerns in a keystroke, and brings you back only to what changed after the agent pushes fixes.
 
-Chaff is a desktop app built with Electron. It keeps everything in one SQLite file on your machine, reads repositories with your own `git`, and never writes to them. The UI is themeable and ships with light and dark modes.
+Chaff is a desktop app built with Electron. It keeps its records in one SQLite file on your machine, reads repositories with your own `git`, and never writes to them; a review is a frozen snapshot copied into Chaff's own git store, so rebasing or deleting the branch does not break it. The UI is themeable and ships with light and dark modes.
 
 ## Agentic Tooling
 

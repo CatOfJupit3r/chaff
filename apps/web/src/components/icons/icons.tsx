@@ -79,3 +79,24 @@ export const CopyIcon = createIcon(
     <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
   </>,
 );
+export const SidebarIcon = createIcon(
+  'SidebarIcon',
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </>,
+);
+export const FileIcon = createIcon(
+  'FileIcon',
+  <>
+    <path d="M6 3h8l4 4v14H6z" />
+    <path d="M14 3v4h4" />
+  </>,
+);
+export const SearchIcon = createIcon(
+  'SearchIcon',
+  <>
+    <circle cx="11" cy="11" r="6" />
+    <path d="M20 20l-4.5-4.5" />
+  </>,
+);
