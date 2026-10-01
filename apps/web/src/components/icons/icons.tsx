@@ -1,0 +1,81 @@
+import { createIcon } from './create-icon';
+
+export const InboxIcon = createIcon(
+  'InboxIcon',
+  <>
+    <path d="M4 13h4l2 3h4l2-3h4" />
+    <path d="M5.5 5h13L20 13v6H4v-6z" />
+  </>,
+);
+export const FocusIcon = createIcon(
+  'FocusIcon',
+  <>
+    <rect x="5" y="6" width="14" height="14" rx="2.5" />
+    <path d="M8 3h8" />
+  </>,
+);
+export const DiffIcon = createIcon(
+  'DiffIcon',
+  <>
+    <path d="M5 4h10l4 4v12H5z" />
+    <path d="M9 11h6M12 8v6M9 17h6" />
+  </>,
+);
+export const BranchIcon = createIcon(
+  'BranchIcon',
+  <>
+    <circle cx="6" cy="5" r="2" />
+    <circle cx="6" cy="19" r="2" />
+    <circle cx="18" cy="8" r="2" />
+    <path d="M6 7v10M18 10c0 5-6 3-12 7" />
+  </>,
+);
+export const StackIcon = createIcon(
+  'StackIcon',
+  <>
+    <circle cx="6" cy="5" r="2" />
+    <circle cx="6" cy="19" r="2" />
+    <circle cx="6" cy="12" r="2" />
+    <path d="M6 7v3M6 14v3M10 5h9M10 12h9M10 19h9" />
+  </>,
+);
+export const DownIcon = createIcon('DownIcon', <path d="M6 9l6 6 6-6" />);
+export const RightIcon = createIcon('RightIcon', <path d="M9 6l6 6-6 6" />);
+export const CheckIcon = createIcon('CheckIcon', <path d="M5 12.5l4.5 4.5L19 7" />);
+export const AlertIcon = createIcon(
+  'AlertIcon',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5v5M12 16v.5" />
+  </>,
+);
+export const RefreshIcon = createIcon(
+  'RefreshIcon',
+  <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4" />,
+);
+export const ExternalIcon = createIcon(
+  'ExternalIcon',
+  <>
+    <path d="M14 4h6v6M20 4l-9 9" />
+    <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  </>,
+);
+export const FolderIcon = createIcon(
+  'FolderIcon',
+  <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />,
+);
+export const SunIcon = createIcon(
+  'SunIcon',
+  <>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </>,
+);
+export const CloseIcon = createIcon('CloseIcon', <path d="M6 6l12 12M18 6L6 18" />);
+export const CopyIcon = createIcon(
+  'CopyIcon',
+  <>
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+  </>,
+);

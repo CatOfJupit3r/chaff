@@ -1,37 +1,29 @@
 import { implement } from '@orpc/server';
+import { container } from 'tsyringe';
 
-import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { CONTRACT } from '@chaff/server-contract/app.contract';
 
-import { ORPCUnauthorizedError, rethrowUnexpectedError } from '@~/lib/orpc-error-wrapper';
-import type { Context } from '@~/loaders/hono.loader';
+import { LoggerFactory } from '@~/features/logger/logger.factory';
+import { rethrowUnexpectedError, shouldLogORPCError } from '@~/lib/orpc-error-wrapper';
 
-export const base = implement(CONTRACT)
-  .$config({
-    initialOutputValidationIndex: Number.NaN,
-  })
-  .$context<Context>();
+export const base = implement(CONTRACT).$config({
+  initialOutputValidationIndex: Number.NaN,
+});
 
 const unexpectedErrorBoundary = base.middleware(async ({ path, next }) => {
+  const operation = path.join('.');
   try {
     return await next();
   } catch (error) {
-    return rethrowUnexpectedError(error, { operation: path.join('.') });
+    if (shouldLogORPCError(error)) {
+      container
+        .resolve(LoggerFactory)
+        .create('rpc')
+        .error(`${operation} failed`, { error: error instanceof Error ? (error.stack ?? error.message) : error });
+    }
+    return rethrowUnexpectedError(error, { operation });
   }
 });
 
-export const publicProcedure = base.use(unexpectedErrorBoundary);
-
-const requireAuth = base.middleware(async ({ context, next }) => {
-  if (!context.session) {
-    throw ORPCUnauthorizedError(errorCodes.UNAUTHORIZED);
-  }
-  return next({
-    context: {
-      ...context,
-      session: context.session,
-    },
-  });
-});
-
-export const protectedProcedure = publicProcedure.use(requireAuth);
+/** Every procedure runs inside the unexpected-error boundary; the desktop app has a single local user. */
+export const procedure = base.use(unexpectedErrorBoundary);

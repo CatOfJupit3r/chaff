@@ -1,18 +1,15 @@
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 
-import type { iAuthUserRepository } from '@~/features/auth/auth-user.repository';
-import { DrizzleAuthUserRepository } from '@~/features/auth/drizzle-auth-user.repository';
+import { DrizzleSettingsRepository } from '@~/features/settings/drizzle-settings.repository';
+import type { iSettingsRepository } from '@~/features/settings/settings.repository';
+import { DrizzleWorkspaceRepository } from '@~/features/workspaces/drizzle-workspace.repository';
+import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repository';
 
-import { AUTH_USER_REPOSITORY_TOKEN } from './tokens';
+import { SETTINGS_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from './tokens';
 
-export { container };
-
-export async function registerServices() {
-  await import('@~/db/postgres.service');
-  await import('@~/features/auth/auth.service');
-  await import('@~/features/logger/logger.factory');
-  await import('@~/features/events/event-bus');
-
-  container.registerSingleton<iAuthUserRepository>(AUTH_USER_REPOSITORY_TOKEN, DrizzleAuthUserRepository);
+/** Binds interface tokens to their implementations. `@singleton()` classes resolve by type. */
+export function registerServices() {
+  container.registerSingleton<iWorkspaceRepository>(WORKSPACE_REPOSITORY_TOKEN, DrizzleWorkspaceRepository);
+  container.registerSingleton<iSettingsRepository>(SETTINGS_REPOSITORY_TOKEN, DrizzleSettingsRepository);
 }

@@ -259,7 +259,14 @@ export const createBackendConfig = (options = {}) => {
 
   const nodeSpecificRules = {
     rules: {
-      'n/no-unsupported-features/node-builtins': ['error', { version: '>=24.0.0' }],
+      // node:sqlite is still flagged experimental, but it is the store the desktop core is built on.
+      'n/no-unsupported-features/node-builtins': ['error', { version: '>=24.0.0', ignores: ['sqlite'] }],
+      'import-x/no-unresolved': [
+        'error',
+        {
+          ignore: ['^@~/', '^node:sqlite$', createWorkspaceIgnorePattern('chaff'), createWorkspaceIgnorePattern('shared')],
+        },
+      ],
     },
   };
 

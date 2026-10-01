@@ -15,9 +15,6 @@ const commonTestConfig = {
   watchExclude: ['dist/**', '.vitest/**'],
   env: {
     NODE_ENV: 'test',
-    BETTER_AUTH_SECRET: 'test-secret',
-    BETTER_AUTH_URL: 'http://localhost:3000/auth',
-    POSTGRES_URL: 'postgresql://postgres:postgres@localhost:5432/chaff-test',
     LOG_LEVEL: 'error',
   },
   coverage: {
@@ -33,6 +30,7 @@ const commonTestConfig = {
 
 const baseProjectConfig = {
   plugins: [swc.vite({ tsconfigFile: './tsconfig.json' })],
+  oxc: false as const,
   resolve: {
     alias,
   },
@@ -66,7 +64,6 @@ export default defineConfig({
           name: 'integration',
           include: ['test/**/*.test.ts'],
           exclude: ['test/unit/**', 'test/**/*.unit.test.ts'],
-          globalSetup: ['./test/global-setup.ts'],
           setupFiles: ['./test/helpers/setup.ts'],
           testTimeout: 10000,
           hookTimeout: 10000,

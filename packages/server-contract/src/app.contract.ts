@@ -1,7 +1,13 @@
-import indexContract from './contract/index.contract';
+import { appContract } from './contract/app.contract';
+import { hostContract } from './contract/host.contract';
+import { settingsContract } from './contract/settings.contract';
+import { workspacesContract } from './contract/workspaces.contract';
 
 export const CONTRACT = {
-  index: indexContract,
+  app: appContract,
+  host: hostContract,
+  settings: settingsContract,
+  workspaces: workspacesContract,
 };
 
 export type AppContract = typeof CONTRACT;

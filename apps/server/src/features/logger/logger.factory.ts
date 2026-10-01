@@ -5,36 +5,21 @@ import { Logger } from './logger';
 /**
  * Factory for creating loggers with namespaces.
  *
- * Uses a single global Logger instance and creates child loggers
- * with proper namespace inheritance.
- *
  * @example
  * const factory = container.resolve(LoggerFactory);
- * const apiLogger = factory.create('api');        // namespace: 'api'
- * const usersLogger = apiLogger.child('users');   // namespace: 'api:users'
+ * const gitLogger = factory.create('git');        // namespace: 'git'
+ * const storeLogger = gitLogger.child('store');   // namespace: 'git:store'
  */
 @singleton()
 export class LoggerFactory {
-  private readonly instance: Logger;
+  private readonly instance = new Logger();
 
-  constructor() {
-    this.instance = new Logger({
-      colorize: process.env.NODE_ENV !== 'production',
-    });
-  }
-
-  /**
-   * Create a new logger with the given namespace.
-   * Returns a Logger instance that properly maintains the namespace.
-   */
+  /** Create a new logger with the given namespace. */
   public create(namespace: string): Logger {
     return this.instance.child(namespace);
   }
 
-  /**
-   * Get the root global logger instance.
-   * Prefer using create() with a namespace for better log organization.
-   */
+  /** The root logger. Prefer `create()` with a namespace. */
   public global(): Logger {
     return this.instance;
   }

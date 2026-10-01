@@ -17,10 +17,10 @@ import {
 describe('ORPC error wrapper', () => {
   it('creates a typed error with safe payload and metadata', () => {
     const error = ORPCBadRequestError(
-      errorCodes.USER_NOT_FOUND,
-      { field: 'userId' },
+      errorCodes.WORKSPACE_NOT_FOUND,
+      { field: 'workspaceId' },
       {
-        operation: 'user.find',
+        operation: 'workspaces.get',
         context: { source: 'test' },
       },
     );
@@ -28,12 +28,12 @@ describe('ORPC error wrapper', () => {
     expect(error).toBeInstanceOf(ORPCError);
     expect(error.code).toBe('BAD_REQUEST');
     expect(error.data).toMatchObject({
-      code: errorCodes.USER_NOT_FOUND,
-      field: 'userId',
+      code: errorCodes.WORKSPACE_NOT_FOUND,
+      field: 'workspaceId',
     });
     expect(getORPCErrorMetadata(error)).toEqual({
       kind: ORPC_ERROR_KINDS.INFO,
-      operation: 'user.find',
+      operation: 'workspaces.get',
       context: { source: 'test' },
     });
     expect(shouldLogORPCError(error)).toBe(false);
@@ -72,7 +72,7 @@ describe('ORPC error wrapper', () => {
   });
 
   it('preserves an existing expected ORPC error', async () => {
-    const expected = ORPCNotFoundError(errorCodes.USER_NOT_FOUND);
+    const expected = ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
 
     await expect(handleUnexpectedError(() => Promise.reject(expected))).rejects.toBe(expected);
   });

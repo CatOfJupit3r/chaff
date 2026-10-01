@@ -1,8 +1,15 @@
-import { base } from '../lib/orpc';
-import { indexRouter } from './index.router';
+import { base } from '@~/lib/orpc';
+
+import { appInfoRouter } from './app.router';
+import { hostRouter } from './host.router';
+import { settingsRouter } from './settings.router';
+import { workspacesRouter } from './workspaces.router';
 
 export const appRouter = base.router({
-  index: indexRouter,
+  app: appInfoRouter,
+  host: hostRouter,
+  settings: settingsRouter,
+  workspaces: workspacesRouter,
 });
 
 export type AppRouter = typeof appRouter;

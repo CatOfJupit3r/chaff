@@ -1,19 +1,7 @@
-import {
-  accounts,
-  accountsRelations,
-  sessions,
-  sessionsRelations,
-  users,
-  usersRelations,
-  verifications,
-} from './schema/auth.schema';
+import { settings } from './schema/settings.schema';
+import { workspaces } from './schema/workspaces.schema';
 
 export const schema = {
-  users,
-  usersRelations,
-  sessions,
-  sessionsRelations,
-  accounts,
-  accountsRelations,
-  verifications,
+  settings,
+  workspaces,
 };

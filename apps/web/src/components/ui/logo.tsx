@@ -11,7 +11,7 @@ export function Logo({ className }: { className?: string }) {
       fill="currentColor"
       role="img"
       aria-label="Chaff"
-      className={cn('size-32', className)}
+      className={cn('size-7 flex-none', className)}
     >
       <path d={CHAFF_MARK_PATH} />
     </svg>
