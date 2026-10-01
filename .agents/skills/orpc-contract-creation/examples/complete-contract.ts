@@ -1,110 +1,70 @@
 // Example: Creating an oRPC contract with input/output schemas
-// Location: packages/shared/src/contract/example.contract.ts
+// Location: packages/server-contract/src/contract/workspaces.contract.ts
 
-import { oc } from '@orpc/server';
+import { oc } from '@orpc/contract';
 import z from 'zod';
-import { authProcedure } from './base';
 
 // Define reusable schemas
-const exampleSchema = z.object({
-  _id: z.string(),
+export const workspaceSchema = z.object({
+  id: z.string(),
   name: z.string(),
-  ownerId: z.string(),
-  createdAt: z.string(),
+  repoPath: z.string(),
+  defaultBranch: z.string().optional(),
+  /** False when the folder was moved or deleted since it was added. */
+  isAvailable: z.boolean(),
+  createdAt: z.date(),
 });
 
+export const branchSchema = z.object({
+  name: z.string(),
+  headSha: z.string(),
+  subject: z.string(),
+  authorName: z.string(),
+  committedAt: z.date(),
+  upstream: z.string().optional(),
+  isDefault: z.boolean(),
+  /** Nearest branch whose tip is in this branch's history; the default branch when none is. */
+  suggestedParent: z.string().optional(),
+  /** First-parent commits between the suggested parent's tip and this branch's tip. */
+  commitsAhead: z.number().int().nonnegative(),
+});
+
+// Input shared by every procedure that targets one workspace
+const workspaceIdInput = z.object({ workspaceId: z.string().min(1).max(64) });
+
 // Export the contract router
-export const exampleContract = oc.router({
-  // Public endpoint - no authentication required
-  listPublicExamples: oc
+export const workspacesContract = oc.router({
+  // A procedure without parameters has no .input()
+  list: oc
     .route({
-      method: 'GET',
-      path: '/examples',
-      summary: 'List all public examples',
-      description: 'Retrieves a paginated list of public examples with optional filtering',
+      summary: 'List repositories',
+      description: 'Returns every repository added to Chaff, oldest first.',
     })
-    .input(
-      z.object({
-        limit: z.number().min(1).max(100).default(20),
-        offset: z.number().min(0).default(0),
-        search: z.string().optional(),
-      })
-    )
-    .output(
-      z.object({
-        examples: z.array(exampleSchema),
-        total: z.number(),
-      })
-    ),
+    .output(z.array(workspaceSchema)),
 
-  // Protected endpoint - requires authentication
-  createExample: oc
+  add: oc
     .route({
-      method: 'POST',
-      path: '/examples',
-      summary: 'Create a new example',
-      description: 'Creates a new example owned by the authenticated user',
+      summary: 'Add a repository',
+      description:
+        'Adds the git repository that contains the given folder. Chaff only reads it and never writes to it.',
     })
-    .input(
-      z.object({
-        name: z.string().min(1, 'Name is required'),
-        description: z.string().max(500).optional(),
-      })
-    )
-    .output(exampleSchema)
-    .use(authProcedure),  // This makes it require authentication
+    .input(z.object({ path: z.string().min(1).max(4096) }))
+    .output(workspaceSchema),
 
-  // Protected endpoint with ID parameter
-  getExample: oc
+  remove: oc
     .route({
-      method: 'GET',
-      path: '/examples/:id',
-      summary: 'Get example by ID',
-      description: 'Retrieves a single example by its ID. User must be the owner or the example must be public.',
+      summary: 'Remove a repository',
+      description: 'Forgets the repository and its reviews. The folder on disk is not touched.',
     })
-    .input(
-      z.object({
-        id: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
-      })
-    )
-    .output(exampleSchema)
-    .use(authProcedure),
+    .input(workspaceIdInput)
+    .output(z.object({ workspaceId: z.string() })),
 
-  // Protected endpoint for updates
-  updateExample: oc
+  branches: oc
     .route({
-      method: 'PATCH',
-      path: '/examples/:id',
-      summary: 'Update an example',
-      description: 'Updates an example. User must be the owner.',
+      summary: 'List local branches',
+      description:
+        'Reads every local branch of the repository from disk, newest commit first, with a suggested parent for each.',
     })
-    .input(
-      z.object({
-        id: z.string(),
-        name: z.string().min(1).optional(),
-        description: z.string().max(500).optional(),
-      })
-    )
-    .output(exampleSchema)
-    .use(authProcedure),
-
-  // Protected endpoint for deletion
-  deleteExample: oc
-    .route({
-      method: 'DELETE',
-      path: '/examples/:id',
-      summary: 'Delete an example',
-      description: 'Soft deletes an example by marking it as archived. User must be the owner.',
-    })
-    .input(
-      z.object({
-        id: z.string(),
-      })
-    )
-    .output(
-      z.object({
-        success: z.boolean(),
-      })
-    )
-    .use(authProcedure),
+    .input(workspaceIdInput)
+    .output(z.array(branchSchema)),
 });

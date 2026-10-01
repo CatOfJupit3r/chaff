@@ -1,5 +1,5 @@
 // Example: Unit Test for Utilities
-// Location: apps/server/test/unit/matchers.test.ts
+// Location: packages/core/test/unit/matchers.test.ts
 
 import { describe, it, expect } from 'vitest';
 

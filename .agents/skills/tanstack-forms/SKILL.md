@@ -31,6 +31,8 @@ The project uses a custom hook created via `createFormHook` that provides:
 
 **Location**: `apps/web/src/components/ui/field.tsx`
 
+Not built yet: `field.tsx` currently exports only the `Field` layout row (label, control, optional hint), and `@tanstack/react-form` is installed but unused. Add `useAppForm`, `withForm`, `withFieldGroup`, the field components (`components/ui/form-fields.tsx`), `useFormAutosave` (`hooks/use-form-autosave.ts`), and the `Input`, `Textarea`, and `Label` primitives together with the first form, at the paths this skill names, and reuse `Field` for the label layout.
+
 ## Create Form Pattern
 
 ```typescript
@@ -39,8 +41,8 @@ import { useAppForm } from '@~/components/ui/field';
 import { useCreateCharacter } from '../hooks/use-create-character';
 import { characterFormSchema } from '../schemas/character.schema';
 
-export function CharacterCreateDialog({ open, onOpenChange }) {
-  const { createCharacter, isPending } = useCreateCharacter();
+export function CharacterCreateDialog({ isOpen, onOpenChange }: iCharacterCreateDialogProps) {
+  const { mutate: createCharacter, isPending } = useCreateCharacter();
 
   const form = useAppForm({
     defaultValues: {
@@ -71,57 +73,57 @@ export function CharacterCreateDialog({ open, onOpenChange }) {
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Character</DialogTitle>
-        </DialogHeader>
+        <DialogHeader title="Create Character" />
 
-        <form.AppForm>
-          <form.Form className="space-y-4">
-            <form.AppField name="name">
-              {(field) => (
-                <field.TextField
-                  label="Name"
-                  placeholder="Enter character name"
-                  required
-                  disabled={isPending}
+        <DialogBody>
+          <form.AppForm>
+            <form.Form className="space-y-4">
+              <form.AppField name="name">
+                {(field) => (
+                  <field.TextField
+                    label="Name"
+                    placeholder="Enter character name"
+                    required
+                    disabled={isPending}
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="description">
+                {(field) => (
+                  <field.TextareaField
+                    label="Description"
+                    placeholder="Describe the character..."
+                    rows={3}
+                    maxLength={500}
+                    disabled={isPending}
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="tags" mode="array">
+                {(field) => (
+                  <field.TagArrayField
+                    label="Tags"
+                    placeholder="Add a tag (press Enter)"
+                    disabled={isPending}
+                  />
+                )}
+              </form.AppField>
+
+              <DialogFooter>
+                <form.FormActions
+                  onCancel={() => onOpenChange(false)}
+                  submitLabel="Create Character"
+                  loadingLabel="Creating..."
+                  isDisabled={isPending}
                 />
-              )}
-            </form.AppField>
-
-            <form.AppField name="description">
-              {(field) => (
-                <field.TextareaField
-                  label="Description"
-                  placeholder="Describe the character..."
-                  rows={3}
-                  maxLength={500}
-                  disabled={isPending}
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="tags" mode="array">
-              {(field) => (
-                <field.TagArrayField
-                  label="Tags"
-                  placeholder="Add a tag (press Enter)"
-                  disabled={isPending}
-                />
-              )}
-            </form.AppField>
-
-            <DialogFooter>
-              <form.FormActions
-                onCancel={() => onOpenChange(false)}
-                submitLabel="Create Character"
-                loadingLabel="Creating..."
-                isDisabled={isPending}
-              />
-            </DialogFooter>
-          </form.Form>
-        </form.AppForm>
+              </DialogFooter>
+            </form.Form>
+          </form.AppForm>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );
@@ -139,7 +141,7 @@ import { useUpdateCharacter } from '../hooks/use-update-character';
 
 export function CharacterEditPanel({ characterId }) {
   const { data: character, isPending: isLoading } = useCharacter(characterId);
-  const { updateCharacter, isPending } = useUpdateCharacter();
+  const { mutate: updateCharacter, isPending } = useUpdateCharacter();
 
   const form = useAppForm({
     defaultValues: {
@@ -182,7 +184,7 @@ export function CharacterEditPanel({ characterId }) {
     }
   }, [character, form, resetTracking]);
 
-  if (isLoading) return <Skeleton className="h-[400px]" />;
+  if (isLoading) return <CharacterPanelSkeleton />;
   if (!character) return <div>Character not found</div>;
 
   return (
@@ -211,7 +213,7 @@ export function CharacterEditPanel({ characterId }) {
 
         {/* Show saving indicator */}
         {isPending && (
-          <div className="text-sm text-muted-foreground">Saving...</div>
+          <div className="text-sm text-muted">Saving...</div>
         )}
       </form.Form>
     </form.AppForm>
@@ -293,7 +295,7 @@ export function createFieldMap<T extends Record<string, unknown>>(
 
 // features/presets/components/preset-create-dialog.tsx
 import { createFieldMap } from '@~/lib/form-utils';
-import { PRESET_TYPES } from '@chaff/shared/constants/presets';
+import { PRESET_TYPES } from '@chaff/common/enums/presets.enums';
 import { PresetInfoFieldGroup } from '../forms/preset-info-field-group';
 
 // Define field mapping once (top-level constant)
@@ -355,12 +357,12 @@ export const characterEditSchema = characterFormSchema.extend({
 });
 ```
 
-For an enum-backed form field, import the named enumwaii accessor (for example `PRESET_TYPES` from `@chaff/shared/constants/presets`) and use its members in `defaultValues`, select options, submit payloads, and test fixtures. Use the enumwaii `.schema` only for validation and the inferred type for annotations; never write raw values or reach through the schema for members. See the **enumwaii** skill.
+For an enum-backed form field, import the named enumwaii accessor (for example `THEME_MODES` from `@chaff/common/enums/appearance.enums`) and use its members in `defaultValues`, select options, submit payloads, and test fixtures. Use the enumwaii `.schema` only for validation and the inferred type for annotations; never write raw values or reach through the schema for members. See the **enumwaii** skill.
 
 ## Available Field Components
 
-Pre-built field components from custom form hook are defined in `@~/components/ui/form-fields.tsx`
-and can be referenced when using `form.AppField`.
+Pre-built field components from custom form hook belong in `@~/components/ui/form-fields.tsx`
+(created with the form hook, see above) and can be referenced when using `form.AppField`.
 
 To get the full list of available fields and their props, check the `form-fields.tsx` file
 
@@ -395,19 +397,19 @@ To get the full list of available fields and their props, check the `form-fields
             />
             <Button
               type="button"
-              variant="ghost"
+              variant="icon"
               size="icon"
+              aria-label="Remove relationship"
               onClick={() => {
                 field.handleChange(relationships.filter((_, i) => i !== index));
               }}
             >
-              <Trash2 className="h-4 w-4" />
+              <CloseIcon />
             </Button>
           </div>
         ))}
         <Button
           type="button"
-          variant="outline"
           onClick={() => {
             field.handleChange([
               ...relationships,
@@ -428,10 +430,9 @@ To get the full list of available fields and their props, check the `form-fields
 Forms always pair with TanStack Query mutations. **See [tanstack-query-integration](../tanstack-query-integration/SKILL.md) for mutation patterns.**
 
 Key points:
-- Export mutation options as constants
-- Use `ctx.client.invalidateQueries()` for cache updates
+- Call the feature's `use<Action>` mutation hook; it owns cache updates (`useQueryClient()`) and error toasts
 - Handle loading states with `isPending`
-- Show success/error toasts
+- Show success toasts with `showToast` from `@~/components/toast/toast-store`
 
 ```typescript
 const form = useAppForm({
@@ -440,11 +441,8 @@ const form = useAppForm({
       { value },
       {
         onSuccess: () => {
-          toast.success('Created!');
+          showToast('Created!');
           form.reset();
-        },
-        onError: (error) => {
-          toast.error(error.message);
         },
       },
     );

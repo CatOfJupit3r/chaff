@@ -141,16 +141,16 @@ Before writing active implementation phases, inspect the real repository state.
 
 Check only the surfaces that matter, such as:
 
-- `packages/shared/src/contract/`
-- `packages/shared/src/constants/`
-- `packages/shared/src/enums/`
-- `packages/shared/src/schemas/`
-- `apps/server/src/db/schema/`
-- `apps/server/src/features/`
-- `apps/server/src/routers/`
+- `packages/server-contract/src/contract/`
+- `packages/common/src/constants/`
+- `packages/common/src/enums/`
+- `packages/core/src/db/schema/`
+- `packages/core/src/features/`
+- `packages/core/src/routers/`
 - `apps/web/src/features/`
 - `apps/web/src/routes/`
-- `apps/server/test/`
+- `apps/desktop/src/`
+- `packages/core/test/`
 - `apps/web/test/`
 - `docs/knowledge-base/`
 - related files under `docs/roadmaps/`
@@ -162,7 +162,7 @@ Good:
 ```md
 | Area | Current state | Evidence |
 | --- | --- | --- |
-| Story development workspace | Story detail already includes scene ideas, memory, and continuity panels | `apps/web/src/features/stories/...`, `apps/server/src/features/stories/...` |
+| Story development workspace | Story detail already includes scene ideas, memory, and continuity panels | `apps/web/src/features/stories/...`, `packages/core/src/features/stories/...` |
 ```
 
 Bad:
@@ -250,11 +250,10 @@ Common commands:
 
 ```bash
 pnpm --filter=web run check-types
-pnpm --filter=server run check-types
-pnpm --filter=@chaff/shared run check-types
-pnpm run check-types
-pnpm run lint
-pnpm run test
+pnpm --filter=@chaff/core run check-types
+pnpm --filter=@chaff/server-contract run check-types
+pnpm run verify
+pnpm run verify --tests
 ```
 
 Do not attach every command to every roadmap. Match validation to the changed surface.

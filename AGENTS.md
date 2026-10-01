@@ -235,7 +235,7 @@ skills:
     load: ".agents/skills/orpc-contract-creation/SKILL.md"
   - task: "Building accessible React components with UI primitives, nuqs, and design tokens"
     load: ".agents/skills/react-component-patterns/SKILL.md"
-  - task: "Implementing error handling with custom wrappers and access control patterns"
+  - task: "Implementing error handling with the ORPC error wrappers and error codes"
     load: ".agents/skills/server-error-handling/SKILL.md"
   - task: "Implementing oRPC router handlers following contract definitions"
     load: ".agents/skills/server-router-implementation/SKILL.md"

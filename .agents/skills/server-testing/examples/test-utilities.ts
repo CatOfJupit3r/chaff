@@ -1,176 +1,56 @@
 // Example: Creating Test Utilities
-// Location: apps/server/test/integration/utilities.ts
+// Location: packages/core/test/helpers/workspace-fixtures.ts (hypothetical)
+//
+// Helpers that already exist in packages/core/test/helpers/:
+// - instance.ts        boots one core per run and exports `appRouter`, `fakeHost`, `testDataDir`, `TEST_APP_VERSION`
+// - git-repo.ts        `createTestGitRepo()`, `cloneTestGitRepo()`, `createTempDirectory()`, `TestGitRepo`
+// - fake-core-host.ts  `FakeCoreHost`, which records picker titles, opened URLs, and applied themes
+// - orpc-errors.ts     `expectORPCError()`
+// - setup.ts           clears every table, resets `fakeHost`, and deletes temp folders after each test
+//
+// Keep a fixture in its test file until a second test file needs it, then move it here.
 
-import { auth } from '../helpers/instance';
+import { call } from '@orpc/server';
+import { container } from 'tsyringe';
 
-type UserData = NonNullable<
-  Prettify<Parameters<typeof auth.api.signUpEmail>[0]>
->['body'];
+import { DatabaseService } from '@~/db/database.service';
+import { workspaces } from '@~/db/schema/workspaces.schema';
+
+import { createTestGitRepo } from './git-repo';
+import type { TestGitRepo } from './git-repo';
+import { appRouter } from './instance';
+
+type NewWorkspaceRow = typeof workspaces.$inferInsert;
 
 // ============================================================================
-// User Creation Utilities
+// Feature Fixtures
 // ============================================================================
 
 /**
- * Creates a random user with unique email and name
+ * Adds a repository through the router, the same way the app does
  */
-export function createRandomUser() {
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
-  return {
-    email: `userapi-${randomSuffix}@example.com`,
-    name: `Test User ${randomSuffix}`,
-    password: 'password123',
-  } satisfies UserData;
+export async function addWorkspace(repo: TestGitRepo) {
+  return call(appRouter.workspaces.add, { path: repo.path });
 }
 
 /**
- * Creates an authenticated user with session
- * 
- * @param newUser - User data (defaults to random user)
- * @returns Object with ctx, user, session, and cookie
- * 
+ * Creates main <- feature/a <- feature/b and adds the repository
+ *
  * @example
  * ```typescript
- * // Create random user
- * const { ctx, user } = await createUser();
- * 
- * // Create specific user
- * const { ctx, user } = await createUser({
- *   email: 'test@example.com',
- *   name: 'Test User',
- *   password: 'password123',
- * });
+ * const { repo, workspace } = await createStackedWorkspace();
+ * const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
  * ```
  */
-export async function createUser(newUser: UserData = createRandomUser()) {
-  const {
-    headers,
-    response: { user },
-  } = await auth.api.signUpEmail({
-    body: newUser,
-    returnHeaders: true,
-  });
+export async function createStackedWorkspace() {
+  const repo = createTestGitRepo();
+  repo.branch('feature/a');
+  repo.commit('a1');
+  repo.branch('feature/b');
+  repo.commit('b1');
 
-  const cookie = headers.getSetCookie()[0];
-
-  const getSession = await auth.api.getSession({
-    headers: {
-      cookie,
-    },
-  });
-
-  if (!getSession?.session) throw new Error('Failed to create user session');
-  const { session } = getSession;
-
-  return {
-    cookie,
-    session,
-    user,
-    ctx: () => ({
-      context: {
-        session: {
-          user,
-          session,
-        },
-      },
-    }),
-  };
-}
-
-// ============================================================================
-// Example: Specialized User Creation
-// ============================================================================
-
-/**
- * Creates a user with admin privileges
- */
-export async function createAdminUser() {
-  const user = await createUser({
-    email: `admin-${Date.now()}@example.com`,
-    name: 'Admin User',
-    password: 'admin123',
-  });
-
-  // Grant admin role (example - adjust to your model)
-  // await UserModel.findByIdAndUpdate(user.user.id, { role: 'ADMIN' });
-
-  return user;
-}
-
-// ============================================================================
-// Example: Feature Fixtures (hypothetical `findings` feature)
-// In a real feature, put these in test/integration/findings.fixtures.ts
-// ============================================================================
-
-/**
- * Creates a user with N findings via API
- *
- * NOTE: Fixture calls endpoints to ensure full API testing
- */
-export async function createUserWithFindings(count: number) {
-  const user = await createUser();
-
-  // Fixture creates findings via API endpoints
-  // await Promise.all(
-  //   Array.from({ length: count }, (_, i) =>
-  //     call(appRouter.findings.createFinding, { title: `Finding ${i}` }, user.ctx())
-  //   )
-  // );
-
-  return user;
-}
-
-/**
- * Creates a user with one finding via API
- *
- * NOTE: Fixture calls endpoint to create the finding
- */
-export async function createUserWithFinding() {
-  const user = await createUser();
-
-  // const finding = await call(
-  //   appRouter.findings.createFinding,
-  //   { title: 'Test finding' },
-  //   user.ctx()
-  // );
-
-  return {
-    ...user,
-    finding: { id: crypto.randomUUID(), summary: '', ownerId: user.user.id }, // In real implementation, return the created finding
-  };
-}
-
-/**
- * Creates a user with a finding and updates its summary via API
- *
- * NOTE: Fixture handles finding creation AND summary update
- */
-export async function createUserWithFindingSummary(summary: string) {
-  const { finding, ...user } = await createUserWithFinding();
-
-  // const updatedFinding = await call(
-  //   appRouter.findings.updateFinding,
-  //   { id: finding.id, summary },
-  //   user.ctx()
-  // );
-
-  return {
-    ...user,
-    finding: { ...finding, summary }, // In real implementation, return the updated finding
-  };
-}
-
-/**
- * Creates a user with a maximum-length finding summary via API
- *
- * NOTE: Fixture encapsulates the constraint
- */
-export async function createUserWithMaxSummary(summary: string) {
-  if (summary.length > 500) {
-    throw new Error('Summary exceeds maximum length of 500 characters');
-  }
-
-  return createUserWithFindingSummary(summary);
+  const workspace = await addWorkspace(repo);
+  return { repo, workspace };
 }
 
 // ============================================================================
@@ -178,62 +58,14 @@ export async function createUserWithMaxSummary(summary: string) {
 // ============================================================================
 
 /**
- * Creates test challenge data with optional overrides
+ * Creates workspace row data with optional overrides
  */
-export function createChallengeData(overrides = {}) {
+export function createWorkspaceData(overrides: Partial<NewWorkspaceRow> = {}) {
   return {
-    title: 'Test Challenge',
-    description: 'Test Description',
-    difficulty: 'MEDIUM',
-    points: 100,
+    name: 'test-repo',
+    repoPath: `/missing/test-repo-${crypto.randomUUID()}`,
     ...overrides,
-  };
-}
-
-/**
- * Creates test finding data
- */
-export function createFindingData(overrides = {}) {
-  return {
-    title: 'Test finding',
-    summary: 'Test summary',
-    filePath: 'apps/server/src/example.ts',
-    ...overrides,
-  };
-}
-
-// ============================================================================
-// Example: API Client Helpers
-// ============================================================================
-
-/**
- * Creates a session by signing in with credentials
- */
-export async function createSession(email: string, password: string) {
-  const { headers } = await auth.api.signInEmail({
-    body: { email, password },
-    returnHeaders: true,
-  });
-
-  return headers.getSetCookie()[0];
-}
-
-/**
- * Makes an authenticated request using a cookie
- */
-export async function makeAuthenticatedRequest(
-  cookie: string,
-  endpoint: string,
-  data: any
-) {
-  return fetch(`http://localhost:3000${endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      cookie,
-    },
-    body: JSON.stringify(data),
-  });
+  } satisfies NewWorkspaceRow;
 }
 
 // ============================================================================
@@ -241,24 +73,18 @@ export async function makeAuthenticatedRequest(
 // ============================================================================
 
 /**
- * Cleans up all data for a specific user
+ * Inserts a workspace row directly, for state the router cannot create
+ * (here: a repository whose folder no longer exists).
+ * setup.ts clears every table after each test, so no cleanup is needed.
  */
-export async function cleanUserData(userId: string) {
-  // Example - adjust to your tables (setup.ts already truncates between tests)
-  // const db = container.resolve(PostgresService).getDb();
-  // await db.delete(findings).where(eq(findings.ownerId, userId));
-}
-
-/**
- * Seeds test findings into the database
- */
-export async function seedFindings(ownerId: string) {
-  // Example - adjust to your tables
-  // const db = container.resolve(PostgresService).getDb();
-  // await db.insert(findings).values([
-  //   { ownerId, title: 'Unused export', summary: '...' },
-  //   { ownerId, title: 'Dead branch', summary: '...' },
-  // ]);
+export function seedWorkspace(overrides: Partial<NewWorkspaceRow> = {}) {
+  return container
+    .resolve(DatabaseService)
+    .getDb()
+    .insert(workspaces)
+    .values(createWorkspaceData(overrides))
+    .returning()
+    .get();
 }
 
 // ============================================================================
@@ -267,7 +93,7 @@ export async function seedFindings(ownerId: string) {
 
 /**
  * Waits for a condition to be true
- * 
+ *
  * @param condition - Function returning boolean or promise of boolean
  * @param timeout - Max time to wait in milliseconds (default 5000)
  */
@@ -286,7 +112,4 @@ export async function waitFor(
 }
 
 // Usage example:
-// await waitFor(async () => {
-//   const user = await UserModel.findById(userId);
-//   return user?.status === 'ACTIVE';
-// });
+// await waitFor(() => fakeHost.openedUrls.length > 0);

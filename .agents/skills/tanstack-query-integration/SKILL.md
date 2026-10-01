@@ -1,11 +1,7 @@
 ---
 name: tanstack-query-integration
-description: Integrate TanStack Query with oRPC for data fetching, mutations, and optimistic updates. Use when creating query hooks, managing mutations, optimistic updates, cache invalidation, or integrating with route loaders. STRICT patterns required - always use tankstackRPC.procedure.{query|mutation}Options(), export options as constants, use ctx.client (never import queryClient).
+description: Integrate TanStack Query with oRPC for data fetching, mutations, and optimistic updates. Use when creating query hooks, managing mutations, optimistic updates, cache invalidation, or integrating with route loaders. STRICT patterns required - always use tanstackRPC.procedure.{query|mutation}Options(), export query options as constants, use useQueryClient() (never import a QueryClient instance).
 ---
-
-# TanStack Query Integration
-
-Type-safe data fetching with TanStack Query + oRPC integration.
 
 # TanStack Query Integration
 
@@ -13,199 +9,173 @@ Type-safe data fetching with TanStack Query + oRPC integration.
 
 ## Critical Rules (NON-NEGOTIABLE)
 
-1. **ALWAYS use `ctx.client`** - NEVER import `queryClient` directly in mutation callbacks
-2. **ALWAYS export query/mutation options** as named constants for reuse in loaders/tests/other mutations
-3. **ALWAYS use `tanstackRPC.procedure.queryKey()`** - NEVER create manual query keys like `['user', id]`
-4. **ALWAYS export return types** from query hooks for type-safe cache updates
-5. **ALWAYS define options as top-level constants** - never inline `mutationOptions()` in `useMutation()` call
+1. **ALWAYS use `useQueryClient()`** inside the hook - NEVER import or create a `QueryClient` instance. Route loaders use `context.queryClient`
+2. **ALWAYS export query options** as named camelCase constants (`workspacesQueryOptions`) for reuse in loaders, hooks, and cache updates
+3. **ALWAYS use generated keys** (`settingsQueryOptions.queryKey`, `tanstackRPC.<namespace>.<procedure>.queryKey()`, `tanstackRPC.<namespace>.key()`) - NEVER create manual query keys like `['workspaces', id]`
+4. **ALWAYS take output types from `ORPCOutputs`** in the feature's `*.types.ts` - NEVER redeclare a response shape
+5. **ALWAYS wrap each mutation in a `use<Action>` hook** that builds the `mutationOptions()` and reports failures with `showToast(getErrorMessage(error))` - never call `useMutation()` directly in a component
 
 ## oRPC Integration
 
-The project uses `tanstackRPC` from `@~/utils/tanstack-orpc.ts`, applying `createTanstackQuery Utils` to the client.
+The project uses `tanstackRPC` from `@~/utils/tanstack-orpc.ts`, applying `createTanstackQueryUtils` to the MessagePort client from `@~/utils/orpc.ts`.
 
 Every contract procedure provides:
-- `.queryOptions()` - For `useQuery()`, generates key + fetcher
+- `.queryOptions()` - For `useQuery()`, `useSuspenseQuery()`, and `ensureQueryData()`, generates key + fetcher
 - `.mutationOptions()` - For `useMutation()`, with cache integration
 - `.queryKey()` - Type-safe key generation
+- `.key()` - Partial key for invalidating every query of a procedure or of a whole namespace (`tanstackRPC.workspaces.key()`)
 - `.call()` - Direct procedure invocation
 
 ## Query Hooks Pattern
 
 ```typescript
-// features/characters/hooks/use-character.ts
-import { useQuery } from '@tanstack/react-query';
-import type { ORPCOutputs } from '@~/utils/orpc';
+// features/workspaces/hooks/use-workspaces.ts
+import { useSuspenseQuery } from '@tanstack/react-query';
+
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
-// 1. Export query options as constant (for loaders, mutations, tests)
-export const CHARACTER_QUERY_OPTIONS = (characterId: string) =>
-  tanstackRPC.characters.getCharacter.queryOptions({
-    input: { characterId },
-  });
+// 1. Export query options as constant (for loaders, cache updates, tests)
+export const workspacesQueryOptions = tanstackRPC.workspaces.list.queryOptions();
 
-// 2. Export query key (for invalidation)
-export const CHARACTER_QUERY_KEY = (characterId: string) =>
-  tanstackRPC.characters.getCharacter.queryKey({ input: { characterId } });
-
-// 3. Export return type (for type-safe cache updates)
-export type CharacterQuery = ORPCOutputs['characters']['getCharacter'];
-
-// 4. Export hook
-export function useCharacter(characterId: string) {
-  return useQuery(CHARACTER_QUERY_OPTIONS(characterId));
+// 2. Export hook; the route loader already loaded the data
+export function useWorkspaces() {
+  return useSuspenseQuery(workspacesQueryOptions).data;
 }
 ```
 
+```typescript
+// features/workspaces/workspaces.types.ts
+import type { ORPCOutputs } from '@~/utils/orpc';
+
+// 3. Export output types from the feature's types file
+export type iWorkspace = ORPCOutputs['workspaces']['list'][number];
+```
+
+Procedures with input take it as `{ input }`: `tanstackRPC.workspaces.branches.queryOptions({ input: { workspaceId } })`. Use `useQueries` with `combine` to read one procedure for many inputs (`features/workspaces/hooks/use-local-stacks.ts`).
+
 ### Conditional Queries
 
-Use `enabled` to prevent queries until dependencies are ready:
+Pass `skipToken` as the input to prevent a query until its dependencies are ready; oRPC disables the query for it:
 
 ```typescript
-export function useCharacter(characterId: string | undefined) {
-  return useQuery({
-    ...CHARACTER_QUERY_OPTIONS(characterId!),
-    enabled: !!characterId, // Only query when ID exists
-  });
+import { skipToken, useQuery } from '@tanstack/react-query';
+
+export function useBranches(workspaceId: string | undefined) {
+  return useQuery(
+    tanstackRPC.workspaces.branches.queryOptions({
+      input: workspaceId ? { workspaceId } : skipToken, // Only query when ID exists
+    }),
+  );
 }
 ```
 
 ## Mutation Hooks Pattern
 
 ```typescript
-// features/characters/hooks/use-update-character.ts
-import { useMutation } from '@tanstack/react-query';
+// features/workspaces/hooks/use-remove-workspace.ts
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { showToast } from '@~/components/toast/toast-store';
+import { getErrorMessage } from '@~/utils/rpc-errors';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
-import { CHARACTER_QUERY_KEY, type CharacterQuery } from './use-character';
 
-// 1. Define mutation options as top-level constant
-const UPDATE_CHARACTER_MUTATION_OPTIONS = tanstackRPC.characters.updateCharacter.mutationOptions({
-  onSuccess: (data, { params: { characterId } }, _context, ctx) => {
-    // Update cache with server response
-    const key = CHARACTER_QUERY_KEY(characterId);
-    ctx.client.setQueryData<CharacterQuery>(key, data);
-    
-    // Invalidate related queries
-    void ctx.client.invalidateQueries({
-      queryKey: tanstackRPC.characters.listCharacters.queryKey(),
-    });
-  },
-  onError: (error) => {
-    console.error('Failed to update character:', error);
-  },
-});
+export function useRemoveWorkspace() {
+  const queryClient = useQueryClient();
 
-// 2. Export hook with clean API
-export function useUpdateCharacter() {
-  const { mutate, isPending, error } = useMutation(UPDATE_CHARACTER_MUTATION_OPTIONS);
-  
-  return {
-    updateCharacter: mutate,
-    isPending,
-    error,
-  };
+  return useMutation(
+    tanstackRPC.workspaces.remove.mutationOptions({
+      onSuccess: async () => {
+        // Refetch the list and every branches query of the namespace
+        await queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.key() });
+      },
+      onError: (error) => showToast(getErrorMessage(error)),
+    }),
+  );
 }
 ```
 
 ### Mutation with Callback Options
 
-Support dynamic callbacks for navigation/UI updates:
+Support dynamic callbacks for navigation/UI updates by passing them to `mutate`. The hook's callbacks still run first, so the per-call ones only handle the UI (`features/workspaces/components/remove-repository-dialog.tsx`):
 
 ```typescript
-interface iUpdateCharacterOptions {
-  onSuccess?: () => void;
-}
+const { mutate: removeWorkspace, isPending } = useRemoveWorkspace();
 
-const UPDATE_CHARACTER_MUTATION_OPTIONS = (options?: iUpdateCharacterOptions) =>
-  tanstackRPC.characters.updateCharacter.mutationOptions({
-    onSuccess: (data, { params: { characterId } }, _context, ctx) => {
-      const key = CHARACTER_QUERY_KEY(characterId);
-      ctx.client.setQueryData<CharacterQuery>(key, data);
-      
-      // Call user's callback
-      options?.onSuccess?.();
+const confirm = () =>
+  removeWorkspace(
+    { workspaceId: workspace.id },
+    {
+      onSuccess: () => {
+        onOpenChange(false);
+        showToast(`Removed ${workspace.name}`);
+      },
     },
-  });
-
-export function useUpdateCharacter(options?: iUpdateCharacterOptions) {
-  const { mutate, isPending } = useMutation(UPDATE_CHARACTER_MUTATION_OPTIONS(options));
-  return { updateCharacter: mutate, isPending };
-}
+  );
 ```
 
 ## Optimistic Updates
 
-Update UI instantly while mutation is in-flight:
+Update UI instantly while mutation is in-flight (`features/settings/hooks/use-update-settings.ts`):
 
 ```typescript
-const UPDATE_CHARACTER_MUTATION_OPTIONS = tanstackRPC.characters.updateCharacter.mutationOptions({
-  async onMutate({ params: { characterId, name, description } }, ctx) {
-    const key = CHARACTER_QUERY_KEY(characterId);
-    
-    // 1. Cancel in-flight queries
-    await ctx.client.cancelQueries({ queryKey: key });
-    
-    // 2. Snapshot previous data for rollback
-    const previous = ctx.client.getQueryData<CharacterQuery>(key);
-    
-    // 3. Apply optimistic update
-    ctx.client.setQueryData<CharacterQuery>(key, (current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-      };
-    });
-    
-    // 4. Return for rollback
-    return { previous };
-  },
-  
-  onError: (_error, { params: { characterId } }, context, ctx) => {
-    const key = CHARACTER_QUERY_KEY(characterId);
-    // Rollback on error
-    if (context?.previous) {
-      ctx.client.setQueryData<CharacterQuery>(key, context.previous);
-    } else {
-      void ctx.client.invalidateQueries({ queryKey: key });
-    }
-  },
-  
-  onSuccess: (data, { params: { characterId } }, _context, ctx) => {
-    const key = CHARACTER_QUERY_KEY(characterId);
-    // Use server response (most accurate)
-    ctx.client.setQueryData<CharacterQuery>(key, data);
-  },
-});
+export function useUpdateSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    tanstackRPC.settings.update.mutationOptions({
+      onMutate: async (changes) => {
+        // 1. Cancel in-flight queries
+        await queryClient.cancelQueries({ queryKey: settingsQueryOptions.queryKey });
+
+        // 2. Snapshot previous data for rollback
+        const previous = queryClient.getQueryData(settingsQueryOptions.queryKey);
+
+        // 3. Apply optimistic update
+        if (previous) {
+          queryClient.setQueryData(settingsQueryOptions.queryKey, {
+            ...previous,
+            ...settingsSchema.partial().parse(changes),
+          });
+        }
+
+        // 4. Return for rollback
+        return { previous };
+      },
+
+      onError: (error, _changes, context) => {
+        // Rollback on error
+        if (context?.previous) queryClient.setQueryData(settingsQueryOptions.queryKey, context.previous);
+        showToast(getErrorMessage(error));
+      },
+
+      onSuccess: (settings) => {
+        // Use server response (most accurate)
+        queryClient.setQueryData(settingsQueryOptions.queryKey, settings);
+      },
+    }),
+  );
+}
 ```
 
 ### Common Optimistic Update Patterns
 
 **Remove item from list:**
 ```typescript
-ctx.client.setQueryData<ListQuery>(key, (current) => {
-  if (!current) return current;
-  return {
-    ...current,
-    items: current.items.filter((item) => item.id !== deletedId),
-  };
-});
+queryClient.setQueryData(workspacesQueryOptions.queryKey, (current) =>
+  current?.filter((workspace) => workspace.id !== workspaceId),
+);
 ```
 
 **Add item to list:**
 ```typescript
-ctx.client.setQueryData<ListQuery>(key, (current) => {
-  if (!current) return current;
-  return {
-    ...current,
-    items: [...current.items, newItem],
-  };
-});
+queryClient.setQueryData(workspacesQueryOptions.queryKey, (current) =>
+  current ? [...current, workspace] : current,
+);
 ```
 
 **Update nested item:**
 ```typescript
-ctx.client.setQueryData<ParentQuery>(key, (current) => {
+queryClient.setQueryData(key, (current) => {
   if (!current) return current;
   return {
     ...current,
@@ -218,35 +188,31 @@ ctx.client.setQueryData<ParentQuery>(key, (current) => {
 
 ## Cache Invalidation
 
+`await` the invalidation inside an `async` callback when the mutation should stay pending until the refetch finishes.
+
 ### Specific Key
 Invalidate query with exact parameters:
 
 ```typescript
-void ctx.client.invalidateQueries({
-  queryKey: CHARACTER_QUERY_KEY(characterId),
+await queryClient.invalidateQueries({
+  queryKey: tanstackRPC.workspaces.branches.queryKey({ input: { workspaceId } }),
 });
 ```
 
 ### All in Namespace
-Invalidate all queries for a procedure (any parameters):
+Invalidate all queries for a procedure (any parameters), or for every procedure of a namespace:
 
 ```typescript
-void ctx.client.invalidateQueries({
-  queryKey: tanstackRPC.characters.getCharacter.queryKey(),
-});
+await queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.branches.key() });
+await queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.key() });
 ```
 
 ### Multiple Related Queries
 ```typescript
-void ctx.client.invalidateQueries({
-  queryKey: CHARACTER_QUERY_KEY(characterId),
-});
-void ctx.client.invalidateQueries({
-  queryKey: tanstackRPC.characters.listCharacters.queryKey(),
-});
-void ctx.client.invalidateQueries({
-  queryKey: tanstackRPC.chats.listChats.queryKey(),
-});
+await Promise.all([
+  queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.list.key() }),
+  queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.branches.queryKey({ input: { workspaceId } }) }),
+]);
 ```
 
 ### When to Use Each Strategy
@@ -260,45 +226,57 @@ void ctx.client.invalidateQueries({
 
 ## Route Integration
 
-Prefetch data in route loaders for SSR-like experience:
+Load data in route loaders so the screen renders with data and `useSuspenseQuery` does not suspend (`routes/index.tsx`):
 
 ```typescript
-// routes/__root.tsx or specific route
-import { CHARACTER_QUERY_OPTIONS } from '@~/features/characters/hooks/use-character';
+import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/characters/$characterId')({
-  async loader({ context, params }) {
-    await context.queryClient.ensureQueryData(
-      CHARACTER_QUERY_OPTIONS(params.characterId)
-    );
-  },
+import { ReviewsScreen } from '@~/features/workspaces/components/reviews-screen';
+import { workspacesQueryOptions } from '@~/features/workspaces/hooks/use-workspaces';
+
+export const Route = createFileRoute('/')({
+  loader: async ({ context }) => context.queryClient.ensureQueryData(workspacesQueryOptions),
+  component: ReviewsScreen,
 });
 ```
 
 ## Loading States
 
 ### Basic Pattern
-```typescript
-const { data, isPending, isError, error } = useCharacter(characterId);
+Data a screen fetches itself (not through its loader) renders its own pending, error, and empty states (`features/workspaces/components/local-stacks-group.tsx`):
 
-if (isPending) return <Skeleton />;
-if (isError) return <ErrorMessage error={error} />;
-if (!data) return <NotFound />;
+```tsx
+const { isPending, failures, stacks } = useLocalStacks(workspaces);
+const isEmpty = !isPending && failures.length === 0 && stacks.length === 0;
 
-return <CharacterCard character={data} />;
+return (
+  <List>
+    {failures.map(({ workspace, error }) => (
+      <BranchesErrorRow key={workspace.id} workspace={workspace} error={error} />
+    ))}
+    {isPending ? <StackRowsSkeleton /> : null}
+    {stacks.map((stack) => (
+      <StackRow key={`${stack.workspace.id}:${stack.tip.name}`} stack={stack} />
+    ))}
+    {isEmpty ? <NoLocalStacks /> : null}
+  </List>
+);
 ```
 
 ### With Mutation
 ```typescript
-const { character, isPending } = useCharacter(characterId);
-const { updateCharacter, isPending: isUpdating } = useUpdateCharacter();
+// features/workspaces/hooks/use-add-workspace.ts returns one flag for both of its mutations
+return { addFromPicker, isAdding: pickDirectory.isPending || addWorkspace.isPending };
 
-const isDisabled = isPending || isUpdating;
+// features/workspaces/components/repositories-group.tsx
+<Button size="sm" onClick={onAdd} disabled={isAdding}>
+  Add repository
+</Button>
 ```
 
 ## Common Mistakes
 
-❌ **Don't import queryClient:**
+**Don't import or create a QueryClient:**
 ```typescript
 import { queryClient } from '@~/utils/query-client';
 mutationOptions({
@@ -306,40 +284,40 @@ mutationOptions({
 });
 ```
 
-✅ **Do use ctx.client:**
+**Do use useQueryClient() in the hook:**
 ```typescript
+const queryClient = useQueryClient();
 mutationOptions({
-  onSuccess: (_data, _vars, _ctx, ctx) => {
-    ctx.client.invalidateQueries({ ... }); // CORRECT
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ ... }); // CORRECT
   },
 });
 ```
 
-❌ **Don't create manual keys:**
+**Don't create manual keys:**
 ```typescript
-const key = ['findings', 'detail', findingId]; // WRONG
+const key = ['workspaces', 'branches', workspaceId]; // WRONG
 ```
 
-✅ **Do use generated keys:**
+**Do use generated keys:**
 ```typescript
-const key = tanstackRPC.findings.getFinding.queryKey({ input: { findingId } }); // CORRECT
+const key = tanstackRPC.workspaces.branches.queryKey({ input: { workspaceId } }); // CORRECT
 ```
 
-❌ **Don't inline options:**
+**Don't build mutation options in a component:**
 ```typescript
-useMutation(tanstackRPC.user.update.mutationOptions({ ... })); // WRONG
+const { mutate } = useMutation(tanstackRPC.workspaces.remove.mutationOptions({ ... })); // WRONG
 ```
 
-✅ **Do export as constant:**
+**Do wrap them in a use<Action> hook:**
 ```typescript
-const UPDATE_USER_MUTATION_OPTIONS = tanstackRPC.user.update.mutationOptions({ ... });
-useMutation(UPDATE_USER_MUTATION_OPTIONS); // CORRECT
+const { mutate: removeWorkspace, isPending } = useRemoveWorkspace(); // CORRECT
 ```
 
 ## Advanced: Best Practices
 
 See [references/best-practices.md](references/best-practices.md) for comprehensive guidelines on:
-- Type exports for cache safety
+- Output types and typed cache access
 - Query key patterns
 - Stale time configuration
 - Request deduplication
