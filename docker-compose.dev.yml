@@ -1,0 +1,32 @@
+name:
+  startername
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: startername-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=startername
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    profiles:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d startername"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+  valkey:
+    image: valkey/valkey:8.0-alpine
+    container_name: startername-valkey
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+
+volumes:
+  postgres-data:
