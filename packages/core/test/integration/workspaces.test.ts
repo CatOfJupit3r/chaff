@@ -161,6 +161,28 @@ describe('workspace branches', () => {
     });
   });
 
+  it('keeps a branch on its parent after it merges newer commits from the parent and the default branch', async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feature/a');
+    repo.commit('a1', 'a1.txt');
+    repo.branch('feature/b');
+    repo.commit('b1', 'b1.txt');
+    repo.switch('feature/a');
+    repo.commit('a2', 'a2.txt');
+    repo.switch('feature/b');
+    repo.git('merge', '--quiet', '--no-edit', 'feature/a');
+    repo.switch('main');
+    repo.commit('m1', 'm1.txt');
+    repo.switch('feature/b');
+    repo.git('merge', '--quiet', '--no-edit', 'main');
+    repo.commit('b2', 'b2.txt');
+    const workspace = await addWorkspace(repo);
+
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+
+    expect(branches.find((branch) => branch.name === 'feature/b')?.suggestedParent).toBe('feature/a');
+  });
+
   it('reports an unknown repository', async () => {
     await expectORPCError(call(appRouter.workspaces.branches, { workspaceId: 'missing' }), {
       code: errorCodes.WORKSPACE_NOT_FOUND,

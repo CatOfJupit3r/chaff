@@ -14,8 +14,10 @@ const BRANCH_FORMAT = [
   '%(authorname)',
   '%(contents:subject)',
 ].join('%00');
-/** How far back the first-parent history is searched for another branch's tip. */
+/** How far back the history is searched for other branches' tips. */
 const PARENT_SEARCH_DEPTH = 2000;
+/** Branch tips found nearest in the history that are compared as possible parents. */
+const MAX_PARENT_CANDIDATES = 8;
 const GIT_CONCURRENCY = 8;
 
 interface iRawBranch {
@@ -89,10 +91,12 @@ export class BranchesService {
   }
 
   /**
-   * Walks the branch's first-parent history and stops at the first commit that is another branch's tip.
-   * Ties go to the branch's upstream, then the default branch, then alphabetical order. At the branch's
-   * own tip, another branch only qualifies if it is the default branch or sorts before this one, which
-   * keeps two branches on the same commit from suggesting each other.
+   * Walks the branch's history (merged-in commits included) for other branches' tips and suggests the
+   * one with the fewest commits between it and this branch, so a branch that merged newer commits of
+   * its parent, or of the default branch, still stacks on its parent. Ties go to the branch's upstream,
+   * then the default branch, then alphabetical order. At the branch's own tip, another branch only
+   * qualifies if it is the default branch or sorts before this one, which keeps two branches on the
+   * same commit from suggesting each other.
    */
   private async suggestParent(
     repoPath: string,
@@ -102,33 +106,45 @@ export class BranchesService {
   ): Promise<iParentSuggestion> {
     const history = await this.gitService.output(repoPath, [
       'rev-list',
-      '--first-parent',
+      '--topo-order',
       `--max-count=${PARENT_SEARCH_DEPTH}`,
       branch.headSha,
     ]);
     const shas = history.split('\n').filter((sha) => sha.length > 0);
 
-    for (const [index, sha] of shas.entries()) {
-      const candidates = (tips.get(sha) ?? []).filter(
-        (name) => name !== branch.name && (index > 0 || name === defaultBranch || name < branch.name),
-      );
-      if (candidates.length === 0) continue;
+    const candidates = shas
+      .flatMap((sha, index) =>
+        (tips.get(sha) ?? [])
+          .filter((name) => name !== branch.name && (index > 0 || name === defaultBranch || name < branch.name))
+          .map((name) => ({ name, sha })),
+      )
+      .slice(0, MAX_PARENT_CANDIDATES);
 
-      const [parent] = [...candidates].sort(
+    const ranked: { name: string; commitsAhead: number }[] = [];
+    for (const { name, sha } of candidates) {
+      ranked.push({ name, commitsAhead: await this.countCommits(repoPath, sha, branch.headSha) });
+    }
+    if (ranked.length > 0) {
+      const [parent] = ranked.sort(
         (left, right) =>
-          Number(upstreamMatches(branch, right)) - Number(upstreamMatches(branch, left)) ||
-          Number(right === defaultBranch) - Number(left === defaultBranch) ||
-          left.localeCompare(right),
+          left.commitsAhead - right.commitsAhead ||
+          Number(upstreamMatches(branch, right.name)) - Number(upstreamMatches(branch, left.name)) ||
+          Number(right.name === defaultBranch) - Number(left.name === defaultBranch) ||
+          left.name.localeCompare(right.name),
       );
-      return { parent, commitsAhead: index };
+      if (parent) return { parent: parent.name, commitsAhead: parent.commitsAhead };
     }
 
     if (!defaultBranch) return { commitsAhead: shas.length };
     const { stdout, exitCode } = await this.gitService.run(
       repoPath,
-      ['rev-list', '--count', '--first-parent', `${defaultBranch}..${branch.headSha}`],
+      ['rev-list', '--count', `${defaultBranch}..${branch.headSha}`],
       { allowFailure: true },
     );
     return { parent: defaultBranch, commitsAhead: exitCode === 0 ? Number(stdout.trim()) : shas.length };
+  }
+
+  private async countCommits(repoPath: string, from: string, to: string) {
+    return Number(await this.gitService.output(repoPath, ['rev-list', '--count', `${from}..${to}`]));
   }
 }
