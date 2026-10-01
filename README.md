@@ -19,9 +19,9 @@ Claude Code and any other AGENTS.md-aware agent read from the same skill library
 
 ## Repository Structure
 
-- `apps/server` - the Chaff core: oRPC routers, services, SQLite schema and migrations, read-only git access
 - `apps/desktop` - Electron main process and preload, packaging config, app icon
 - `apps/web` - the renderer: React single-page app, TanStack Router tree, theme tokens in `src/index.css`
+- `packages/core` (`@chaff/core`) - the Chaff core, a library bundled into the desktop main process: oRPC routers, services, SQLite schema and migrations, read-only git access
 - `packages/server-contract` - API contract definitions and schema exports
 - `packages/common` - shared utilities, types, constants, and helpers
 - `packages/enumwaii` - enum helper library and its ESLint rules
@@ -122,5 +122,5 @@ Chaff keeps its data in the OS app data folder: `%APPDATA%\Chaff` on Windows, `~
 
 - Avoid rebasing on `main`; prefer merging.
 - Use the shared contract utilities (`tanstackRPC` helpers, shared schemas) instead of duplicating types or query keys.
-- When extending the API, register new routers in `apps/server/src/routers/app-router.ts` and add error codes to `packages/common/src/enums/errors.enums.ts`.
+- When extending the API, register new routers in `packages/core/src/routers/app-router.ts` and add error codes to `packages/common/src/enums/errors.enums.ts`.
 - Use theme token classes for every color (`bg-surface`, `text-muted`, `text-bad`, ...); raw Tailwind palette colors fail lint.

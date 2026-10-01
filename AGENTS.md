@@ -40,9 +40,9 @@ Examples:
 
 ## Repository Layout
 
-- `apps/server` is the Chaff core: oRPC routers, services, the Drizzle schema on SQLite, and git access. It has no HTTP server; `createChaffCore()` in `src/core.ts` is started by the desktop main process.
 - `apps/desktop` is the Electron shell: the main process (`src/main`) owns the window, the OS dialogs and the core, and serves the renderer from `chaff://app/`; `src/preload/preload.ts` only forwards the MessagePort the renderer talks to the core through.
 - `apps/web` is the renderer: a React 19 single-page app with the TanStack Router tree, UI components, and client-side state. It has no Node access and reaches the core only through the oRPC client in `src/utils/orpc.ts`.
+- `packages/core` (`@chaff/core`) is the Chaff core: oRPC routers, services, the Drizzle schema on SQLite, and git access. It is a library with no HTTP server and no Electron imports; the desktop app bundles it into its main process and starts it with `createChaffCore()` from `src/core.ts`.
 - `packages/server-contract` contains the API contracts shared by the core and the renderer.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
 - `docs` contains product notes, roadmaps, and design documentation, if present.
@@ -128,16 +128,16 @@ Examples:
 
 ## Environment and Configuration
 
-- There are no `.env` files and no login. Everything Chaff stores lives in one SQLite file (`chaff.db`, through Node's built-in `node:sqlite`) in Electron's `userData` folder; development runs use a separate `Chaff Dev` folder. Migrations in `apps/server/src/db/migrations` are applied when the core starts.
+- There are no `.env` files and no login. Everything Chaff stores lives in one SQLite file (`chaff.db`, through Node's built-in `node:sqlite`) in Electron's `userData` folder; development runs use a separate `Chaff Dev` folder. Migrations in `packages/core/src/db/migrations` are applied when the core starts.
 - Repositories are read with the system `git` from PATH. Chaff never writes to a user's repository: no checkouts, branch or ref changes, index or stash writes.
-- Aliases: `@~/` resolves to `apps/server/src` or `apps/web/src` depending on the package (in `apps/desktop` it points at the core, so desktop code uses relative imports); `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
+- Aliases: `@~/` resolves to `packages/core/src` or `apps/web/src` depending on the package (in `apps/desktop` it points at the core, so desktop code uses relative imports); `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
 - Node.js 24.13 is required (Electron 44 embeds Node 24 as well); use nvm or similar to manage Node versions.
 - pnpm 11.5.0 is the package manager; use `corepack enable` to activate it.
 
 ## Desktop Security
 
 - The renderer runs with `contextIsolation`, `sandbox`, no `nodeIntegration`, and a strict content security policy (`apps/desktop/src/main/content-security-policy.ts`). Never loosen these, and never add a preload API beyond the MessagePort hand-off.
-- Anything that needs the OS (dialogs, opening links, native theme) goes through the core's `iCoreHost` (`apps/server/src/host/core-host.types.ts`), implemented in `apps/desktop/src/main/electron-core-host.ts`. `openExternal` only allows `https:` and editor URL schemes.
+- Anything that needs the OS (dialogs, opening links, native theme) goes through the core's `iCoreHost` (`packages/core/src/host/core-host.types.ts`), implemented in `apps/desktop/src/main/electron-core-host.ts`. `openExternal` only allows `https:` and editor URL schemes.
 - Secrets such as a GitLab token stay in the main process (encrypted with Electron `safeStorage`) and are never sent to the renderer.
 
 ## Environment (Windows)
@@ -149,7 +149,7 @@ The default shell is Windows PowerShell 5.1. Assume these rules unless told othe
 - `rm` is permission-denied by policy — always use `Remove-Item -Recurse -Force` directly.
 - pnpm writes progress to stderr, and PS 5.1 wraps native stderr as `NativeCommandError`, so error-looking output does NOT mean failure. Trust exit codes.
 - Always use absolute paths rooted at the repository root; never rely on the current working directory, and do not prefix commands with `cd`.
-- Canonical command forms: `pnpm run check-types`, `pnpm run lint`, `pnpm run db:generate`, `pnpm --filter=server run <script>`.
+- Canonical command forms: `pnpm run check-types`, `pnpm run lint`, `pnpm run db:generate`, `pnpm --filter=@chaff/core run <script>`.
 
 ## Testing
 
@@ -172,14 +172,14 @@ Our repository is organized to promote clarity, maintainability, and scalability
 
 - The renderer calls the core over a MessagePort: `apps/web/src/utils/orpc.ts` opens a `MessageChannel`, the preload forwards one end to the main process, and `apps/desktop/src/main/rpc-bridge.ts` serves the core router on it. The contract is the only API surface.
 - Shared API contracts live in `packages/server-contract/src/contract/*.contract.ts`.
-- Core schema files live in `apps/server/src/db/schema/*.schema.ts`; queries go through `DatabaseService.getDb()`. Drizzle runs on a custom `node:sqlite` driver, so transactions are synchronous.
-- Repositories live under `apps/server/src/features/**/drizzle-*.repository.ts`.
-- Routers live under `apps/server/src/routers/*.router.ts` and use `procedure` from `apps/server/src/lib/orpc.ts`.
-- Error handling utilities live in `apps/server/src/lib/orpc-error-wrapper.ts`.
+- Core schema files live in `packages/core/src/db/schema/*.schema.ts`; queries go through `DatabaseService.getDb()`. Drizzle runs on a custom `node:sqlite` driver, so transactions are synchronous.
+- Repositories live under `packages/core/src/features/**/drizzle-*.repository.ts`.
+- Routers live under `packages/core/src/routers/*.router.ts` and use `procedure` from `packages/core/src/lib/orpc.ts`.
+- Error handling utilities live in `packages/core/src/lib/orpc-error-wrapper.ts`.
 - Shared error codes live in `packages/common/src/enums/errors.enums.ts`.
 - Tests mirror the source structure inside each app or package.
 ```
-apps/server/test/
+packages/core/test/
   ├── integration/<feature>.test.ts   # through the router with `call()`, real git repos in temp folders
   ├── unit/
   └── helpers/                        # core instance, fake host, git repo builder
@@ -197,7 +197,7 @@ apps/desktop/test/                    # mirrors apps/desktop/src
 - `pnpm run lint` runs ESLint across the workspace.
 - `pnpm run prettify` formats the workspace.
 - `pnpm run test` runs the test suite across the workspace.
-- `pnpm run db:generate` generates a Drizzle migration from the current schema (root alias for the `server` package script).
+- `pnpm run db:generate` generates a Drizzle migration from the current schema (root alias for the `@chaff/core` package script).
 - `pnpm install` installs dependencies across the workspace.
 
 ## Workflow

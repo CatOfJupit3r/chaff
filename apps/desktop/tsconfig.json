@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "paths": {
-      "@~/*": ["../server/src/*"],
+      "@~/*": ["../../packages/core/src/*"],
       "@chaff/common/*": ["../../packages/common/src/*"],
       "@chaff/server-contract/*": ["../../packages/server-contract/src/*"]
     },
