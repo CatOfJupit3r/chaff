@@ -31,8 +31,10 @@ export const findingSchema = z.object({
   status: findingStatusSchema,
   /** The reviewer's comment, verbatim. */
   body: z.string(),
+  workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
+  parentBranch: z.string(),
   snapshotId: z.string(),
   anchors: z.array(findingAnchorSchema),
   createdAt: z.date(),

@@ -5,13 +5,17 @@ import { Button } from '@~/components/ui/button';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
 
+import { DiffReviewContext } from '../diff-review.context';
+import { useDiffReviewState } from '../hooks/use-diff-review-state';
 import { useFullDiff } from '../hooks/use-full-diff';
 import { useResizablePanel } from '../hooks/use-resizable-panel';
 import { AllFilesView } from './all-files-view';
+import { DecisionLegend } from './decision-legend';
 import { DiffStat } from './diff-stat';
 import { DiffToolbar } from './diff-toolbar';
 import { FileDiffBody } from './file-diff-body';
 import { FileTreePanel } from './file-tree-panel';
+import { MarkFileButton } from './mark-file-button';
 import { ReviewTopBar } from './review-top-bar';
 
 /** Every change in a snapshot: a file tree beside one file's diff or all of them. */
@@ -29,10 +33,11 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
     openInEditor,
   } = useFullDiff(snapshotId);
   const panel = useResizablePanel();
+  const review = useDiffReviewState(snapshot);
   const diffProps = { snapshotId, layout: view.layout, isWrapped: view.wrap };
 
   return (
-    <>
+    <DiffReviewContext value={review}>
       <ReviewTopBar snapshot={snapshot} repositoryName={repositoryName} />
       <div
         style={{ gridTemplateColumns: `${panel.isOpen ? panel.width : 0}px minmax(0, 1fr)` }}
@@ -74,14 +79,17 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
             isWrapped={view.wrap}
             onToggleWrap={() => view.update({ wrap: !view.wrap })}
             end={
-              <Link
-                to="/reviews/$snapshotId"
-                params={{ snapshotId }}
-                className="inline-flex h-[26px] items-center gap-2 rounded-sm border border-line-strong bg-surface px-[9px] text-[12px] text-fg hover:bg-hover [&_svg]:size-3.5"
-              >
-                <FocusIcon />
-                Focus
-              </Link>
+              <>
+                <DecisionLegend />
+                <Link
+                  to="/reviews/$snapshotId"
+                  params={{ snapshotId }}
+                  className="inline-flex h-[26px] items-center gap-2 rounded-sm border border-line-strong bg-surface px-[9px] text-[12px] text-fg hover:bg-hover [&_svg]:size-3.5"
+                >
+                  <FocusIcon />
+                  Focus
+                </Link>
+              </>
             }
           >
             {isAllFiles || !currentFile ? (
@@ -97,6 +105,7 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
                   <ExternalIcon />
                   Open in editor
                 </Button>
+                <MarkFileButton fileId={currentFile.id} />
               </>
             )}
           </DiffToolbar>
@@ -119,6 +128,6 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
           </div>
         </div>
       </div>
-    </>
+    </DiffReviewContext>
   );
 }

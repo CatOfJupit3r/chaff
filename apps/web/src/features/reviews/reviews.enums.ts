@@ -49,3 +49,23 @@ export const fileDisplaysEnumwaii = new Enumwaii('FileDisplay', [
 
 export const FILE_DISPLAYS = fileDisplaysEnumwaii.enum;
 export type FileDisplay = InferEnumwaii<typeof fileDisplaysEnumwaii>;
+
+/** How far the reviewer got through a file's units. */
+export const fileDecisionsEnumwaii = new Enumwaii('FileDecision', ['NONE', 'PARTIAL', 'LOOKS_GOOD', 'CONCERN']);
+
+export const FILE_DECISIONS = fileDecisionsEnumwaii.enum;
+export type FileDecision = InferEnumwaii<typeof fileDecisionsEnumwaii>;
+
+export const FILE_DECISION_LABELS = fileDecisionsEnumwaii.derive({
+  [FILE_DECISIONS.NONE]: 'Not reviewed',
+  [FILE_DECISIONS.PARTIAL]: 'Partly reviewed',
+  [FILE_DECISIONS.LOOKS_GOOD]: 'Looks good',
+  [FILE_DECISIONS.CONCERN]: 'Has a concern or question',
+});
+
+export const FILE_DECISION_DOTS = fileDecisionsEnumwaii.derive({
+  [FILE_DECISIONS.NONE]: 'border-[1.5px] border-faint',
+  [FILE_DECISIONS.PARTIAL]: 'border-[1.5px] border-good',
+  [FILE_DECISIONS.LOOKS_GOOD]: 'bg-good',
+  [FILE_DECISIONS.CONCERN]: 'bg-warn',
+});

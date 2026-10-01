@@ -7,7 +7,7 @@ import { createRowResolver } from '@~/lib/row-resolver';
 
 import type { iFindingAnchorRecord, iFindingRecord } from './findings.types';
 
-type FindingWithBranchRow = typeof findings.$inferSelect & { branch: string };
+type FindingWithBranchRow = typeof findings.$inferSelect & { branch: string; parentBranch: string };
 type FindingAnchorRow = typeof findingAnchors.$inferSelect;
 
 @singleton()
@@ -19,7 +19,6 @@ export class FindingResolver {
   });
 
   public toFindingRecord = createRowResolver<FindingWithBranchRow, Omit<iFindingRecord, 'anchors'>>({
-    omit: ['workspaceId'],
     overrides: (row) => ({ kind: findingKindSchema.parse(row.kind), status: findingStatusSchema.parse(row.status) }),
   });
 }

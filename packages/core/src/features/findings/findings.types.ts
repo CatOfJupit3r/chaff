@@ -16,11 +16,12 @@ export type iFindingAnchorRecord = Omit<
   endLine?: number;
 };
 
-export type iFindingRecord = Omit<FindingRow, 'workspaceId' | 'kind' | 'status'> & {
+export type iFindingRecord = Omit<FindingRow, 'kind' | 'status'> & {
   kind: FindingKind;
   status: FindingStatus;
   /** Branch of the review the finding was written in. */
   branch: string;
+  parentBranch: string;
   anchors: iFindingAnchorRecord[];
 };
 

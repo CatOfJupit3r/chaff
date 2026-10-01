@@ -12,7 +12,11 @@ import type { iFindingRepository } from './finding.repository';
 import { FindingResolver } from './finding.resolver';
 import type { iListFindingsInput, iNewFinding } from './findings.types';
 
-const findingWithBranchColumns = { ...getTableColumns(findings), branch: reviewTargets.branch };
+const findingWithBranchColumns = {
+  ...getTableColumns(findings),
+  branch: reviewTargets.branch,
+  parentBranch: reviewTargets.parentBranch,
+};
 
 @singleton()
 export class DrizzleFindingRepository implements iFindingRepository {
@@ -89,7 +93,7 @@ export class DrizzleFindingRepository implements iFindingRepository {
       .$dynamic();
   }
 
-  private withAnchors(rows: (typeof findings.$inferSelect & { branch: string })[]) {
+  private withAnchors(rows: (typeof findings.$inferSelect & { branch: string; parentBranch: string })[]) {
     if (rows.length === 0) return [];
     const anchors = this.databaseService
       .getDb()

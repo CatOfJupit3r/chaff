@@ -10,6 +10,7 @@ import type { DiffLayout } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffStat } from './diff-stat';
 import { FileDiffBody } from './file-diff-body';
+import { MarkFileButton } from './mark-file-button';
 import { DiffSkeleton } from './skeleton-components';
 
 /** Height reserved per changed line before a section loads, so the scrollbar stays put. */
@@ -56,12 +57,14 @@ export function DiffFileSection({
         {file.kind === FILE_KINDS.GENERATED ? (
           <span className="rounded-[4px] border border-line px-1.5 text-[11px] text-faint">generated</span>
         ) : null}
+        <span className="ml-auto" />
+        <MarkFileButton fileId={file.id} />
         <button
           type="button"
           aria-label={`Open ${file.path} in editor`}
           title="Open in editor"
           onClick={() => onOpenInEditor(file.path)}
-          className="ml-auto grid size-[26px] place-items-center rounded-sm text-muted hover:bg-hover hover:text-fg"
+          className="grid size-[26px] place-items-center rounded-sm text-muted hover:bg-hover hover:text-fg"
         >
           <ExternalIcon className="size-[13px]" />
         </button>

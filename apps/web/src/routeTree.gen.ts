@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root';
+import { Route as FindingsRouteImport } from './routes/findings';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
 import { Route as ReviewsSnapshotIdIndexRouteImport } from './routes/reviews.$snapshotId.index';
 import { Route as ReviewsSnapshotIdDiffRouteImport } from './routes/reviews.$snapshotId.diff';
 
+const FindingsRoute = FindingsRouteImport.update({
+  id: '/findings',
+  path: '/findings',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,18 +43,21 @@ const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
+  '/findings': typeof FindingsRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
   '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
+  '/findings': typeof FindingsRoute;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
+  '/findings': typeof FindingsRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
   '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
@@ -57,14 +66,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | '/'
+    | '/findings'
     | '/reviews/$snapshotId'
     | '/reviews/$snapshotId/diff'
     | '/reviews/$snapshotId/';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/reviews/$snapshotId/diff' | '/reviews/$snapshotId';
+  to: '/' | '/findings' | '/reviews/$snapshotId/diff' | '/reviews/$snapshotId';
   id:
     | '__root__'
     | '/'
+    | '/findings'
     | '/reviews/$snapshotId'
     | '/reviews/$snapshotId/diff'
     | '/reviews/$snapshotId/';
@@ -72,11 +83,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
+  FindingsRoute: typeof FindingsRoute;
   ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRouteWithChildren;
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/findings': {
+      id: '/findings';
+      path: '/findings';
+      fullPath: '/findings';
+      preLoaderRoute: typeof FindingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/': {
       id: '/';
       path: '/';
@@ -123,6 +142,7 @@ const ReviewsSnapshotIdRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FindingsRoute: FindingsRoute,
   ReviewsSnapshotIdRoute: ReviewsSnapshotIdRouteWithChildren,
 };
 export const routeTree = rootRouteImport

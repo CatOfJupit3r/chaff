@@ -4,8 +4,10 @@ import { useAtom } from 'jotai';
 import { useEffect } from 'react';
 
 import type { IconComponent } from '@~/components/icons/create-icon';
-import { DiffIcon, FocusIcon, InboxIcon } from '@~/components/icons/icons';
+import { DiffIcon, FlagIcon, FocusIcon, InboxIcon } from '@~/components/icons/icons';
 import { Logo } from '@~/components/ui/logo';
+import { countActive } from '@~/features/findings/findings.utils';
+import { useAllFindings } from '@~/features/findings/hooks/use-findings';
 import { lastSnapshotIdAtom } from '@~/features/reviews/last-review.store';
 
 const RAIL_LINK_CLASS =
@@ -16,22 +18,30 @@ interface iRailLinkProps {
   params?: LinkProps['params'];
   icon: IconComponent;
   label: string;
+  /** Count shown on the icon, such as open findings. */
+  badge?: number;
 }
 
-function RailLink({ to, params, icon: Icon, label }: iRailLinkProps) {
+function RailLink({ to, params, icon: Icon, label, badge }: iRailLinkProps) {
   return (
     <Link to={to} params={params} activeOptions={{ exact: true, includeSearch: false }} className={RAIL_LINK_CLASS}>
       <Icon />
+      {badge ? (
+        <span className="absolute top-0.5 right-2 grid h-4 min-w-4 place-items-center rounded-full bg-warn px-1 text-[10px] font-semibold text-canvas tabular-nums">
+          {badge}
+        </span>
+      ) : null}
       {label}
     </Link>
   );
 }
 
-/** Screens: the review list, and Focus and Full diff for the review open now or most recently. */
+/** Screens: the review list, Focus and Full diff for the review open now or most recently, and findings. */
 export function AppRail() {
   const { snapshotId } = useParams({ strict: false });
   const [lastSnapshotId, setLastSnapshotId] = useAtom(lastSnapshotIdAtom);
   const reviewSnapshotId = snapshotId ?? lastSnapshotId;
+  const openFindingCount = countActive(useAllFindings().data ?? []);
 
   useEffect(() => {
     if (snapshotId) setLastSnapshotId(snapshotId);
@@ -57,6 +67,7 @@ export function AppRail() {
           />
         </>
       ) : null}
+      <RailLink to="/findings" icon={FlagIcon} label="Findings" badge={openFindingCount} />
     </nav>
   );
 }
