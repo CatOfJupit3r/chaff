@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent and posting findings as host drafts work today. Fix hand-off, project preferences and swipe are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences, swipe, rebindable keys and agent settings are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -234,6 +234,20 @@ On a merge or pull request, the drafts tab posts the findings as GitLab draft no
   <img src="docs/screenshots/export-drafts-light.png" alt="GitLab drafts tab listing three findings and the lines they will be posted on" />
 </picture>
 
+### Fix with an agent
+
+**Fix with agent** hands the review's open concerns and questions to Claude Code or Codex with write access, after a confirmation of its own. The agent works in a new checkout of the newest snapshot, on a new branch in Chaff's store, never in your repository. Chaff commits what it changed, reads its report (fixed concerns move to **Fix proposed**, answers are kept), and lists the run under **Agent fixes**: the changes file by file, the agent's reply, a `git fetch` command that brings the branch into your repository when you want it, and **Discard**.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/fix-dialog-dark.png" />
+  <img src="docs/screenshots/fix-dialog-light.png" alt="Fix with agent dialog with the agent picked and the write access confirmation" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/fix-changes-dark.png" />
+  <img src="docs/screenshots/fix-changes-light.png" alt="Changes an agent made for a finding, file by file" />
+</picture>
+
 ### Open in your editor
 
 File names and line numbers link into VS Code, VS Code Insiders or Cursor, at the path of your local checkout.
@@ -274,6 +288,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Working changes (uncommitted work) as a review target | Works |
 | Second pass: interdiffs, re-anchored findings, Verify screen | Works |
 | Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import | Works |
+| Fix hand-off: a local agent fixes findings in its own checkout, on a branch of Chaff's store | Works |
 
 ## Stack
 

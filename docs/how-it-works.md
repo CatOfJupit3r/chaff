@@ -103,12 +103,23 @@ Generated files, lockfiles and very large diffs stay collapsed until you ask for
 4. **Re-anchoring.** Every finding's lines are looked for again in the new version of their file, starting from where they were last found: the same lines (preferring the copy whose surrounding lines agree, then the nearest), else whatever now sits between the same surrounding lines, else a block that looks like the old one (by shared tokens) next to one of them, or anywhere in the file if it is very similar. Anything less certain is **Unmatched**, so a finding never lands on unrelated code. Every location is kept per snapshot.
 5. **Statuses.** A concern whose lines changed becomes **Fix proposed**. A finding whose lines are all lost becomes **Unmatched** and keeps its original quote; if it is found again later it goes back to Open, or to Fix proposed when its code changed meanwhile. Only you move a finding to Verified, Answered, Closed or Withdrawn, and every change is recorded against the snapshot it was made on. The proposed fix compares the code at the snapshot where the finding was last raised with where it is now.
 
+## Fix hand-off
+
+**Fix with agent** is the one place an agent may write, and it asks first.
+
+1. The agent gets the review's open and reopened concerns and questions (notes need no action), as the same agent prompt the export writes, plus where it is: a checkout of the branch at the newest snapshot's head.
+2. Chaff adds a worktree of its own store under `<app data>/fixes/<id>/checkout`, on a new branch `chaff/fix-<id>`. Your repository gets no branch, worktree or file.
+3. Claude Code runs with Read, Grep, Glob, Edit and Write only (no shell, no web), accepting its own edits in that folder, with your project's settings and MCP servers ignored. Codex runs in its `workspace-write` sandbox. Either is stopped after 30 minutes or when you press **Stop**.
+4. When the agent is done, Chaff commits everything it changed as Chaff, counts the lines per file, and applies its report to the findings it was handed, with the new commit as the fix's commit. Report entries for any other finding are listed as unknown.
+5. The checkout and branch stay until **Discard**. The fetch command (`git -C <repo> fetch <store> chaff/fix-<id>:chaff/fix-<id>`) is for you to run when you want the fix in your repository.
+
 ## Where data lives
 
 | What | Where |
 | --- | --- |
 | Database | `<app data>/chaff.db` |
 | Snapshot stores | `<app data>/stores/<workspace id>.git` |
+| Fix checkouts | `<app data>/fixes/<fix id>/checkout`, until discarded |
 | Logs | the OS log folder for Chaff, `chaff.log` |
 
 `<app data>` is `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS and `~/.config/Chaff` on Linux. Development runs (`pnpm run dev`) use a separate `Chaff Dev` folder. Reviews stay on that machine; export is the way to move findings out.
