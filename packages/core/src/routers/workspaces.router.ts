@@ -15,4 +15,8 @@ export const workspacesRouter = base.workspaces.router({
   branches: procedure.workspaces.branches.handler(async ({ input }) =>
     container.resolve(WorkspacesService).listBranches(input.workspaceId),
   ),
+
+  branchStat: procedure.workspaces.branchStat.handler(async ({ input }) =>
+    container.resolve(WorkspacesService).branchStat(input),
+  ),
 });

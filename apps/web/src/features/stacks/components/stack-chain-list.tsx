@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+
 import { BranchIcon } from '@~/components/icons/icons';
 import { Pill } from '@~/components/ui/pill';
 import type { iFinding } from '@~/features/findings/findings.types';
@@ -8,6 +10,7 @@ import type { iSnapshotSummary } from '@~/features/reviews/reviews.types';
 import type { iStackLink } from '@~/features/reviews/stack-review.utils';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
+import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import { findingsFromStack } from '../stack.utils';
 import { MarkBar } from './mark-bar';
@@ -17,6 +20,32 @@ function dotClass(summary: iSnapshotSummary | undefined) {
   return isReviewComplete(summary) ? 'border-good bg-good' : 'border-fg';
 }
 
+function decidedUnitCount(summary: iSnapshotSummary) {
+  return summary.markCounts.reduce((total, { count }) => total + count, 0);
+}
+
+/** What a branch changes before its review starts: read from disk, without units yet. */
+function UnreviewedStat({ workspaceId, link }: { workspaceId: string; link: iStackLink }) {
+  const { data: stat } = useQuery({
+    ...tanstackRPC.workspaces.branchStat.queryOptions({
+      input: { workspaceId, branch: link.branch.name, parentBranch: link.parentBranch ?? '' },
+    }),
+    enabled: link.parentBranch !== undefined,
+  });
+
+  return (
+    <>
+      <span>{pluralize(link.branch.commitsAhead, 'commit')}</span>
+      {stat ? (
+        <>
+          <DiffStat additions={stat.additions} deletions={stat.deletions} />
+          <span>{pluralize(stat.fileCount, 'file')}</span>
+        </>
+      ) : null}
+    </>
+  );
+}
+
 function fromStackLabel(fromStack: readonly iFinding[]) {
   const [only] = fromStack;
   if (fromStack.length === 1 && only) return `affected by F-${only.number} on ${only.branch}`;
@@ -24,6 +53,7 @@ function fromStackLabel(fromStack: readonly iFinding[]) {
 }
 
 interface iStackChainItemProps {
+  workspaceId: string;
   link: iStackLink;
   findings: readonly iFinding[];
   fromStack: readonly iFinding[];
@@ -31,7 +61,7 @@ interface iStackChainItemProps {
   onSelect: () => void;
 }
 
-function StackChainItem({ link, findings, fromStack, isSelected, onSelect }: iStackChainItemProps) {
+function StackChainItem({ workspaceId, link, findings, fromStack, isSelected, onSelect }: iStackChainItemProps) {
   const summary = link.target?.latestSnapshot;
   const findingCount = countActive(findings.filter((finding) => finding.targetId === link.target?.id));
 
@@ -77,13 +107,16 @@ function StackChainItem({ link, findings, fromStack, isSelected, onSelect }: iSt
           {summary ? (
             <>
               <DiffStat additions={summary.additions} deletions={summary.deletions} />
+              <span title="Units with a decision">
+                {decidedUnitCount(summary)}/{pluralize(summary.unitCount, 'unit')}
+              </span>
               <span title="Regions decided on or skipped">
                 {summary.accountedRegionCount}/{summary.regionCount} regions
               </span>
               {isReviewComplete(summary) ? <Pill variant="ok">complete</Pill> : null}
             </>
           ) : (
-            <span>{pluralize(link.branch.commitsAhead, 'commit')}</span>
+            <UnreviewedStat workspaceId={workspaceId} link={link} />
           )}
           {findingCount > 0 ? <span>{pluralize(findingCount, 'finding')}</span> : null}
         </span>
@@ -94,6 +127,7 @@ function StackChainItem({ link, findings, fromStack, isSelected, onSelect }: iSt
 }
 
 interface iStackChainListProps {
+  workspaceId: string;
   links: readonly iStackLink[];
   base: string | undefined;
   findings: readonly iFinding[];
@@ -102,13 +136,14 @@ interface iStackChainListProps {
 }
 
 /** The stack top to bottom, each branch with its progress, down to the branch it sits on. */
-export function StackChainList({ links, base, findings, selectedBranch, onSelect }: iStackChainListProps) {
+export function StackChainList({ workspaceId, links, base, findings, selectedBranch, onSelect }: iStackChainListProps) {
   return (
     <div className="min-w-0">
       <ol className="m-0 list-none p-0">
         {links.toReversed().map((link, reversedIndex) => (
           <StackChainItem
             key={link.branch.name}
+            workspaceId={workspaceId}
             link={link}
             findings={findings}
             fromStack={findingsFromStack(links, links.length - 1 - reversedIndex, findings)}

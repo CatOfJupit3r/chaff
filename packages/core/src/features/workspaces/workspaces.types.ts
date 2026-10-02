@@ -34,3 +34,9 @@ export type iGitBranch = Omit<
   iBranchResponse,
   'parent' | 'isParentConfirmed' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
 >;
+
+export interface iBranchStatInput {
+  workspaceId: string;
+  branch: string;
+  parentBranch: string;
+}

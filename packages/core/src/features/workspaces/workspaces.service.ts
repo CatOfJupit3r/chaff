@@ -10,6 +10,7 @@ import { GitService } from '@~/features/git/git.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import { localArchiveChanges } from '@~/features/reviews/review-targets/target-archive.utils';
 import type { iArchiveChange } from '@~/features/reviews/review-targets/target-archive.utils';
+import { parseNumstat } from '@~/features/reviews/snapshots/numstat.utils';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 import { isDirectory, pathExists } from '@~/lib/file-system';
@@ -17,7 +18,13 @@ import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError }
 
 import { BranchesService } from './branches.service';
 import type { iWorkspaceRepository } from './workspace.repository';
-import type { iBranchResponse, iGitBranch, iWorkspaceRecord, iWorkspaceResponse } from './workspaces.types';
+import type {
+  iBranchResponse,
+  iBranchStatInput,
+  iGitBranch,
+  iWorkspaceRecord,
+  iWorkspaceResponse,
+} from './workspaces.types';
 
 const DEFAULT_BRANCH_CANDIDATES = ['main', 'master', 'trunk', 'develop'];
 const STATUS_CONCURRENCY = 4;
@@ -109,6 +116,33 @@ export class WorkspacesService {
   }
 
   /** Moves the repository's local reviews whose branch is gone to History, and back when the branch returns. */
+  /** Changes between where the branch left its parent and its tip; zero when either branch is missing. */
+  public async branchStat({ workspaceId, branch, parentBranch }: iBranchStatInput) {
+    const record = await this.getRecord(workspaceId);
+    const { stdout, exitCode } = await this.gitService.run(
+      record.repoPath,
+      [
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--numstat',
+        '-z',
+        '--find-renames',
+        '--no-ext-diff',
+        '--no-textconv',
+        `refs/heads/${parentBranch}...refs/heads/${branch}`,
+        '--',
+      ],
+      { allowFailure: true },
+    );
+    const files = exitCode === 0 ? parseNumstat(stdout) : [];
+    return {
+      fileCount: files.length,
+      additions: files.reduce((total, file) => total + file.additions, 0),
+      deletions: files.reduce((total, file) => total + file.deletions, 0),
+    };
+  }
+
   public async syncArchive(workspaceId: string) {
     const record = await this.getRecord(workspaceId);
     if (!(await pathExists(path.join(record.repoPath, '.git')))) return;
