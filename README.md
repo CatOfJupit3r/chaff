@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff and findings work today. The second pass and export are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings and the second pass after the agent pushes work today. Export and posting findings back to the host are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -36,6 +36,7 @@ Chaff keeps the reviewer in charge: it never decides what you see or what is res
 4. **Chaff breaks the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing is dropped.
 5. **You read the diff in reading order.** Types and contracts come first, tests sit next to the code they test, and config, docs and generated files come last.
 6. **When the branch moves, Chaff tells you.** New commits, a rewritten branch or a moved parent show up next to the snapshot, and **Update** freezes a new snapshot when you choose to.
+7. **The second pass brings you back only where needed.** Decisions on unchanged units carry over, edited units show what changed since you decided, and every finding is looked for again in the new code so you can verify the fix.
 
 [docs/how-it-works.md](docs/how-it-works.md) goes deeper: the architecture, the snapshot store, regions and units, and where Chaff keeps its data.
 
@@ -159,6 +160,29 @@ The chip in the top bar shows the frozen commit you are reading. When the agent 
   <img src="docs/screenshots/new-commits-light.png" alt="Snapshot chip showing one new commit and an Update button" />
 </picture>
 
+### Second pass
+
+After **Update**, a banner sums up the new version: units edited or added since your decisions, unchanged units that use something that changed (possibly affected), and what happened to your concerns. Decisions on unchanged units carry over. An edited card opens on **Since your decision**, the diff between the code you decided on and the code now, with **Whole change** one click away. **Recheck** walks you through the possibly affected units.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/second-pass-dark.png" />
+  <img src="docs/screenshots/second-pass-light.png" alt="Focus with the version 2 banner and an edited function card" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/interdiff-dark.png" />
+  <img src="docs/screenshots/interdiff-light.png" alt="Edited card showing the change since the reviewer's decision" />
+</picture>
+
+### Verify
+
+Every finding is looked for again in the new version: the same lines, the code between the same surrounding lines, or a block that looks like it. A concern whose code changed becomes **Fix proposed**, and the Findings screen shows the code you flagged next to what the agent changed it to. **Verify fix** (V), **Still wrong** (R) and **Withdraw** (W) settle it from the keyboard; J and K move between findings. A finding whose code can't be found any more is **Unmatched** and keeps its original quote. Questions take an answer and close.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/verify-fix-dark.png" />
+  <img src="docs/screenshots/verify-fix-light.png" alt="Findings screen with a concern marked Fix proposed, the flagged code and the agent's change below it" />
+</picture>
+
 ### Merge requests and pull requests
 
 Connect GitLab (gitlab.com or self-managed) or GitHub in **Settings** with a read-only token, which is checked once and kept in your system keychain. Each repository's project is detected from its remotes, or picked by hand.
@@ -225,7 +249,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Linking a local branch's review to the merge request it became | Works |
 | Findings posted as GitLab draft notes or a pending GitHub review | Planned |
 | Working changes (uncommitted work) as a review target | Works |
-| Second pass: interdiffs, re-anchored findings, Verify screen | Planned |
+| Second pass: interdiffs, re-anchored findings, Verify screen | Works |
 | Export: Markdown and JSON packets, GitLab draft notes, agent report import | Planned |
 
 ## Stack

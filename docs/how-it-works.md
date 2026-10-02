@@ -14,6 +14,7 @@ flowchart TB
     subgraph Core["@chaff/core"]
       WS["Workspaces and<br/>branch stacks"]
       SB["Snapshot builder"]
+      SP["Second pass<br/>and re-anchoring"]
       TS["Tree-sitter (WASM)"]
       DB[("SQLite<br/>chaff.db")]
     end
@@ -26,6 +27,7 @@ flowchart TB
   SB -- "git fetch" --> Store
   Store -- "fetch from" --> Repo
   SB --> TS
+  SB --> SP
   Core --> DB
 ```
 
@@ -69,7 +71,7 @@ Starting a review freezes a **snapshot** of one branch against its parent:
 2. It records three commits: the branch head, the parent head and their merge base. The diff is always merge base to branch head.
 3. It pins those commits under `refs/chaff/snapshots/<snapshot id>/{head,parent,base}` in the store, so rebasing, force-updating or deleting the branch in your repository never breaks a review, and git's garbage collection can't remove them.
 
-While you review, Chaff compares the snapshot with your repository and reports what moved: new commits on the branch, a rewritten branch (its old head is no longer in its history), a parent that moved, or a deleted branch. Nothing under the review changes until you press **Update**, which freezes a new snapshot of the same target. Comparing the two snapshots (interdiffs, keeping marks on unchanged code, re-anchoring findings) is the **planned** second pass.
+While you review, Chaff compares the snapshot with your repository and reports what moved: new commits on the branch, a rewritten branch (its old head is no longer in its history), a parent that moved, or a deleted branch. Nothing under the review changes until you press **Update**, which freezes a new snapshot of the same target. The [second pass](#the-second-pass) then compares the two snapshots.
 
 ## Regions and units
 
@@ -90,6 +92,16 @@ Files in the Full diff are sorted so that what other code depends on comes first
 3. Config, then docs, then generated files, then binaries.
 
 Generated files, lockfiles and very large diffs stay collapsed until you ask for them.
+
+## The second pass
+
+**Update** compares the new snapshot with the one before it, unit by unit:
+
+1. **Pairing.** Units are matched by file, kind and name (in order when a name repeats). Section units, which have no name, are matched by their start line within three lines. A paired unit points at its previous version, so its history can be walked back.
+2. **Revisions.** A paired unit whose regions hash the same is **unchanged** and keeps its decision, marked as carried over. One with different code is **edited** and goes back to undecided, and an unpaired one is **new**. An unchanged unit whose code names an edited or removed declaration (a whole word of three characters or more) is **possibly affected**: it keeps its decision and joins the Recheck queue. This match is by name, so it can flag a unit that uses a same-named thing from elsewhere; it never hides one.
+3. **Since your decision.** For an edited unit, Chaff walks back to the newest version you gave a decision and diffs that code against the code now.
+4. **Re-anchoring.** Every finding's lines are looked for again in the new version of their file, starting from where they were last found: the same lines (preferring the copy whose surrounding lines agree, then the nearest), else whatever now sits between the same surrounding lines, else a block that looks like the old one (by shared tokens) next to one of them, or anywhere in the file if it is very similar. Anything less certain is **Unmatched**, so a finding never lands on unrelated code. Every location is kept per snapshot.
+5. **Statuses.** A concern whose lines changed becomes **Fix proposed**. A finding whose lines are all lost becomes **Unmatched** and keeps its original quote; if it is found again later it goes back to Open, or to Fix proposed when its code changed meanwhile. Only you move a finding to Verified, Answered, Closed or Withdrawn, and every change is recorded against the snapshot it was made on. The proposed fix compares the code at the snapshot where the finding was last raised with where it is now.
 
 ## Where data lives
 
