@@ -38,6 +38,29 @@ export const DIGEST_RUNNER_PROVIDERS = digestRunnersEnumwaii.derive({
   [DIGEST_RUNNERS.CODEX]: 'OpenAI',
 });
 
+/** How the branch's diff reaches the agent: in the prompt, or as files it reads when it needs them. */
+export const digestDiffModesEnumwaii = new Enumwaii('DigestDiffMode', ['AUTO', 'INLINE', 'ON_DEMAND']);
+
+export const DIGEST_DIFF_MODES = digestDiffModesEnumwaii.enum;
+export type DigestDiffMode = InferEnumwaii<typeof digestDiffModesEnumwaii>;
+export const digestDiffModeSchema = digestDiffModesEnumwaii.schema;
+export const digestDiffModeValues = digestDiffModesEnumwaii.values;
+
+export const DIGEST_DIFF_MODE_LABELS = digestDiffModesEnumwaii.derive({
+  [DIGEST_DIFF_MODES.AUTO]: 'Auto',
+  [DIGEST_DIFF_MODES.INLINE]: 'Always inline',
+  [DIGEST_DIFF_MODES.ON_DEMAND]: 'Read on demand',
+});
+
+/** What one digest run settles on: the diff in the prompt, or read from files on demand. */
+export const digestDiffDeliveriesEnumwaii = digestDiffModesEnumwaii.pick('DigestDiffDelivery', [
+  DIGEST_DIFF_MODES.INLINE,
+  DIGEST_DIFF_MODES.ON_DEMAND,
+]);
+
+export const DIGEST_DIFF_DELIVERIES = digestDiffDeliveriesEnumwaii.enum;
+export type DigestDiffDelivery = InferEnumwaii<typeof digestDiffDeliveriesEnumwaii>;
+
 export const digestStatusesEnumwaii = new Enumwaii('DigestStatus', ['RUNNING', 'READY', 'FAILED', 'CANCELLED']);
 
 export const DIGEST_STATUSES = digestStatusesEnumwaii.enum;

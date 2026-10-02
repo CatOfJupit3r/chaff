@@ -160,7 +160,9 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
   <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
 </picture>
 
-**AI digest** in the top bar starts one and says which company receives the code before anything runs. **Model and instructions**, folded away in the same dialog, picks the model for this run (Claude Code gets `--model`, Codex `-m`, for example `opus` or `gpt-6-astra`; empty keeps the agent's default) and adds extra instructions. They go into the prompt in their own section and cannot change the shape Chaff checks. Both start from the defaults in Settings, and the context panel shows which agent and model wrote the digest.
+**AI digest** in the top bar starts one and says which company receives the code before anything runs. **Model and instructions**, folded away in the same dialog, picks the model for this run from a list (Claude Code gets `--model`, Codex `-m`): the agent's default, the models your installed Codex reports through `codex debug models` (asked once per session, with **Refresh** to ask again) or Claude Code's aliases such as `opus`, or **Custom...** for any other id. It also adds extra instructions. They go into the prompt in their own section and cannot change the shape Chaff checks. Both start from the defaults in Settings, and the context panel shows which agent and model wrote the digest.
+
+Before the agent starts, Chaff writes a `.chaff/` folder into its throwaway copy (never into your repository): one patch per changed file, the parent's version of each modified, deleted or renamed file, and the units with their ids and line ranges. The prompt carries the units, the file list with line counts and hunk headers, the commits and the merge request. A small branch's diff goes in the prompt too, which is faster; past about 40,000 characters the agent reads the patches it needs on demand. **Diff in the digest prompt** in Settings switches between Auto, Always inline and Read on demand.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
@@ -343,7 +345,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 ### Agents and keys
 
-**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, a default model for each agent's digests and extra instructions every digest starts with, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
+**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, a default model for each agent's digests (picked from its list), extra instructions every digest starts with, how the diff reaches the agent, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-agents-dark.png" />
@@ -424,8 +426,8 @@ The width you drag the Full diff's file list to is kept.
 | Decisions on every unit, shown in Full diff with line coverage | Works |
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
-| Digest reads the MR or PR description and linked issues, outlines branches too large to send whole, streams in while Claude Code writes, and its diagram boxes open their units | Works |
-| Digest model per agent and extra instructions, from Settings or per run; the digest shows the model that wrote it | Works |
+| Digest reads the MR or PR description and linked issues, reads large diffs file by file from `.chaff/` in its copy, streams in while Claude Code writes, and its diagram boxes open their units | Works |
+| Digest model per agent, picked from the agent's models, and extra instructions, from Settings or per run; the digest shows the model that wrote it | Works |
 | Stack overview with parent editing and cumulative view | Works |
 | GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
 | GitHub pull requests, the same way | Works |

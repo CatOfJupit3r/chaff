@@ -15,8 +15,8 @@ import type {
 } from '@chaff/common/enums/appearance.enums';
 import { DIFF_CONTEXTS, DIFF_LAYOUTS, INLINE_DIFFS } from '@chaff/common/enums/diff.enums';
 import type { DiffContext, DiffLayout, InlineDiff } from '@chaff/common/enums/diff.enums';
-import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
-import type { DigestRunner } from '@chaff/common/enums/digest.enums';
+import { DIGEST_DIFF_MODES, DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
+import type { DigestDiffMode, DigestRunner } from '@chaff/common/enums/digest.enums';
 import type { Editor } from '@chaff/common/enums/editors.enums';
 import { REVIEW_PROGRESSIONS } from '@chaff/common/enums/review.enums';
 import type { ReviewProgression } from '@chaff/common/enums/review.enums';
@@ -63,6 +63,8 @@ export const settings = sqliteTable('settings', {
     .default([]),
   /** Extra instructions added to every digest prompt unless changed when starting one. */
   digestInstructions: text('digest_instructions').notNull().default(''),
+  /** Whether digests carry the diff in the prompt or have the agent read it from files. */
+  digestDiffMode: text('digest_diff_mode').$type<DigestDiffMode>().notNull().default(DIGEST_DIFF_MODES.AUTO),
   /** Keys the user rebound; other actions keep their default key. */
   shortcuts: text('shortcuts', { mode: 'json' }).$type<iShortcutBinding[]>().notNull().default([]),
   onboarding: text('onboarding', { mode: 'json' })

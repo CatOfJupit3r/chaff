@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { DIGEST_DIFF_DELIVERIES } from '@chaff/common/enums/digest.enums';
+
 import { buildDigestPrompt } from '@~/features/digests/digest-prompt.utils';
 
 const INPUT = {
+  delivery: DIGEST_DIFF_DELIVERIES.INLINE,
   branch: 'feature',
   parentBranch: 'main',
   baseSha: 'a'.repeat(40),
@@ -74,5 +77,20 @@ describe('buildDigestPrompt', () => {
 
     expect(prompt).toContain('The diff of the files that fit:');
     expect(prompt).toContain('- src/big.ts (+900 -4)\n    @@ -1,4 +1,900 @@');
+    expect(prompt).toContain("read each one's patch at `.chaff/diff/<path>.patch`");
+  });
+
+  it('leaves the diff out and points the agent at the per-file patches when it reads on demand', () => {
+    const prompt = buildDigestPrompt({
+      ...INPUT,
+      delivery: DIGEST_DIFF_DELIVERIES.ON_DEMAND,
+      outlined: [{ path: 'src/big.ts', additions: 900, deletions: 4, hunks: ['@@ -1,4 +1,900 @@'] }],
+    });
+
+    expect(prompt).not.toContain('```diff');
+    expect(prompt).toContain('The diff is not in this prompt.');
+    expect(prompt).toContain('- src/big.ts (+900 -4)\n    @@ -1,4 +1,900 @@');
+    expect(prompt).toContain('Read `.chaff/diff/<path>.patch` for every file whose units you write about');
+    expect(prompt).toContain('Answer with:');
   });
 });

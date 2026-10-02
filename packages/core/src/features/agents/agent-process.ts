@@ -22,11 +22,30 @@ export interface iAgentProcessOptions {
 export class AgentProcessError extends Error {}
 
 /** Runs an agent CLI to completion, streaming stdout line by line. Aborting the signal kills it. */
-export async function runAgentProcess({ command, args, cwd, input, signal, onLine }: iAgentProcessOptions) {
+/** What to start for an agent command: a `.mjs` script (a stand-in agent) runs with this process's Node. */
+function spawnTarget(command: string, args: string[]) {
   const isNodeScript = path.extname(command).toLowerCase() === '.mjs';
-  const executable = isNodeScript ? process.execPath : command;
-  const argumentsToPass = isNodeScript ? [command, ...args] : args;
-  const env = isNodeScript && process.versions.electron ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env;
+  return {
+    executable: isNodeScript ? process.execPath : command,
+    argumentsToPass: isNodeScript ? [command, ...args] : args,
+    env: isNodeScript && process.versions.electron ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env,
+  };
+}
+
+/** Runs a short agent CLI command, such as one that lists models, and returns its stdout. */
+export async function runAgentCommand(command: string, args: string[], timeoutMs: number) {
+  const { executable, argumentsToPass, env } = spawnTarget(command, args);
+  const { stdout } = await execFileAsync(executable, argumentsToPass, {
+    env,
+    timeout: timeoutMs,
+    windowsHide: true,
+    maxBuffer: 4 * 1024 * 1024,
+  });
+  return stdout;
+}
+
+export async function runAgentProcess({ command, args, cwd, input, signal, onLine }: iAgentProcessOptions) {
+  const { executable, argumentsToPass, env } = spawnTarget(command, args);
   return new Promise((resolve: (value?: undefined) => unknown, reject) => {
     const child = spawn(executable, argumentsToPass, {
       cwd,

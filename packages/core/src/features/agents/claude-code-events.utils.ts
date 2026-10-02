@@ -49,7 +49,12 @@ export function parseClaudeStreamEvent(line: string) {
 function describeToolUse(name: string | undefined, input: Record<string, unknown> | undefined, cwd: string) {
   const target = input?.file_path ?? input?.pattern ?? input?.path;
   const shown = typeof target === 'string' ? path.relative(cwd, path.resolve(cwd, target)) || target : '';
-  if (name === 'Read') return `Reading ${shown}`;
+  if (name === 'Read') {
+    const notes = /^\.chaff\/(diff|base)\/(.+?)(\.patch)?$/.exec(shown.split(path.sep).join('/'));
+    if (notes?.[1] === 'diff') return `Reading the diff of ${notes[2]}`;
+    if (notes?.[1] === 'base') return `Reading the parent's ${notes[2]}${notes[3] ?? ''}`;
+    return `Reading ${shown}`;
+  }
   if (name === 'Grep') return `Searching for ${shown}`;
   if (name === 'Glob') return `Listing ${shown}`;
   if (name === 'Edit' || name === 'Write') return `Editing ${shown}`;

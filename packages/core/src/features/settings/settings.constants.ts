@@ -10,7 +10,7 @@ import {
   THEME_MODES,
 } from '@chaff/common/enums/appearance.enums';
 import { DIFF_CONTEXTS, DIFF_LAYOUTS, INLINE_DIFFS } from '@chaff/common/enums/diff.enums';
-import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
+import { DIGEST_DIFF_MODES, DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
 import { EDITORS } from '@chaff/common/enums/editors.enums';
 import { REVIEW_PROGRESSIONS } from '@chaff/common/enums/review.enums';
 
@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS = {
   agentCommands: [],
   agentModels: [],
   digestInstructions: '',
+  digestDiffMode: DIGEST_DIFF_MODES.AUTO,
   shortcuts: [],
   onboarding: INITIAL_ONBOARDING,
 } satisfies iSettingsResponse;

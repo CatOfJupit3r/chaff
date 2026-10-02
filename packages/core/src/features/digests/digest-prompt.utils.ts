@@ -1,9 +1,12 @@
+import { DIGEST_DIFF_DELIVERIES } from '@chaff/common/enums/digest.enums';
+
 import { preferencesPromptSection } from '@~/features/preferences/preference-format.utils';
 
 import type { iOutlinedFile } from './digest-patch.utils';
 import type { iDigestPromptInput, iPromptChange, iPromptUnit } from './digests.types';
 
-function describeUnit(unit: iPromptUnit) {
+/** One unit on one line: its id first, so the agent can quote it back. */
+export function describeUnit(unit: iPromptUnit) {
   const lines = [unit.oldLines && `old ${unit.oldLines}`, unit.newLines && `new ${unit.newLines}`]
     .filter(Boolean)
     .join(', ');
@@ -22,15 +25,36 @@ ${change.description.trim() || '(no description)'}
 ${issues.length > 0 ? `\nIssues it links to, also documented intent:\n${issues.join('\n\n')}\n` : ''}`;
 }
 
-function describeOutline(outlined: readonly iOutlinedFile[]) {
-  if (outlined.length === 0) return '';
-  const files = outlined.map(
-    (file) =>
-      `- ${file.path} (+${file.additions} -${file.deletions})${file.hunks.map((hunk) => `\n    ${hunk}`).join('')}`,
-  );
-  return `
-The branch is too large to show whole. These files are left out of the diff above and listed by where they changed; read them in the checkout before writing about their units:
-${files.join('\n')}
+const FOLDER_NOTE =
+  'Chaff also wrote a `.chaff/` folder at the root of the working directory: one patch per changed file under `.chaff/diff/<path>.patch`, the parent-side version of each modified, deleted or renamed file under `.chaff/base/<path>` (a renamed file under its old path), and the units in `.chaff/units.md`; `.chaff/README.md` explains it. Open these files by their paths, since searches may skip the folder. It is not part of the branch: never review it, cite it as a test or list it as a change.';
+
+function listFiles(outlined: readonly iOutlinedFile[]) {
+  return outlined
+    .map(
+      (file) =>
+        `- ${file.path} (+${file.additions} -${file.deletions})${file.hunks.map((hunk) => `\n    ${hunk}`).join('')}`,
+    )
+    .join('\n');
+}
+
+function describeInlineDiff(patch: string, outlined: readonly iOutlinedFile[]) {
+  const diff = `The diff${outlined.length > 0 ? ' of the files that fit' : ''}:
+\`\`\`diff
+${patch}
+\`\`\`
+`;
+  if (outlined.length === 0) return diff;
+  return `${diff}
+The branch is too large to show whole. These files are left out of the diff above and listed by where they changed; read each one's patch at \`.chaff/diff/<path>.patch\` before writing about its units:
+${listFiles(outlined)}
+`;
+}
+
+function describeOnDemandDiff(outlined: readonly iOutlinedFile[]) {
+  return `The diff is not in this prompt. The changed files, with the lines added and removed and the hunks where they changed:
+${listFiles(outlined)}
+
+Read \`.chaff/diff/<path>.patch\` for every file whose units you write about, \`.chaff/base/<path>\` when you need more of what the code was before than the patch shows, and the file itself in the working directory for what surrounds a change. Read what you need, in any order; start with the files that the other changes depend on.
 `;
 }
 
@@ -59,6 +83,8 @@ export function buildDigestPrompt(input: iDigestPromptInput) {
 
   return `You are preparing a review digest for a human reviewer in Chaff. The reviewer decides everything; your job is to make the code faster to read. You can read and search files in the working directory, which is a checkout of the branch's head commit. Do not try to change anything.
 
+${FOLDER_NOTE}
+
 Branch \`${input.branch}\` is compared with its parent \`${input.parentBranch}\` (merge base ${input.baseSha.slice(0, 10)}, head ${input.headSha.slice(0, 10)}).
 
 Commit messages on the branch, oldest first. These, and comments in the code, count as documented intent:
@@ -67,11 +93,7 @@ ${describeChange(input.change)}
 Units of change. Every changed line belongs to exactly one unit. Refer to units only by these ids:
 ${input.units.map(describeUnit).join('\n')}
 
-The diff${input.outlined.length > 0 ? ' of the files that fit' : ''}:
-\`\`\`diff
-${input.patch}
-\`\`\`
-${describeOutline(input.outlined)}
+${input.delivery === DIGEST_DIFF_DELIVERIES.INLINE ? describeInlineDiff(input.patch, input.outlined) : describeOnDemandDiff(input.outlined)}
 ${preferences ? `${preferences}\n\n` : ''}Answer with:
 1. overview: two to four plain sentences on what the branch does.
 2. groups: the meaningful behavior or design changes. Give each a short title, the behavior before and after in plain words, and the reason for it in intent. Set intentSource to DOCUMENTED only when a commit message, the merge request, a linked issue or a code comment states the reason; otherwise INFERRED. List the ids of the units that make up the change. Put each unit in at most one group; leave out units you cannot explain rather than forcing them in.

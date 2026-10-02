@@ -15,7 +15,7 @@ import {
   THEME_MODES,
 } from '@chaff/common/enums/appearance.enums';
 import { DIFF_CONTEXTS, DIFF_LAYOUTS, INLINE_DIFFS } from '@chaff/common/enums/diff.enums';
-import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
+import { DIGEST_DIFF_MODES, DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
 import { EDITORS } from '@chaff/common/enums/editors.enums';
 import { ONBOARDING_HINTS, ONBOARDING_ITEMS, ONBOARDING_STATUSES } from '@chaff/common/enums/onboarding.enums';
 import { REVIEW_PROGRESSIONS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
@@ -93,6 +93,7 @@ function settingsWith(onboarding: iOnboardingState) {
     agentCommands: [],
     agentModels: [],
     digestInstructions: '',
+    digestDiffMode: DIGEST_DIFF_MODES.AUTO,
     shortcuts: [],
     onboarding,
   };

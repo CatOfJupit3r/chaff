@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `digest_diff_mode` text DEFAULT 'AUTO' NOT NULL;

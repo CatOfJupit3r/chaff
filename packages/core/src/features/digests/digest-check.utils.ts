@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { INTENT_SOURCES, TEST_TIERS } from '@chaff/common/enums/digest.enums';
 
+import { CHAFF_FOLDER } from './digest-folder.utils';
 import type { iAgentDigest } from './digest-output.schema';
 import type { iDigestContent } from './digests.types';
 
@@ -12,7 +13,9 @@ const UNEXPLAINED_GROUP_ID = 'unexplained';
 function toRepoPath(root: string, candidate: string) {
   const relative = path.relative(root, path.resolve(root, candidate.trim()));
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return undefined;
-  return relative.split(path.sep).join('/');
+  const repoPath = relative.split(path.sep).join('/');
+  // Chaff's own notes in the checkout are not part of the branch.
+  return repoPath === CHAFF_FOLDER || repoPath.startsWith(`${CHAFF_FOLDER}/`) ? undefined : repoPath;
 }
 
 /** The drawing's nodes named after a unit's short id (`u3["Scheduler.next"]`), with the unit each opens. */
@@ -29,7 +32,7 @@ function nodeUnits(mermaid: string, shortIds: ReadonlyMap<string, string>) {
  * dropped, a unit belongs to one group at most, units no group explains land in a visible "Other
  * changes" group, the reading order lists every unit exactly once, and a test claimed to have passed
  * is downgraded because nothing ran. Test paths are made relative to `root`, the checkout the agent read;
- * a test outside it is dropped.
+ * a test outside it, or in Chaff's `.chaff/` notes, is dropped.
  */
 export function checkDigest(
   answer: iAgentDigest,

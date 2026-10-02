@@ -1,5 +1,6 @@
 import { container } from 'tsyringe';
 
+import { AgentModelsService } from '@~/features/agents/agent-models.service';
 import { DigestsService } from '@~/features/digests/digests.service';
 import { base, procedure } from '@~/lib/orpc';
 
@@ -13,4 +14,8 @@ export const digestsRouter = base.digests.router({
   ),
 
   runners: procedure.digests.runners.handler(async () => container.resolve(DigestsService).runners()),
+
+  models: procedure.digests.models.handler(async ({ input }) =>
+    container.resolve(AgentModelsService).list(input.runner, input.shouldRefresh),
+  ),
 });

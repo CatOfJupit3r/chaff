@@ -8,7 +8,7 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import { settingsQueryOptions } from './use-settings';
 
-/** Applies a settings change immediately and rolls it back if the core rejects it; new agent paths are looked up again. */
+/** Applies a settings change immediately and rolls it back if the core rejects it; new agent paths are looked up and asked for their models again. */
 export function useUpdateSettings() {
   const queryClient = useQueryClient();
 
@@ -39,7 +39,12 @@ export function useUpdateSettings() {
           ...settings,
           onboarding: current?.onboarding ?? settings.onboarding,
         }));
-        if (changes.agentCommands) await queryClient.invalidateQueries({ queryKey: tanstackRPC.digests.runners.key() });
+        if (changes.agentCommands) {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: tanstackRPC.digests.runners.key() }),
+            queryClient.invalidateQueries({ queryKey: tanstackRPC.digests.models.key() }),
+          ]);
+        }
       },
     }),
   );

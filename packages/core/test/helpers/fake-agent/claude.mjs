@@ -2,8 +2,9 @@
 // Stands in for `claude -p` in tests. With the read-only tool list it writes a digest; with the editing
 // tool list and acceptEdits it fixes the findings in its prompt; asked for a task, it restates the finding. FAKE_AGENT_MODE picks the behaviour:
 // unset answers, `fail` exits with an error, `hang` never answers, `stream-hang` streams the start of a digest and
-// then never finishes. FAKE_AGENT_PROMPT_FILE, when set, receives the prompt, and FAKE_AGENT_ARGS_FILE the arguments as JSON.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+// then never finishes. FAKE_AGENT_PROMPT_FILE, when set, receives the prompt, FAKE_AGENT_ARGS_FILE the arguments as JSON,
+// and FAKE_AGENT_NOTES_FILE the files of the checkout's `.chaff/` folder as JSON, by path.
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const READ_ONLY_TOOLS = ['--tools', 'Read,Grep,Glob'];
@@ -30,6 +31,7 @@ process.stdin.on('end', () => {
 
   if (process.env.FAKE_AGENT_PROMPT_FILE) writeFileSync(process.env.FAKE_AGENT_PROMPT_FILE, prompt);
   if (process.env.FAKE_AGENT_ARGS_FILE) writeFileSync(process.env.FAKE_AGENT_ARGS_FILE, JSON.stringify(args));
+  if (process.env.FAKE_AGENT_NOTES_FILE) writeFileSync(process.env.FAKE_AGENT_NOTES_FILE, JSON.stringify(readNotes()));
   const mode = process.env.FAKE_AGENT_MODE;
   if (mode === 'fail') {
     process.stderr.write('boom\n');
@@ -153,4 +155,18 @@ function fix() {
     is_error: false,
     result: `Changed the scheduler.\n\n\`\`\`json\n${JSON.stringify(report, null, 2)}\n\`\`\``,
   });
+}
+
+/** Every file under `.chaff/` in the working directory, by its path relative to the working directory. */
+function readNotes() {
+  const root = path.join(process.cwd(), '.chaff');
+  if (!existsSync(root)) return {};
+  return Object.fromEntries(
+    readdirSync(root, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => {
+        const file = path.join(entry.parentPath, entry.name);
+        return [path.relative(process.cwd(), file).split(path.sep).join('/'), readFileSync(file, 'utf8')];
+      }),
+  );
 }

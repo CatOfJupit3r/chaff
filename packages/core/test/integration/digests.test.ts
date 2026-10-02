@@ -3,12 +3,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DIGEST_RUNNERS, DIGEST_STATUSES, TEST_TIERS } from '@chaff/common/enums/digest.enums';
+import { DIGEST_DIFF_MODES, DIGEST_RUNNERS, DIGEST_STATUSES, TEST_TIERS } from '@chaff/common/enums/digest.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 
+import { createTestGitRepo } from '../helpers/git-repo';
 import { appRouter, testDataDir } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
-import { createFeatureRepo, startFeatureReview } from '../helpers/review-repo';
+import { createFeatureRepo, SCHEDULER, startFeatureReview } from '../helpers/review-repo';
 
 const WAIT = { timeout: 10_000, interval: 50 };
 
@@ -25,7 +26,12 @@ describe('digests', () => {
     delete process.env.FAKE_AGENT_MODE;
     delete process.env.FAKE_AGENT_PROMPT_FILE;
     delete process.env.FAKE_AGENT_ARGS_FILE;
-    await call(appRouter.settings.update, { agentModels: [], digestInstructions: '' });
+    delete process.env.FAKE_AGENT_NOTES_FILE;
+    await call(appRouter.settings.update, {
+      agentModels: [],
+      digestInstructions: '',
+      digestDiffMode: DIGEST_DIFF_MODES.AUTO,
+    });
   });
 
   it('uses the model and extra instructions from Settings, and keeps the model with the digest', async () => {
@@ -189,7 +195,7 @@ describe('digests', () => {
     expect(cancelled.preview).toBeUndefined();
   });
 
-  it('outlines files that do not fit in the prompt and lets the agent read them in the checkout', async () => {
+  it('has the agent read a large branch on demand in Auto mode, and inlines what fits when told to', async () => {
     const promptFile = path.join(testDataDir, 'digest-prompt.txt');
     process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
     const repo = createFeatureRepo();
@@ -199,13 +205,103 @@ describe('digests', () => {
     const { snapshotId } = await startFeatureReview(repo);
 
     await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
-    const digest = await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+    let digest = await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    expect(digest.content?.outlinedPaths.toSorted()).toEqual([
+      'config.json',
+      'src/backoff.test.ts',
+      'src/backoff.ts',
+      'src/scheduler.ts',
+      'src/table.ts',
+    ]);
+    let prompt = readFileSync(promptFile, 'utf8');
+    expect(prompt).toContain('The diff is not in this prompt.');
+    expect(prompt).toContain('- src/table.ts (+6000 -0)\n    @@ -0,0 +1,6000 @@');
+    expect(prompt).not.toContain('```diff');
+
+    await call(appRouter.settings.update, { digestDiffMode: DIGEST_DIFF_MODES.INLINE });
+    const inline = await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    digest = await vi.waitFor(async () => {
+      const latest = await call(appRouter.digests.get, { snapshotId });
+      if (latest?.id !== inline.id || latest.status !== DIGEST_STATUSES.READY) throw new Error('Not ready');
+      return latest;
+    }, WAIT);
 
     expect(digest.content?.outlinedPaths).toEqual(['src/table.ts']);
-    const prompt = readFileSync(promptFile, 'utf8');
+    prompt = readFileSync(promptFile, 'utf8');
     expect(prompt).toContain('- src/table.ts (+6000 -0)\n    @@ -0,0 +1,6000 @@');
     expect(prompt).not.toContain('export const row5999');
     expect(prompt).toContain('+    return attempt * 3;');
+  });
+
+  it('reads a small branch on demand when the setting says so', async () => {
+    const promptFile = path.join(testDataDir, 'digest-on-demand-prompt.txt');
+    process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+    await call(appRouter.settings.update, { digestDiffMode: DIGEST_DIFF_MODES.ON_DEMAND });
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    const prompt = readFileSync(promptFile, 'utf8');
+    expect(prompt).not.toContain('```diff');
+    expect(prompt).not.toContain('+    return attempt * 3;');
+    expect(prompt).toContain('- src/scheduler.ts (+1 -1)\n    @@ -1,5 +1,5 @@');
+  });
+
+  it('writes per-file patches, parent versions and units into .chaff/ of the throwaway checkout', async () => {
+    const notesFile = path.join(testDataDir, 'digest-notes.json');
+    process.env.FAKE_AGENT_NOTES_FILE = notesFile;
+    const moved = Array.from({ length: 20 }, (_, index) => `export const value${index} = ${index};`).join('\n');
+    const repo = createTestGitRepo();
+    repo.commitFiles('base', {
+      'src/scheduler.ts': SCHEDULER,
+      'src/gone.ts': 'export const gone = true;\n',
+      'src/old-name.ts': `${moved}\n`,
+    });
+    repo.branch('feature');
+    repo.commitFiles('feature work', {
+      'src/scheduler.ts': SCHEDULER.replace('attempt * 2', 'attempt * 3'),
+      'src/gone.ts': null,
+      'src/old-name.ts': null,
+      'src/new-name.ts': `${moved}\nexport const added = 1;\n`,
+      'src/backoff.ts': 'export function backoff(attempt: number) {\n  return 2 ** attempt;\n}\n',
+    });
+    const { snapshotId } = await startFeatureReview(repo);
+
+    await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    const notes = JSON.parse(readFileSync(notesFile, 'utf8')) as Record<string, string>;
+    expect(Object.keys(notes).toSorted()).toEqual([
+      '.chaff/.gitignore',
+      '.chaff/README.md',
+      '.chaff/base/src/gone.ts',
+      '.chaff/base/src/old-name.ts',
+      '.chaff/base/src/scheduler.ts',
+      '.chaff/diff/src/backoff.ts.patch',
+      '.chaff/diff/src/gone.ts.patch',
+      '.chaff/diff/src/new-name.ts.patch',
+      '.chaff/diff/src/scheduler.ts.patch',
+      '.chaff/units.md',
+    ]);
+    expect(notes['.chaff/base/src/scheduler.ts']).toBe(SCHEDULER);
+    expect(notes['.chaff/base/src/gone.ts']).toBe('export const gone = true;\n');
+    expect(notes['.chaff/base/src/old-name.ts']).toBe(`${moved}\n`);
+    const schedulerPatch = notes['.chaff/diff/src/scheduler.ts.patch'];
+    expect(schedulerPatch).toMatch(/^diff --git a\/src\/scheduler.ts b\/src\/scheduler.ts\n/);
+    expect(schedulerPatch).toContain('+    return attempt * 3;');
+    expect(schedulerPatch).not.toContain('backoff');
+    expect(notes['.chaff/diff/src/new-name.ts.patch']).toContain('rename from src/old-name.ts');
+    expect(notes['.chaff/diff/src/gone.ts.patch']).toContain('-export const gone = true;');
+    const units = notes['.chaff/units.md'];
+    expect(units).toContain('## src/new-name.ts (renamed, from src/old-name.ts, +1 -0)');
+    expect(units).toContain('Parent version: .chaff/base/src/old-name.ts');
+    expect(units).toMatch(
+      /## src\/backoff.ts \(added, \+3 -0\)\n\nDiff: \.chaff\/diff\/src\/backoff.ts.patch\n\n- u\d+ {2}/,
+    );
+    expect(notes['.chaff/README.md']).toContain('This folder is not part of the branch.');
+    expect(repo.git('status', '--porcelain')).toBe('');
   });
 
   it('marks the digest failed with what the agent said', async () => {

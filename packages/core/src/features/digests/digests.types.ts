@@ -1,6 +1,6 @@
 import type z from 'zod';
 
-import type { DigestRunner, DigestStatus } from '@chaff/common/enums/digest.enums';
+import type { DigestDiffDelivery, DigestRunner, DigestStatus } from '@chaff/common/enums/digest.enums';
 import type { digestContentSchema, digestPreviewSchema } from '@chaff/server-contract/contract/digests.contract';
 
 import type { digests } from '@~/db/schema/digests.schema';
@@ -65,9 +65,11 @@ export interface iDigestPromptInput {
   /** Commit messages on the branch, oldest first: the documented intent. */
   commits: string[];
   units: iPromptUnit[];
-  /** The diff of the files that fit in the prompt. */
+  /** Whether the diff is in the prompt or read by the agent from `.chaff/`. */
+  delivery: DigestDiffDelivery;
+  /** The diff of the files that fit in the prompt; empty when the agent reads it on demand. */
   patch: string;
-  /** Files left out of `patch` to keep it short; the agent reads them in the checkout. */
+  /** Files left out of `patch`, listed by where they changed; the agent reads their patches from `.chaff/`. */
   outlined: iOutlinedFile[];
   /** The merge or pull request the branch is, when it is one. */
   change?: iPromptChange;

@@ -102,6 +102,23 @@ export const digestRunnerStatusSchema = z.object({
   path: z.string().optional(),
 });
 
+export const agentModelOptionSchema = z.object({
+  id: z.string(),
+  /** The agent's own name for the model, when it gives one other than the id. */
+  label: z.string().optional(),
+});
+
+export const agentModelListSchema = z.object({
+  runner: digestRunnerSchema,
+  models: z.array(agentModelOptionSchema),
+  /** The model the agent uses when none is asked for, when its configuration says. */
+  defaultModel: z.string().optional(),
+  /** The list was read from the installed agent rather than built into Chaff. */
+  isDiscovered: z.boolean(),
+  /** Why the installed agent could not be asked, when the built-in list is shown instead. */
+  reason: z.string().optional(),
+});
+
 export const digestsContract = oc.router({
   get: oc
     .route({
@@ -139,4 +156,13 @@ export const digestsContract = oc.router({
       description: 'Reports which of Claude Code and Codex can be started on this computer.',
     })
     .output(z.array(digestRunnerStatusSchema)),
+
+  models: oc
+    .route({
+      summary: 'List agent models',
+      description:
+        'Lists the models a coding agent offers, asked from the installed CLI once per session (Codex) or built in (Claude Code). `shouldRefresh` asks again. When the agent cannot be asked, a built-in list comes back with the reason.',
+    })
+    .input(z.object({ runner: digestRunnerSchema, shouldRefresh: z.boolean().optional() }))
+    .output(agentModelListSchema),
 });

@@ -10,7 +10,7 @@ import {
   themeModeSchema,
 } from '@chaff/common/enums/appearance.enums';
 import { diffContextSchema, diffLayoutSchema, inlineDiffSchema } from '@chaff/common/enums/diff.enums';
-import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
+import { digestDiffModeSchema, digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
 import {
@@ -46,6 +46,7 @@ export class SettingsResolver {
       inlineDiff: inlineDiffSchema.parse(row.inlineDiff),
       defaultProgression: reviewProgressionSchema.parse(row.defaultProgression),
       digestRunner: digestRunnerSchema.parse(row.digestRunner),
+      digestDiffMode: digestDiffModeSchema.parse(row.digestDiffMode),
       agentCommands: agentCommandsSchema.parse(row.agentCommands),
       agentModels: agentModelsSchema.parse(row.agentModels),
       shortcuts: shortcutBindingsSchema.parse(row.shortcuts),

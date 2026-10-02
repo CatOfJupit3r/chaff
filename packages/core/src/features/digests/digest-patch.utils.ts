@@ -1,3 +1,6 @@
+import { DIGEST_DIFF_DELIVERIES, DIGEST_DIFF_MODES } from '@chaff/common/enums/digest.enums';
+import type { DigestDiffMode } from '@chaff/common/enums/digest.enums';
+
 export interface iFilePatch {
   path: string;
   text: string;
@@ -53,4 +56,21 @@ export function fitPatch(patch: string, budget: number) {
     }
   }
   return { patch: included.join(''), outlined };
+}
+
+/** Every file of a patch as an outline: counts and hunk headers, without the lines. */
+export function outlinePatch(patch: string) {
+  return splitPatch(patch).map(outline);
+}
+
+/**
+ * Settles how a digest's prompt carries the diff. Inline puts it in the prompt (files past `maxInlineChars` are
+ * outlined); on demand outlines every file and the agent reads the patches from `.chaff/`. Auto inlines a diff of up
+ * to `thresholdChars`.
+ */
+export function planPromptDiff(mode: DigestDiffMode, patch: string, thresholdChars: number, maxInlineChars: number) {
+  const isInline =
+    mode === DIGEST_DIFF_MODES.INLINE || (mode === DIGEST_DIFF_MODES.AUTO && patch.length <= thresholdChars);
+  if (isInline) return { delivery: DIGEST_DIFF_DELIVERIES.INLINE, ...fitPatch(patch, maxInlineChars) };
+  return { delivery: DIGEST_DIFF_DELIVERIES.ON_DEMAND, patch: '', outlined: outlinePatch(patch) };
 }

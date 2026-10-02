@@ -14,7 +14,7 @@ import {
   themeModeSchema,
 } from '@chaff/common/enums/appearance.enums';
 import { diffContextSchema, diffLayoutSchema, inlineDiffSchema } from '@chaff/common/enums/diff.enums';
-import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
+import { digestDiffModeSchema, digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
 import {
   onboardingHintSchema,
@@ -95,6 +95,8 @@ export const settingsSchema = z.object({
   agentModels: agentModelsSchema,
   /** Extra instructions every digest starts with; they can be changed when starting one. */
   digestInstructions: digestInstructionsSchema,
+  /** Whether digests carry the diff in the prompt or have the agent read it from files; Auto decides by its size. */
+  digestDiffMode: digestDiffModeSchema,
   shortcuts: shortcutBindingsSchema,
   onboarding: onboardingSchema,
 });

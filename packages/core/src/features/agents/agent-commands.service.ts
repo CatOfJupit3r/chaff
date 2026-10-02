@@ -36,14 +36,19 @@ export class AgentCommandsService {
 
   /** The executable to start for a runner; refuses when it can't be found. */
   public async resolve(runner: DigestRunner) {
-    const { agentCommands } = await this.settingsService.get();
-    const command = await resolveExecutable(this.commandFor(runner, agentCommands));
+    const command = await this.find(runner);
     if (!command) {
       throw ORPCUnprocessableContentError(errorCodes.DIGEST_RUNNER_UNAVAILABLE, {
         runner: DIGEST_RUNNER_LABELS(runner),
       });
     }
     return command;
+  }
+
+  /** The executable to start for a runner, or undefined when it can't be found. */
+  public async find(runner: DigestRunner) {
+    const { agentCommands } = await this.settingsService.get();
+    return resolveExecutable(this.commandFor(runner, agentCommands));
   }
 
   private commandFor(runner: DigestRunner, agentCommands: iSettingsResponse['agentCommands']) {

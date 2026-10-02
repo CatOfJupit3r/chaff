@@ -20,8 +20,8 @@ export function DigestOverview({ digest, content }: iDigestOverviewProps) {
       </p>
       {content.outlinedPaths.length > 0 ? (
         <p className="m-0 text-[11.5px] text-muted" title={content.outlinedPaths.join('\n')}>
-          The branch was too large to send whole, so {pluralize(content.outlinedPaths.length, 'file')} went as an
-          outline the agent read in the checkout.
+          {pluralize(content.outlinedPaths.length, 'file')} went to the agent as an outline; it read their diffs from
+          its copy of the branch.
         </p>
       ) : null}
       <p className="m-0 text-[11.5px] text-faint">Cards follow the digest&apos;s reading order.</p>

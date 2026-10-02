@@ -6,6 +6,7 @@ import {
   TEST_TIERS,
   testTiersEnumwaii,
 } from '@chaff/common/enums/digest.enums';
+import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 
 export const DIAGRAM_KIND_LABELS = diagramKindsEnumwaii.derive({
   [DIAGRAM_KINDS.FLOW]: 'Flow',
@@ -25,3 +26,8 @@ export const TEST_TIER_IS_READ = testTiersEnumwaii.derive({
   [TEST_TIERS.INSPECTED]: true,
   [TEST_TIERS.PASSED]: true,
 });
+
+/** The model select's entries that are not a listed model: the agent's own default, or an id typed by hand. */
+export const agentModelPicksEnumwaii = new Enumwaii('AgentModelPick', ['AGENT_DEFAULT', 'CUSTOM']);
+
+export const AGENT_MODEL_PICKS = agentModelPicksEnumwaii.enum;

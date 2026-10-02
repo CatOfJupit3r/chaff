@@ -6,6 +6,7 @@ import { SectionLabel } from '@~/components/ui/section-label';
 import { useDigestRunners } from '@~/features/digests/hooks/use-digest-runners';
 
 import { AgentRow } from './agent-row';
+import { DigestDiffModeField } from './digest-diff-mode-field';
 import { DigestInstructionsField } from './digest-instructions-field';
 
 /** Claude Code and Codex: where Chaff finds them, which one runs by default, and where the code goes. */
@@ -30,6 +31,7 @@ export function AgentsSection() {
         ))}
       </List>
       <DigestInstructionsField />
+      <DigestDiffModeField />
     </section>
   );
 }
