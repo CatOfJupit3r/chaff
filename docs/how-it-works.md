@@ -113,6 +113,14 @@ Generated files, lockfiles and very large diffs stay collapsed until you ask for
 4. When the agent is done, Chaff commits everything it changed as Chaff, counts the lines per file, and applies its report to the findings it was handed, with the new commit as the fix's commit. Report entries for any other finding are listed as unknown.
 5. The checkout and branch stay until **Discard**. The fetch command (`git -C <repo> fetch <store> chaff/fix-<id>:chaff/fix-<id>`) is for you to run when you want the fix in your repository.
 
+## Project preferences
+
+A preference is a rule you state for one repository, often promoted from a finding (it keeps a link to it). Chaff stores them in the database, never infers them, and adds them, oldest first, to:
+
+- the digest prompt, asking the agent to name a unit that goes against one in its things worth checking;
+- the export's agent prompt and its JSON (`preferences`), which also makes them part of every fix hand-off;
+- the `CLAUDE.md`/`AGENTS.md` snippet in Settings, a `## Review preferences` list to paste into the repository yourself.
+
 ## Where data lives
 
 | What | Where |

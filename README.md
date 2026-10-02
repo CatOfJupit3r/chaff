@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences, swipe, rebindable keys and agent settings are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences work too; swipe, rebindable keys and agent settings are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -248,6 +248,15 @@ On a merge or pull request, the drafts tab posts the findings as GitLab draft no
   <img src="docs/screenshots/fix-changes-light.png" alt="Changes an agent made for a finding, file by file" />
 </picture>
 
+### Project preferences
+
+**Make preference** on a finding turns it into a rule for the repository, worded the way you want an agent to read it. Preferences live in **Settings**, where you can add, reword or delete them and copy them as a section for `CLAUDE.md` or `AGENTS.md`. Every AI digest, agent prompt and fix hand-off includes them; Chaff never adds one by itself.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-preferences-dark.png" />
+  <img src="docs/screenshots/settings-preferences-light.png" alt="Preferences in Settings, one promoted from finding F-2" />
+</picture>
+
 ### Open in your editor
 
 File names and line numbers link into VS Code, VS Code Insiders or Cursor, at the path of your local checkout.
@@ -289,6 +298,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Second pass: interdiffs, re-anchored findings, Verify screen | Works |
 | Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import | Works |
 | Fix hand-off: a local agent fixes findings in its own checkout, on a branch of Chaff's store | Works |
+| Project preferences: promoted from findings, exported for CLAUDE.md, given to digests and agents | Works |
 
 ## Stack
 
