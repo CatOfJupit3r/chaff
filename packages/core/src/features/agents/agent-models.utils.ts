@@ -14,6 +14,8 @@ export interface iParsedModelList {
 interface iModelEntry extends iAgentModelOption {
   isHidden: boolean;
   isDefault: boolean;
+  /** Lower comes first, as Codex's `priority` orders its picker. */
+  priority?: number;
 }
 
 /** Fields an entry's id may come under, in order of preference. */
@@ -61,6 +63,7 @@ function entryFromJson(value: unknown, key?: string): iModelEntry | undefined {
     label: label && label !== id ? label : undefined,
     isHidden: isHiddenRecord(record),
     isDefault: record.is_default === true || record.isDefault === true || record.default === true,
+    priority: typeof record.priority === 'number' ? record.priority : undefined,
   };
 }
 
@@ -139,7 +142,9 @@ function parseText(output: string): iModelEntry[] {
  * cannot be passed as one model id are left out.
  */
 export function parseModelList(output: string): iParsedModelList {
-  const entries = parseJson(output.trim()) ?? parseText(output);
+  const entries = (parseJson(output.trim()) ?? parseText(output)).toSorted(
+    (left, right) => (left.priority ?? Number.MAX_SAFE_INTEGER) - (right.priority ?? Number.MAX_SAFE_INTEGER),
+  );
   const seen = new Set<string>();
   const models: iAgentModelOption[] = [];
   let defaultModel: string | undefined;

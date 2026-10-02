@@ -39,7 +39,7 @@ export async function runAgentCommand(command: string, args: string[], timeoutMs
     env,
     timeout: timeoutMs,
     windowsHide: true,
-    maxBuffer: 4 * 1024 * 1024,
+    maxBuffer: 64 * 1024 * 1024,
   });
   return stdout;
 }

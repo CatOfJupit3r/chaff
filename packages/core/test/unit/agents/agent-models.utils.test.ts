@@ -5,6 +5,27 @@ import { parseModelList, parseTomlModel } from '@~/features/agents/agent-models.
 const ids = (output: string) => parseModelList(output).models.map((model) => model.id);
 
 describe('parseModelList', () => {
+  it("reads Codex's model catalog in its picker order, without hidden models", () => {
+    const model = (slug: string, visibility: string, priority: number) => ({
+      slug,
+      display_name: slug.toUpperCase(),
+      visibility,
+      priority,
+      model_messages: { persistent_instructions: 'x'.repeat(50_000) },
+    });
+    const output = JSON.stringify({
+      models: [
+        model('gpt-5.5', 'list', 13),
+        model('gpt-6-astra', 'list', 2),
+        model('codex-auto-review', 'hide', 43),
+        model('gpt-6.1-sol', 'list', 1),
+        model('gpt-reserve', 'hide', 4),
+      ],
+    });
+
+    expect(ids(output)).toEqual(['gpt-6.1-sol', 'gpt-6-astra', 'gpt-5.5']);
+  });
+
   it('reads a JSON array of presets, leaving out hidden ones and keeping display names', () => {
     const output = JSON.stringify([
       { slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol', visibility: 'list' },
