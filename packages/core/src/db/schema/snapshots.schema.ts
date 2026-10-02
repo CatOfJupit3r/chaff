@@ -24,6 +24,8 @@ export const snapshots = sqliteTable(
     deletions: integer('deletions').notNull(),
     regionCount: integer('region_count').notNull(),
     unitCount: integer('unit_count').notNull(),
+    /** For working changes: a fingerprint of `git status` and the changed files, to notice later edits. */
+    workingFingerprint: text('working_fingerprint'),
     createdAt: timestampColumn('created_at')
       .notNull()
       .$defaultFn(() => new Date()),

@@ -3,18 +3,22 @@ import path from 'node:path';
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
-import { WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { GitService } from '@~/features/git/git.service';
+import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
+import { mapWithConcurrency } from '@~/lib/concurrency';
 import { isDirectory, pathExists } from '@~/lib/file-system';
 import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
 
 import { BranchesService } from './branches.service';
 import type { iWorkspaceRepository } from './workspace.repository';
-import type { iWorkspaceRecord, iWorkspaceResponse } from './workspaces.types';
+import type { iBranchResponse, iWorkspaceRecord, iWorkspaceResponse } from './workspaces.types';
 
 const DEFAULT_BRANCH_CANDIDATES = ['main', 'master', 'trunk', 'develop'];
+const STATUS_CONCURRENCY = 4;
 
 @singleton()
 export class WorkspacesService {
@@ -23,6 +27,7 @@ export class WorkspacesService {
     private readonly gitService: GitService,
     private readonly branchesService: BranchesService,
     private readonly snapshotStoreService: SnapshotStoreService,
+    @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
   ) {}
 
   public async list(): Promise<iWorkspaceResponse[]> {
@@ -61,9 +66,33 @@ export class WorkspacesService {
     return { workspaceId };
   }
 
-  public async listBranches(workspaceId: string) {
+  /** Local branches with the parent each is reviewed against and whether it has uncommitted work. */
+  public async listBranches(workspaceId: string): Promise<iBranchResponse[]> {
     const record = await this.getRecord(workspaceId);
-    return this.branchesService.listBranches(record.repoPath, record.defaultBranch);
+    const [branches, targets, worktrees] = await Promise.all([
+      this.branchesService.listBranches(record.repoPath, record.defaultBranch),
+      this.reviewTargetRepository.list(workspaceId),
+      this.snapshotStoreService.listWorktrees(record.repoPath),
+    ]);
+    const confirmedParents = new Map(
+      targets
+        .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
+        .map((target) => [target.branch, target.parentBranch]),
+    );
+    return mapWithConcurrency(branches, STATUS_CONCURRENCY, async (branch) => {
+      const confirmedParent = confirmedParents.get(branch.name);
+      const worktreePath = worktrees.get(branch.name);
+      const hasWorkingChanges = worktreePath
+        ? (await this.snapshotStoreService.workingFingerprint(worktreePath).catch(() => undefined)) !== undefined
+        : false;
+      return {
+        ...branch,
+        parent: confirmedParent ?? branch.suggestedParent,
+        isParentConfirmed: confirmedParent !== undefined,
+        worktreePath,
+        hasWorkingChanges,
+      };
+    });
   }
 
   private async toResponse(record: iWorkspaceRecord): Promise<iWorkspaceResponse> {

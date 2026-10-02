@@ -22,4 +22,11 @@ export interface iBranchResponse {
   isDefault: boolean;
   suggestedParent?: string;
   commitsAhead: number;
+  parent?: string;
+  isParentConfirmed: boolean;
+  worktreePath?: string;
+  hasWorkingChanges: boolean;
 }
+
+/** A branch as read from git, before Chaff adds its confirmed parent and working-changes state. */
+export type iGitBranch = Omit<iBranchResponse, 'parent' | 'isParentConfirmed' | 'worktreePath' | 'hasWorkingChanges'>;

@@ -1,4 +1,5 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { inject, singleton } from 'tsyringe';
 
@@ -17,6 +18,14 @@ const STORES_DIRECTORY = 'stores';
 const FETCH_REF_PREFIX = 'refs/chaff/fetch';
 const SNAPSHOT_REF_PREFIX = 'refs/chaff/snapshots';
 const BLOB_BATCH_SIZE = 200;
+const TEMPORARY_DIRECTORY = 'tmp';
+/** Author and committer of the commits Chaff makes in its store for working changes. */
+const CHAFF_AUTHOR_ENV = {
+  GIT_AUTHOR_NAME: 'Chaff',
+  GIT_AUTHOR_EMAIL: 'chaff@localhost',
+  GIT_COMMITTER_NAME: 'Chaff',
+  GIT_COMMITTER_EMAIL: 'chaff@localhost',
+};
 
 /** Matches kept per file by `grep`; enough to show how a symbol is used without reading whole files. */
 const MAX_GREP_HITS_PER_FILE = 20;
@@ -92,6 +101,79 @@ export class SnapshotStoreService {
       ]);
       const [headSha = '', parentHeadSha = ''] = output.split('\n');
       return { headSha, parentHeadSha };
+    });
+  }
+
+  /** Local branches checked out in one of the repository's worktrees, with the worktree's folder. */
+  public async listWorktrees(repoPath: string) {
+    const { stdout } = await this.gitService.run(repoPath, ['worktree', 'list', '--porcelain', '-z'], {
+      allowFailure: true,
+    });
+    const worktrees = new Map<string, string>();
+    let folder: string | undefined;
+    for (const field of stdout.split('\0')) {
+      if (field.startsWith('worktree ')) folder = field.slice('worktree '.length);
+      else if (field.startsWith('branch refs/heads/') && folder)
+        worktrees.set(field.slice('branch refs/heads/'.length), folder);
+      else if (field === '') folder = undefined;
+    }
+    return worktrees;
+  }
+
+  /**
+   * Summarizes the uncommitted state of a worktree: `git status` plus the size and modification time of
+   * every changed file, so an edit to an already modified file still changes it. Undefined when clean.
+   */
+  public async workingFingerprint(worktreePath: string) {
+    const { stdout } = await this.gitService.run(worktreePath, [
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+    ]);
+    if (stdout.length === 0) return undefined;
+    const paths = stdout
+      .split('\0')
+      .filter((entry) => entry.length > 3)
+      .map((entry) => entry.slice(3));
+    const hash = createHash('sha1').update(stdout);
+    for (const filePath of paths) {
+      const details = await stat(path.join(worktreePath, filePath)).catch(() => undefined);
+      hash.update(`\0${filePath}:${details ? `${details.size}:${details.mtimeMs}` : 'gone'}`);
+    }
+    return hash.digest('hex');
+  }
+
+  /**
+   * Copies the uncommitted work of a worktree into the store as a commit on top of the branch. The
+   * work is read through a throwaway index with the store as the repository, so the user's index,
+   * stash and objects are never written.
+   */
+  public async captureWorkingChanges(
+    workspace: { id: string; repoPath: string },
+    branch: string,
+    worktreePath: string,
+  ): Promise<iSnapshotHeads> {
+    const { headSha: branchSha } = await this.fetchHeads(workspace, branch, branch);
+    return this.mutex.run(workspace.id, async () => {
+      const storePath = this.storePath(workspace.id);
+      const temporaryRoot = path.join(this.options.dataDir, TEMPORARY_DIRECTORY);
+      await mkdir(temporaryRoot, { recursive: true });
+      const scratch = await mkdtemp(path.join(temporaryRoot, 'working-'));
+      const env = { GIT_DIR: storePath, GIT_WORK_TREE: worktreePath, GIT_INDEX_FILE: path.join(scratch, 'index') };
+      try {
+        await this.gitService.run(worktreePath, ['read-tree', branchSha], { env });
+        await this.gitService.run(worktreePath, ['add', '--all', '--', '.'], { env });
+        const tree = await this.gitService.output(worktreePath, ['write-tree'], { env });
+        const headSha = await this.gitService.output(
+          storePath,
+          ['commit-tree', tree, '-p', branchSha, '-m', `Working changes on ${branch}`],
+          { env: CHAFF_AUTHOR_ENV },
+        );
+        return { headSha, parentHeadSha: branchSha };
+      } finally {
+        await rm(scratch, { recursive: true, force: true });
+      }
     });
   }
 

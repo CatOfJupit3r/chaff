@@ -22,6 +22,8 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'DIGEST_NOT_FOUND',
   'DIGEST_ALREADY_RUNNING',
   'DIGEST_RUNNER_UNAVAILABLE',
+  'PARENT_CYCLE',
+  'BRANCH_NOT_CHECKED_OUT',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -48,4 +50,6 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.DIGEST_NOT_FOUND]: 'Digest not found',
   [errorCodes.DIGEST_ALREADY_RUNNING]: 'A digest is already being written for this snapshot',
   [errorCodes.DIGEST_RUNNER_UNAVAILABLE]: 'The coding agent could not be found on this computer',
+  [errorCodes.PARENT_CYCLE]: 'That parent already builds on this branch',
+  [errorCodes.BRANCH_NOT_CHECKED_OUT]: 'The branch is not checked out, so it has no working changes',
 });

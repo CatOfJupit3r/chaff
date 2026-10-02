@@ -146,6 +146,8 @@ describe('reviews', () => {
       newCommitCount: 1,
       isBranchRewritten: false,
       isParentMoved: false,
+      isParentChanged: false,
+      hasNewWorkingChanges: false,
     });
     expect(frozen.headSha).not.toBe(repo.git('rev-parse', 'feature'));
     expect(refreshed).toMatchObject({ targetId, isNew: true });

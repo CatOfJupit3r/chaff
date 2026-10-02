@@ -115,3 +115,13 @@ export const diffSidesEnumwaii = new Enumwaii('DiffSide', ['OLD', 'NEW']);
 export const DIFF_SIDES = diffSidesEnumwaii.enum;
 export type DiffSide = InferEnumwaii<typeof diffSidesEnumwaii>;
 export const diffSideSchema = diffSidesEnumwaii.schema;
+
+/**
+ * What a review compares: a branch against its parent, the uncommitted work on top of a checked-out
+ * branch, or a branch against the bottom of its stack (everything the stack adds).
+ */
+export const reviewTargetKindsEnumwaii = new Enumwaii('ReviewTargetKind', ['BRANCH', 'WORKING_CHANGES', 'CUMULATIVE']);
+
+export const REVIEW_TARGET_KINDS = reviewTargetKindsEnumwaii.enum;
+export type ReviewTargetKind = InferEnumwaii<typeof reviewTargetKindsEnumwaii>;
+export const reviewTargetKindSchema = reviewTargetKindsEnumwaii.schema;

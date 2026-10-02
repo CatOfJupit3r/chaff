@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { IS_INSPECTED_MARK, UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import { IS_INSPECTED_MARK, REVIEW_TARGET_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 
 import { REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { GitService } from '@~/features/git/git.service';
@@ -18,6 +18,7 @@ import type {
   iReviewTargetResponse,
   iSnapshotLiveStatus,
   iSnapshotResponse,
+  iSetParentInput,
   iSnapshotSummary,
   iStartReviewInput,
 } from './reviews.types';
@@ -50,12 +51,13 @@ export class ReviewsService {
   public async list(workspaceId?: string): Promise<iReviewTargetResponse[]> {
     const targets = await this.reviewTargetRepository.list(workspaceId);
     return Promise.all(
-      targets.map(async ({ id, workspaceId: targetWorkspaceId, branch, parentBranch }) => {
+      targets.map(async ({ id, workspaceId: targetWorkspaceId, branch, kind, parentBranch }) => {
         const latest = await this.snapshotRepository.findLatest(id);
         return {
           id,
           workspaceId: targetWorkspaceId,
           branch,
+          kind,
           parentBranch,
           latestSnapshot: latest ? await this.toSummary(latest) : undefined,
         };
@@ -64,12 +66,17 @@ export class ReviewsService {
   }
 
   /** Opens the branch's newest snapshot, freezing the first one when the review is new. */
-  public async start(input: iStartReviewInput) {
-    if (input.branch === input.parentBranch) throw ORPCBadRequestError(errorCodes.INVALID_PARENT_BRANCH);
+  public async start(request: iStartReviewInput) {
+    const isWorkingChanges = request.kind === REVIEW_TARGET_KINDS.WORKING_CHANGES;
+    // Working changes are compared with the branch they sit on.
+    const input = isWorkingChanges ? { ...request, parentBranch: request.branch } : request;
+    if (!isWorkingChanges && input.branch === input.parentBranch) {
+      throw ORPCBadRequestError(errorCodes.INVALID_PARENT_BRANCH);
+    }
     const workspace = await this.workspacesService.getRecord(input.workspaceId);
 
     return this.captureMutex.run(this.captureKey(workspace.id, input.branch), async () => {
-      let target = await this.reviewTargetRepository.findByBranch(workspace.id, input.branch);
+      let target = await this.reviewTargetRepository.findByBranch(workspace.id, input.branch, input.kind);
       const latest = target ? await this.snapshotRepository.findLatest(target.id) : undefined;
       if (target && latest) return { targetId: target.id, snapshotId: latest.id };
 
@@ -91,13 +98,53 @@ export class ReviewsService {
     const workspace = await this.workspacesService.getRecord(target.workspaceId);
 
     return this.captureMutex.run(this.captureKey(workspace.id, target.branch), async () => {
-      const heads = await this.snapshotStoreService.fetchHeads(workspace, target.branch, target.parentBranch);
       const latest = await this.snapshotRepository.findLatest(target.id);
-      const isUnchanged = latest?.headSha === heads.headSha && latest.parentHeadSha === heads.parentHeadSha;
-      if (latest && isUnchanged) return { targetId: target.id, snapshotId: latest.id, isNew: false };
+      if (latest && (await this.isUnchanged(workspace, target, latest))) {
+        return { targetId: target.id, snapshotId: latest.id, isNew: false };
+      }
 
-      const snapshot = await this.capture(workspace, target, heads);
+      const snapshot = await this.capture(workspace, target);
       return { targetId: target.id, snapshotId: snapshot.id, isNew: true };
+    });
+  }
+
+  /**
+   * Confirms or changes the parent a branch is reviewed against. A review already started keeps its
+   * snapshots; the next update compares the branch with the new parent.
+   */
+  public async setParent(input: iSetParentInput) {
+    if (input.branch === input.parentBranch) throw ORPCBadRequestError(errorCodes.INVALID_PARENT_BRANCH);
+    const workspace = await this.workspacesService.getRecord(input.workspaceId);
+    for (const name of [input.branch, input.parentBranch]) {
+      if (!(await this.snapshotStoreService.resolveBranch(workspace.repoPath, name))) {
+        throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
+      }
+    }
+
+    const targets = await this.reviewTargetRepository.list(workspace.id);
+    const parents = new Map(
+      targets
+        .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
+        .map((target) => [target.branch, target.parentBranch]),
+    );
+    const visited = new Set<string>();
+    for (let current: string | undefined = input.parentBranch; current; current = parents.get(current)) {
+      if (current === input.branch) throw ORPCBadRequestError(errorCodes.PARENT_CYCLE);
+      if (visited.has(current)) break;
+      visited.add(current);
+    }
+
+    return this.captureMutex.run(this.captureKey(workspace.id, input.branch), async () => {
+      const existing = await this.reviewTargetRepository.findByBranch(
+        workspace.id,
+        input.branch,
+        REVIEW_TARGET_KINDS.BRANCH,
+      );
+      const target = existing
+        ? await this.reviewTargetRepository.updateParent(existing.id, input.parentBranch)
+        : await this.reviewTargetRepository.create({ ...input, kind: REVIEW_TARGET_KINDS.BRANCH });
+      if (!target) throw ORPCNotFoundError(errorCodes.REVIEW_TARGET_NOT_FOUND);
+      return { targetId: target.id, branch: target.branch, parentBranch: target.parentBranch };
     });
   }
 
@@ -113,7 +160,9 @@ export class ReviewsService {
       targetId: target.id,
       workspaceId: target.workspaceId,
       branch: target.branch,
+      kind: target.kind,
       parentBranch: snapshot.parentBranch,
+      targetParentBranch: target.parentBranch,
       parentHeadSha: snapshot.parentHeadSha,
       baseSha: snapshot.baseSha,
       latestVersion: latest?.version ?? snapshot.version,
@@ -126,29 +175,33 @@ export class ReviewsService {
     const snapshot = await this.getSnapshotRecord(snapshotId);
     const target = await this.getTarget(snapshot.targetId);
     const { repoPath } = await this.workspacesService.getRecord(target.workspaceId);
+    const isWorkingChanges = target.kind === REVIEW_TARGET_KINDS.WORKING_CHANGES;
+    // The commit a working-changes snapshot sits on is its parent head; its own head exists only in the store.
+    const committedSha = isWorkingChanges ? snapshot.parentHeadSha : snapshot.headSha;
 
     const [branchSha, parentSha] = await Promise.all([
       this.snapshotStoreService.resolveBranch(repoPath, target.branch),
       this.snapshotStoreService.resolveBranch(repoPath, snapshot.parentBranch),
     ]);
-    const isParentMoved = parentSha !== snapshot.parentHeadSha;
-    if (!branchSha) return { isBranchMissing: true, newCommitCount: 0, isBranchRewritten: false, isParentMoved };
-    if (branchSha === snapshot.headSha) {
-      return { isBranchMissing: false, newCommitCount: 0, isBranchRewritten: false, isParentMoved };
-    }
+    const unchanged = {
+      isBranchMissing: false,
+      newCommitCount: 0,
+      isBranchRewritten: false,
+      isParentMoved: !isWorkingChanges && parentSha !== snapshot.parentHeadSha,
+      isParentChanged: target.parentBranch !== snapshot.parentBranch,
+      hasNewWorkingChanges: isWorkingChanges
+        ? await this.hasNewWorkingChanges(repoPath, target.branch, snapshot)
+        : false,
+    };
+    if (!branchSha) return { ...unchanged, isBranchMissing: true };
+    if (branchSha === committedSha) return unchanged;
 
-    const ancestry = await this.gitService.run(repoPath, ['merge-base', '--is-ancestor', snapshot.headSha, branchSha], {
+    const ancestry = await this.gitService.run(repoPath, ['merge-base', '--is-ancestor', committedSha, branchSha], {
       allowFailure: true,
     });
-    if (ancestry.exitCode !== 0) {
-      return { isBranchMissing: false, newCommitCount: 0, isBranchRewritten: true, isParentMoved };
-    }
-    const newCommits = await this.gitService.output(repoPath, [
-      'rev-list',
-      '--count',
-      `${snapshot.headSha}..${branchSha}`,
-    ]);
-    return { isBranchMissing: false, newCommitCount: Number(newCommits), isBranchRewritten: false, isParentMoved };
+    if (ancestry.exitCode !== 0) return { ...unchanged, isBranchRewritten: true };
+    const newCommits = await this.gitService.output(repoPath, ['rev-list', '--count', `${committedSha}..${branchSha}`]);
+    return { ...unchanged, newCommitCount: Number(newCommits) };
   }
 
   /** The snapshot and the review it belongs to. */
@@ -177,9 +230,8 @@ export class ReviewsService {
     return { oldContents: contentsOf(file.oldBlobSha), newContents: contentsOf(file.newBlobSha) };
   }
 
-  private async capture(workspace: iWorkspaceRecord, target: iReviewTargetRecord, knownHeads?: iSnapshotHeads) {
-    const heads =
-      knownHeads ?? (await this.snapshotStoreService.fetchHeads(workspace, target.branch, target.parentBranch));
+  private async capture(workspace: iWorkspaceRecord, target: iReviewTargetRecord) {
+    const { heads, workingFingerprint } = await this.readHeads(workspace, target);
     const baseSha = await this.snapshotStoreService.mergeBase(workspace.id, heads);
     const shas = { ...heads, baseSha };
     const { content, totals } = await this.snapshotBuilderService.build(workspace.id, baseSha, heads.headSha);
@@ -196,6 +248,7 @@ export class ReviewsService {
           parentBranch: target.parentBranch,
           ...shas,
           ...totals,
+          workingFingerprint,
         },
         content,
       );
@@ -206,6 +259,43 @@ export class ReviewsService {
       await this.snapshotStoreService.unpin(workspace.id, snapshotId, shas);
       throw error;
     }
+  }
+
+  /** Copies what the target compares into the store: two branch tips, or a branch and its uncommitted work. */
+  private async readHeads(
+    workspace: iWorkspaceRecord,
+    target: iReviewTargetRecord,
+  ): Promise<{ heads: iSnapshotHeads; workingFingerprint: string | null }> {
+    if (target.kind !== REVIEW_TARGET_KINDS.WORKING_CHANGES) {
+      const heads = await this.snapshotStoreService.fetchHeads(workspace, target.branch, target.parentBranch);
+      return { heads, workingFingerprint: null };
+    }
+    const worktreePath = (await this.snapshotStoreService.listWorktrees(workspace.repoPath)).get(target.branch);
+    if (!worktreePath) throw ORPCBadRequestError(errorCodes.BRANCH_NOT_CHECKED_OUT);
+    // Taken first, so edits made while the snapshot is being built still show up as new.
+    const workingFingerprint = (await this.snapshotStoreService.workingFingerprint(worktreePath)) ?? '';
+    const heads = await this.snapshotStoreService.captureWorkingChanges(workspace, target.branch, worktreePath);
+    return { heads, workingFingerprint };
+  }
+
+  private async isUnchanged(workspace: iWorkspaceRecord, target: iReviewTargetRecord, latest: iSnapshotRecord) {
+    if (latest.parentBranch !== target.parentBranch) return false;
+    if (target.kind === REVIEW_TARGET_KINDS.WORKING_CHANGES) {
+      const branchSha = await this.snapshotStoreService.resolveBranch(workspace.repoPath, target.branch);
+      return (
+        branchSha === latest.parentHeadSha &&
+        !(await this.hasNewWorkingChanges(workspace.repoPath, target.branch, latest))
+      );
+    }
+    const heads = await this.snapshotStoreService.fetchHeads(workspace, target.branch, target.parentBranch);
+    return latest.headSha === heads.headSha && latest.parentHeadSha === heads.parentHeadSha;
+  }
+
+  private async hasNewWorkingChanges(repoPath: string, branch: string, snapshot: iSnapshotRecord) {
+    const worktreePath = (await this.snapshotStoreService.listWorktrees(repoPath)).get(branch);
+    if (!worktreePath) return false;
+    const fingerprint = (await this.snapshotStoreService.workingFingerprint(worktreePath)) ?? '';
+    return fingerprint !== (snapshot.workingFingerprint ?? '');
   }
 
   private async toSummary(snapshot: iSnapshotRecord): Promise<iSnapshotSummary> {
@@ -226,6 +316,7 @@ export class ReviewsService {
       unitCount,
       inspectedUnitCount,
       laterUnitCount: markCounts.get(UNIT_MARKS.LATER) ?? 0,
+      markCounts: [...markCounts].map(([mark, count]) => ({ mark, count })),
       createdAt,
     };
   }

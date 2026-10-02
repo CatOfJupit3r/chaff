@@ -4,6 +4,8 @@ import z from 'zod';
 import {
   fileKindSchema,
   fileStatusSchema,
+  REVIEW_TARGET_KINDS,
+  reviewTargetKindSchema,
   symbolKindSchema,
   unitChangeSchema,
   unitKindSchema,
@@ -25,6 +27,8 @@ export const snapshotSummarySchema = z.object({
   /** Units marked Looks good, Concern or Question. */
   inspectedUnitCount: z.number().int().nonnegative(),
   laterUnitCount: z.number().int().nonnegative(),
+  /** Units per decision; undecided units are the rest of `unitCount`. */
+  markCounts: z.array(z.object({ mark: unitMarkSchema, count: z.number().int().positive() })),
   createdAt: z.date(),
 });
 
@@ -32,7 +36,10 @@ export const reviewTargetSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   branch: z.string(),
+  kind: reviewTargetKindSchema,
+  /** The branch it is compared with; the branch itself for working changes. */
   parentBranch: z.string(),
+  /** Missing until a review is started; a branch target with only a confirmed parent has none. */
   latestSnapshot: snapshotSummarySchema.optional(),
 });
 
@@ -59,7 +66,11 @@ export const snapshotSchema = snapshotSummarySchema.extend({
   targetId: z.string(),
   workspaceId: z.string(),
   branch: z.string(),
+  kind: reviewTargetKindSchema,
+  /** Parent the snapshot was taken against. */
   parentBranch: z.string(),
+  /** Parent the review uses now; differs from `parentBranch` after the reviewer changed it. */
+  targetParentBranch: z.string(),
   parentHeadSha: z.string(),
   baseSha: z.string(),
   /** Version of the newest snapshot of the same review. */
@@ -76,6 +87,10 @@ export const snapshotLiveStatusSchema = z.object({
   isBranchRewritten: z.boolean(),
   /** The parent branch moved since the snapshot. */
   isParentMoved: z.boolean(),
+  /** The reviewer picked another parent since the snapshot was taken. */
+  isParentChanged: z.boolean(),
+  /** Working changes only: the uncommitted work changed since the snapshot. */
+  hasNewWorkingChanges: z.boolean(),
 });
 
 export const unitSchema = z.object({
@@ -134,8 +149,24 @@ export const reviewsContract = oc.router({
       description:
         "Opens the branch's review. The first time, Chaff copies the branch and its parent into its own store and freezes a snapshot; afterwards the newest snapshot is reused.",
     })
-    .input(z.object({ workspaceId: idSchema, branch: branchNameSchema, parentBranch: branchNameSchema }))
+    .input(
+      z.object({
+        workspaceId: idSchema,
+        branch: branchNameSchema,
+        parentBranch: branchNameSchema,
+        kind: reviewTargetKindSchema.default(REVIEW_TARGET_KINDS.BRANCH),
+      }),
+    )
     .output(z.object({ targetId: z.string(), snapshotId: z.string() })),
+
+  setParent: oc
+    .route({
+      summary: "Confirm or change a branch's parent",
+      description:
+        'Stores the branch the review compares this branch with. Snapshots already taken stay as they are; the next update uses the new parent.',
+    })
+    .input(z.object({ workspaceId: idSchema, branch: branchNameSchema, parentBranch: branchNameSchema }))
+    .output(z.object({ targetId: z.string(), branch: z.string(), parentBranch: z.string() })),
 
   refresh: oc
     .route({

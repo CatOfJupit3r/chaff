@@ -23,6 +23,13 @@ export const branchSchema = z.object({
   suggestedParent: z.string().optional(),
   /** First-parent commits between the suggested parent's tip and this branch's tip. */
   commitsAhead: z.number().int().nonnegative(),
+  /** The parent the branch is reviewed against: the confirmed one, else the suggestion. */
+  parent: z.string().optional(),
+  isParentConfirmed: z.boolean(),
+  /** Folder of the worktree the branch is checked out in, if any. */
+  worktreePath: z.string().optional(),
+  /** The branch is checked out and has uncommitted changes. */
+  hasWorkingChanges: z.boolean(),
 });
 
 const workspaceIdInput = z.object({ workspaceId: z.string().min(1).max(64) });

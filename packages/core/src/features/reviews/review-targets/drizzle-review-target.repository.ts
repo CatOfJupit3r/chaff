@@ -1,6 +1,8 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
+import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
+
 import { DatabaseService } from '@~/db/database.service';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
 
@@ -25,12 +27,14 @@ export class DrizzleReviewTargetRepository implements iReviewTargetRepository {
     return this.databaseService.getDb().select().from(reviewTargets).where(eq(reviewTargets.id, targetId)).get();
   }
 
-  public async findByBranch(workspaceId: string, branch: string) {
+  public async findByBranch(workspaceId: string, branch: string, kind: ReviewTargetKind) {
     return this.databaseService
       .getDb()
       .select()
       .from(reviewTargets)
-      .where(and(eq(reviewTargets.workspaceId, workspaceId), eq(reviewTargets.branch, branch)))
+      .where(
+        and(eq(reviewTargets.workspaceId, workspaceId), eq(reviewTargets.branch, branch), eq(reviewTargets.kind, kind)),
+      )
       .get();
   }
 

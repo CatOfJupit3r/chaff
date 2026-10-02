@@ -3,7 +3,7 @@ import { singleton } from 'tsyringe';
 import { GitService } from '@~/features/git/git.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 
-import type { iBranchResponse } from './workspaces.types';
+import type { iGitBranch } from './workspaces.types';
 
 const FIELD_SEPARATOR = '\u0000';
 const BRANCH_FORMAT = [
@@ -61,7 +61,7 @@ function upstreamMatches(branch: iRawBranch, candidate: string) {
 export class BranchesService {
   constructor(private readonly gitService: GitService) {}
 
-  public async listBranches(repoPath: string, defaultBranch: string | undefined): Promise<iBranchResponse[]> {
+  public async listBranches(repoPath: string, defaultBranch: string | undefined): Promise<iGitBranch[]> {
     const output = await this.gitService.output(repoPath, ['for-each-ref', `--format=${BRANCH_FORMAT}`, 'refs/heads']);
     const branches = parseBranches(output);
 
