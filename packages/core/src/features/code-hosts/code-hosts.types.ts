@@ -1,4 +1,4 @@
-import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import type { ChangeState, CodeHost } from '@chaff/common/enums/code-host.enums';
 import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import type { connections } from '@~/db/schema/connections.schema';
@@ -27,6 +27,7 @@ export interface iRemoteChange {
   headSha: string;
   webUrl: string;
   isDraft: boolean;
+  state: ChangeState;
   updatedAt: Date;
   assigneeUsernames: string[];
   reviewerUsernames: string[];

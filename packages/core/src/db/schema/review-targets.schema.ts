@@ -3,9 +3,9 @@ import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core
 
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
-import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
+import type { ArchiveReason, ReviewTargetKind } from '@chaff/common/enums/review.enums';
 
-import { idPrimaryKey, timestamps } from '../schema.helpers';
+import { idPrimaryKey, timestampColumn, timestamps } from '../schema.helpers';
 import { workspaces } from './workspaces.schema';
 
 /**
@@ -30,6 +30,9 @@ export const reviewTargets = sqliteTable(
     changeNumber: integer('change_number'),
     title: text('title'),
     webUrl: text('web_url'),
+    /** Set once the branch is gone or the change was merged or closed; the review then lives in History. */
+    archivedAt: timestampColumn('archived_at'),
+    archiveReason: text('archive_reason').$type<ArchiveReason>(),
     ...timestamps(),
   },
   (table) => [

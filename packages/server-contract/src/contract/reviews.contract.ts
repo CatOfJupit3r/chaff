@@ -3,6 +3,7 @@ import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
 import {
+  archiveReasonSchema,
   diffSideSchema,
   fileKindSchema,
   fileStatusSchema,
@@ -56,6 +57,19 @@ export const reviewTargetSchema = z.object({
   change: changeRequestInfoSchema.optional(),
   /** Missing until a review is started; a branch target with only a confirmed parent has none. */
   latestSnapshot: snapshotSummarySchema.optional(),
+  /** Set once the review moved to History. */
+  archived: z.object({ at: z.date(), reason: archiveReasonSchema }).optional(),
+});
+
+/** A started review as History lists it. */
+export const reviewHistoryEntrySchema = reviewTargetSchema.extend({
+  latestSnapshot: snapshotSummarySchema,
+  workspaceName: z.string(),
+  findingCount: z.number().int().nonnegative(),
+  /** Findings still open or waiting on a fix or a check. */
+  activeFindingCount: z.number().int().nonnegative(),
+  /** The newest snapshot, decision or finding change. */
+  lastActivityAt: z.date(),
 });
 
 export const snapshotFileSchema = z.object({
@@ -184,6 +198,15 @@ export const reviewsContract = oc.router({
     })
     .input(z.object({ workspaceId: idSchema.optional() }))
     .output(z.array(reviewTargetSchema)),
+
+  history: oc
+    .route({
+      summary: 'List review history',
+      description:
+        'Returns every started review, newest activity first, after moving reviews whose branch is gone or whose change was merged or closed to History. A host that cannot be reached leaves its reviews as they were.',
+    })
+    .input(z.object({ workspaceId: idSchema.optional() }))
+    .output(z.array(reviewHistoryEntrySchema)),
 
   start: oc
     .route({

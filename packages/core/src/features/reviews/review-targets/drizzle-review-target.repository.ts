@@ -7,7 +7,7 @@ import { DatabaseService } from '@~/db/database.service';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
 
 import type { iReviewTargetRepository } from './review-target.repository';
-import type { iChangeRequestFields, iNewReviewTarget } from './review-targets.types';
+import type { iChangeRequestFields, iNewReviewTarget, iTargetArchive } from './review-targets.types';
 
 @singleton()
 export class DrizzleReviewTargetRepository implements iReviewTargetRepository {
@@ -66,6 +66,16 @@ export class DrizzleReviewTargetRepository implements iReviewTargetRepository {
       .getDb()
       .update(reviewTargets)
       .set({ parentBranch })
+      .where(eq(reviewTargets.id, targetId))
+      .returning()
+      .get();
+  }
+
+  public async setArchive(targetId: string, archive: iTargetArchive) {
+    return this.databaseService
+      .getDb()
+      .update(reviewTargets)
+      .set(archive)
       .where(eq(reviewTargets.id, targetId))
       .returning()
       .get();

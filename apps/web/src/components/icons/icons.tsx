@@ -117,6 +117,14 @@ export const ClockIcon = createIcon(
     <path d="M12 7v5l3 2" />
   </>,
 );
+export const HistoryIcon = createIcon(
+  'HistoryIcon',
+  <>
+    <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+    <path d="M3.5 4.5v4h4" />
+    <path d="M12 8v4.2l2.8 1.8" />
+  </>,
+);
 export const PanelIcon = createIcon(
   'PanelIcon',
   <>

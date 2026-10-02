@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, max } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { singleton } from 'tsyringe';
 
@@ -53,6 +53,16 @@ export class DrizzleUnitMarkRepository implements iUnitMarkRepository {
       .where(and(eq(regions.snapshotId, snapshotId), inArray(unitMarks.mark, accounted)))
       .get();
     return row?.total ?? 0;
+  }
+
+  public async lastMarkedAt(snapshotId: string) {
+    const row = this.databaseService
+      .getDb()
+      .select({ latest: max(unitMarks.updatedAt) })
+      .from(unitMarks)
+      .where(eq(unitMarks.snapshotId, snapshotId))
+      .get();
+    return row?.latest ?? undefined;
   }
 
   public async carryOver(fromSnapshotId: string, toSnapshotId: string) {

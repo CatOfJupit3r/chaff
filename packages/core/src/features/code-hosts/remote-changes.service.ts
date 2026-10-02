@@ -1,8 +1,12 @@
-import { singleton } from 'tsyringe';
+import { inject, singleton } from 'tsyringe';
 
+import type { ChangeState } from '@chaff/common/enums/code-host.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 
+import { REVIEW_TARGET_REPOSITORY_TOKEN } from '@~/di/tokens';
+import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
+import { changeArchiveChange } from '@~/features/reviews/review-targets/target-archive.utils';
 import type { iSnapshotLiveStatus } from '@~/features/reviews/reviews.types';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotHeads, iSnapshotRecord } from '@~/features/reviews/snapshots/snapshots.types';
@@ -22,15 +26,15 @@ interface iCachedStatus {
   status: iSnapshotLiveStatus;
 }
 
-/**
- * Reads merge and pull requests that are under review: copying them into the store and telling the
- * review what moved on the host since its snapshot.
- */
 /** Issues read from a change's description, at most. */
 const MAX_LINKED_ISSUES = 3;
 /** Characters kept of a change's or an issue's description. */
 const MAX_DESCRIPTION_CHARS = 8000;
 
+/**
+ * Reads merge and pull requests that are under review: copying them into the store, telling the review
+ * what moved on the host since its snapshot, and moving it to History once the change is merged or closed.
+ */
 @singleton()
 export class RemoteChangesService {
   private readonly statusCache = new Map<string, iCachedStatus>();
@@ -40,7 +44,15 @@ export class RemoteChangesService {
     private readonly remoteProjectsService: RemoteProjectsService,
     private readonly workspacesService: WorkspacesService,
     private readonly snapshotStoreService: SnapshotStoreService,
+    @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
   ) {}
+
+  /** Asks the host whether the change is still open and archives or restores its review to match. */
+  public async syncArchive(target: iReviewTargetRecord) {
+    const { provider, access, project, changeNumber } = await this.locate(target);
+    const change = await provider.getChange(access, project, changeNumber);
+    if (change) await this.archiveByState(target, change.state);
+  }
 
   /** The provider, credentials, project and number of a change target. */
   public async locate(target: iReviewTargetRecord) {
@@ -101,6 +113,7 @@ export class RemoteChangesService {
       isParentChanged: target.parentBranch !== snapshot.parentBranch,
       hasNewWorkingChanges: false,
     };
+    if (change) await this.archiveByState(target, change.state);
     let status: iSnapshotLiveStatus = unchanged;
     if (!change) status = { ...unchanged, isBranchMissing: true };
     else if (change.headSha !== snapshot.headSha) {
@@ -139,5 +152,10 @@ export class RemoteChangesService {
 
   public forget(snapshotId: string) {
     this.statusCache.delete(snapshotId);
+  }
+
+  private async archiveByState(target: iReviewTargetRecord, state: ChangeState) {
+    const change = changeArchiveChange(target, state);
+    if (change) await this.reviewTargetRepository.setArchive(change.targetId, change.archive);
   }
 }

@@ -131,6 +131,10 @@ A preference is a rule you state for one repository, often promoted from a findi
 - **Keys.** Settings stores only the keys you changed. Each screen (Focus, Verify) resolves its actions against the defaults; the core refuses a map where two actions on one screen share a key or an action takes 1 to 4 in Focus. Arrows always move, whatever the map says.
 - **Swipe.** A touch or pen drag on the Focus card moves it with a CSS transform only, so nothing around it shifts. Mostly vertical drags scroll the page as usual.
 
+## History and archiving
+
+A review is never deleted along with its branch. Each time Chaff lists a repository's branches (Reviews, Stack, History), a local review whose branch no longer exists gets `archived_at` and the reason `BRANCH_DELETED`; if a branch of that name appears again, the mark is cleared. A repository whose folder is gone is skipped, so unplugging a drive archives nothing. Archived reviews keep working because their snapshots are pinned in Chaff's store, not in your repository: Focus, the Full diff, findings and export all read from there.
+
 ## Where data lives
 
 | What | Where |
@@ -163,6 +167,7 @@ GitLab merge requests and GitHub pull requests are read through one provider int
 - **New versions.** The snapshot chip asks the host for the change's head and the target branch's tip (at most every 30 seconds) and counts new commits from the change's commit list. **Update** freezes a new snapshot as with local branches.
 - **Discussions** are read from the host and shown read-only on the lines and units they are about. Threads written against another commit are marked as such and stay out of the Full diff.
 - **Linking.** A local branch's review can be moved onto the merge request it was pushed as. The review keeps its snapshots, decisions and findings; its next update reads from the host.
+- **Archiving.** A change's review is archived as merged or closed when the host says so, whenever the review checks the host for new commits or History is opened. A change that reopens is restored. A host that can't be reached changes nothing.
 
 - **Posting.** Findings go back as GitLab draft notes or one pending GitHub review, never published or submitted by Chaff. See [Export and posting](#export-and-posting).
 

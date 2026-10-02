@@ -9,6 +9,7 @@ import { DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enum
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
 import {
+  ARCHIVE_REASONS,
   DIFF_SIDES,
   FINDING_KINDS,
   FINDING_STATUSES,
@@ -275,6 +276,30 @@ describe('code hosts', () => {
       expect(prompt).toContain('Title: Retry three times\nRetries were lost on timeouts. Closes #7, see #8 and !1.');
       expect(prompt).toContain('Issue #7: Deliveries vanish\nSeen when the receiver is slow.');
       expect(prompt).not.toContain('Issue #8');
+    },
+  );
+
+  it.each([CODE_HOSTS.GITLAB, CODE_HOSTS.GITHUB])(
+    'moves the review of a merged or closed %s change to History and back when it reopens',
+    async (host) => {
+      await connect(host);
+      const { workspace } = await addClone(host === CODE_HOSTS.GITHUB ? 'owner/repo' : 'group/project');
+      const { targetId } = await call(appRouter.codeHosts.startChange, { workspaceId: workspace.id, number: 1 });
+      const change = codeHost.changes.find((candidate) => candidate.number === 1);
+      if (!change) throw new Error('No change 1');
+
+      change.state = 'merged';
+      const [merged] = await call(appRouter.reviews.history, {});
+      change.state = 'closed';
+      const [closed] = await call(appRouter.reviews.history, {});
+      const [project] = await call(appRouter.codeHosts.inbox, { filter: INBOX_FILTERS.all });
+      change.state = 'opened';
+      const [reopened] = await call(appRouter.reviews.history, { workspaceId: workspace.id });
+
+      expect(merged).toMatchObject({ id: targetId, archived: { reason: ARCHIVE_REASONS.MERGED } });
+      expect(closed?.archived?.reason).toBe(ARCHIVE_REASONS.CLOSED);
+      expect(project?.changes.map((candidate) => candidate.number)).not.toContain(1);
+      expect(reopened?.archived).toBeUndefined();
     },
   );
 

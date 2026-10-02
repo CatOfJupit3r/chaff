@@ -234,6 +234,19 @@ export const REVIEW_TARGET_KINDS = reviewTargetKindsEnumwaii.enum;
 export type ReviewTargetKind = InferEnumwaii<typeof reviewTargetKindsEnumwaii>;
 export const reviewTargetKindSchema = reviewTargetKindsEnumwaii.schema;
 
+/** Why a review moved to History: its branch is gone, or its merge or pull request was merged or closed. */
+export const archiveReasonsEnumwaii = new Enumwaii('ArchiveReason', ['BRANCH_DELETED', 'MERGED', 'CLOSED']);
+
+export const ARCHIVE_REASONS = archiveReasonsEnumwaii.enum;
+export type ArchiveReason = InferEnumwaii<typeof archiveReasonsEnumwaii>;
+export const archiveReasonSchema = archiveReasonsEnumwaii.schema;
+
+export const ARCHIVE_REASON_LABELS = archiveReasonsEnumwaii.derive({
+  [ARCHIVE_REASONS.BRANCH_DELETED]: 'branch deleted',
+  [ARCHIVE_REASONS.MERGED]: 'merged',
+  [ARCHIVE_REASONS.CLOSED]: 'closed',
+});
+
 /** Where a Change unit came from: a group the AI digest proposed, or one the reviewer made. */
 export const changeUnitSourcesEnumwaii = new Enumwaii('ChangeUnitSource', ['DIGEST', 'REVIEWER']);
 

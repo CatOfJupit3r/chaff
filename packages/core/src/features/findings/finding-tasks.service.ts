@@ -61,12 +61,14 @@ export class FindingTasksService {
       () => controller.abort(new Error('Writing the task took too long and was stopped')),
       TASK_TIMEOUT_MS,
     );
+    // The run is released before its outcome is stored, so a new run can start as soon as the reviewer sees it.
     this.write(findingId, command, runner, controller.signal)
-      .catch((error: unknown) => this.logger.error('Task failed', { findingId, error: String(error) }))
-      .finally(() => {
+      .then(async (outcome) => {
         clearTimeout(timeout);
         this.running.delete(findingId);
-      });
+        await this.storeIfStillWriting(findingId, outcome);
+      })
+      .catch((error: unknown) => this.logger.error('Storing the task failed', { findingId, error: String(error) }));
     return writing ?? this.getFinding(findingId);
   }
 
@@ -104,7 +106,13 @@ export class FindingTasksService {
     return runner === DIGEST_RUNNERS.CODEX ? this.codexAdapter : this.claudeCodeAdapter;
   }
 
-  private async write(findingId: string, command: string, runner: DigestRunner, signal: AbortSignal) {
+  /** Runs the agent in an empty folder and returns the task it wrote, or why it failed. */
+  private async write(
+    findingId: string,
+    command: string,
+    runner: DigestRunner,
+    signal: AbortSignal,
+  ): Promise<iFindingTaskChange> {
     const folder = path.join(this.options.dataDir, TASKS_DIRECTORY, findingId);
     const cwd = path.join(folder, 'empty');
     const scratchDir = path.join(folder, 'scratch');
@@ -121,15 +129,15 @@ export class FindingTasksService {
       });
       const checked = checkTask(answer);
       if (!checked) throw new Error('The agent did not answer with a usable task');
-      await this.storeIfStillWriting(findingId, { state: FINDING_TASK_STATES.PROPOSED, runner, ...checked });
+      return { state: FINDING_TASK_STATES.PROPOSED, runner, ...checked };
     } catch (error) {
+      this.logger.error('Task failed', { findingId, error: String(error) });
       const reason: unknown = signal.aborted ? signal.reason : error;
-      await this.storeIfStillWriting(findingId, {
+      return {
         state: FINDING_TASK_STATES.FAILED,
         runner,
         error: reason instanceof Error ? reason.message : String(reason),
-      });
-      throw error;
+      };
     } finally {
       await rm(folder, { recursive: true, force: true }).catch(() => undefined);
     }
