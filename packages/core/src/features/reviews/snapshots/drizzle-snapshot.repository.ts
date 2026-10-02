@@ -7,7 +7,7 @@ import { unitMarks } from '@~/db/schema/unit-marks.schema';
 
 import type { iSnapshotRepository } from './snapshot.repository';
 import { SnapshotResolver } from './snapshot.resolver';
-import type { iNewSnapshot, iSnapshotContent } from './snapshots.types';
+import type { iNewSnapshot, iSnapshotContent, iUnitRevisionUpdate } from './snapshots.types';
 
 /** Rows per insert statement, well under SQLite's bound-parameter limit. */
 const INSERT_CHUNK_SIZE = 400;
@@ -21,7 +21,7 @@ function chunk<TItem>(items: readonly TItem[]) {
 }
 
 const { patch: _patch, ...fileColumns } = getTableColumns(snapshotFiles);
-const unitWithMarkColumns = { ...getTableColumns(units), mark: unitMarks.mark };
+const unitWithMarkColumns = { ...getTableColumns(units), mark: unitMarks.mark, isMarkCarried: unitMarks.isCarried };
 
 @singleton()
 export class DrizzleSnapshotRepository implements iSnapshotRepository {
@@ -148,6 +148,30 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
       .where(and(eq(units.snapshotId, snapshotId), eq(units.id, unitId)))
       .get();
     return row ? this.snapshotResolver.toUnitRecord(row) : undefined;
+  }
+
+  public async findUnitById(unitId: string) {
+    const row = this.databaseService
+      .getDb()
+      .select(unitWithMarkColumns)
+      .from(units)
+      .leftJoin(unitMarks, eq(unitMarks.unitId, units.id))
+      .where(eq(units.id, unitId))
+      .get();
+    return row ? { ...this.snapshotResolver.toUnitRecord(row), snapshotId: row.snapshotId } : undefined;
+  }
+
+  public async setRevisions(revisions: readonly iUnitRevisionUpdate[]) {
+    if (revisions.length === 0) return;
+    this.databaseService.getDb().transaction((transaction) => {
+      for (const { unitId, revision, previousUnitId } of revisions) {
+        transaction
+          .update(units)
+          .set({ revision, previousUnitId: previousUnitId ?? null })
+          .where(eq(units.id, unitId))
+          .run();
+      }
+    });
   }
 
   private countByFile(rows: { fileId: string; total: number }[]) {

@@ -6,6 +6,7 @@ import { IS_INSPECTED_MARK, REVIEW_TARGET_KINDS, UNIT_MARKS } from '@chaff/commo
 
 import { REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { RemoteChangesService } from '@~/features/code-hosts/remote-changes.service';
+import { AnchorRelocationService } from '@~/features/findings/anchor-relocation.service';
 import { GitService } from '@~/features/git/git.service';
 import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
@@ -24,6 +25,7 @@ import type {
   iSnapshotSummary,
   iStartReviewInput,
 } from './reviews.types';
+import { SecondPassService } from './second-pass/second-pass.service';
 import { SnapshotBuilderService } from './snapshots/snapshot-builder.service';
 import { SnapshotStoreService } from './snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from './snapshots/snapshot.repository';
@@ -55,6 +57,8 @@ export class ReviewsService {
     private readonly gitService: GitService,
     @inject(UNIT_MARK_REPOSITORY_TOKEN) private readonly unitMarkRepository: iUnitMarkRepository,
     private readonly remoteChangesService: RemoteChangesService,
+    private readonly secondPassService: SecondPassService,
+    private readonly anchorRelocationService: AnchorRelocationService,
   ) {}
 
   public async list(workspaceId?: string): Promise<iReviewTargetResponse[]> {
@@ -274,8 +278,9 @@ export class ReviewsService {
 
     const snapshotId = randomUUID();
     await this.snapshotStoreService.pin(workspace.id, snapshotId, shas);
+    let snapshot: iSnapshotRecord;
     try {
-      const snapshot = await this.snapshotRepository.create(
+      snapshot = await this.snapshotRepository.create(
         {
           id: snapshotId,
           targetId: target.id,
@@ -287,13 +292,27 @@ export class ReviewsService {
         },
         content,
       );
-      // Units whose code did not change keep the reviewer's decision.
-      if (latest) await this.unitMarkRepository.carryOver(latest.id, snapshot.id);
-      return snapshot;
     } catch (error) {
       await this.snapshotStoreService.unpin(workspace.id, snapshotId, shas);
       throw error;
     }
+    if (latest) await this.startSecondPass(workspace, target, latest, snapshot);
+    return snapshot;
+  }
+
+  /**
+   * Units whose code did not change keep the reviewer's decision, every unit learns how it compares with
+   * the previous snapshot, and findings are looked for in the new code.
+   */
+  private async startSecondPass(
+    workspace: iWorkspaceRecord,
+    target: iReviewTargetRecord,
+    previous: iSnapshotRecord,
+    snapshot: iSnapshotRecord,
+  ) {
+    await this.unitMarkRepository.carryOver(previous.id, snapshot.id);
+    await this.secondPassService.classify(workspace.id, previous.id, snapshot.id);
+    await this.anchorRelocationService.relocate(workspace.id, target.id, snapshot);
   }
 
   /** Copies what the target compares into the store: two branch tips, or a branch and its uncommitted work. */

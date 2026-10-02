@@ -1,7 +1,7 @@
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { SYMBOL_KINDS, UNIT_KINDS } from '@chaff/common/enums/review.enums';
+import { DIFF_SIDES, SYMBOL_KINDS, UNIT_KINDS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import { SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
@@ -11,6 +11,7 @@ import { parsePatch } from '../diff/patch.utils';
 import { buildUnitPatch } from '../diff/unit-patch.utils';
 import type { iUnitMarkRepository } from '../marks/unit-mark.repository';
 import { ReviewsService } from '../reviews.service';
+import { SecondPassService } from '../second-pass/second-pass.service';
 import { SnapshotStoreService } from '../snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '../snapshots/snapshot.repository';
 import type { iUnitRecord } from '../snapshots/snapshots.types';
@@ -40,6 +41,7 @@ export class UnitsService {
     @inject(UNIT_MARK_REPOSITORY_TOKEN) private readonly unitMarkRepository: iUnitMarkRepository,
     private readonly reviewsService: ReviewsService,
     private readonly snapshotStoreService: SnapshotStoreService,
+    private readonly secondPassService: SecondPassService,
   ) {}
 
   public async list(snapshotId: string) {
@@ -121,6 +123,45 @@ export class UnitsService {
       };
     });
     return { symbol, usages, isTruncated: outside.length > shown.length };
+  }
+
+  /**
+   * For a unit edited since an earlier snapshot, the version the reviewer last decided on, so the card can
+   * show what changed since then rather than the whole diff again. Null when there is no such version.
+   */
+  public async getInterdiff(snapshotId: string, unitId: string) {
+    const { target } = await this.reviewsService.getContext(snapshotId);
+    const unit = await this.getUnit(snapshotId, unitId);
+    if (unit.revision !== UNIT_REVISIONS.EDITED) return { reviewed: null };
+    const reviewed = await this.secondPassService.findReviewedVersion(unit);
+    if (!reviewed?.mark) return { reviewed: null };
+
+    const isNewSide = unit.newStartLine !== undefined;
+    const [snapshot, file] = await Promise.all([
+      this.snapshotRepository.findById(reviewed.snapshotId),
+      this.snapshotRepository.findFile(reviewed.snapshotId, reviewed.fileId),
+    ]);
+    const startLine = isNewSide ? reviewed.newStartLine : reviewed.oldStartLine;
+    const endLine = isNewSide ? reviewed.newEndLine : reviewed.oldEndLine;
+    const blobSha = isNewSide ? file?.newBlobSha : file?.oldBlobSha;
+    const blobs =
+      blobSha && !file?.isBinary
+        ? await this.snapshotStoreService.readBlobs(target.workspaceId, [blobSha], MAX_FILE_BYTES)
+        : undefined;
+    const lines = blobSha ? blobs?.get(blobSha)?.toString('utf8').split('\n') : undefined;
+    const text = lines && startLine !== undefined ? lines.slice(startLine - 1, endLine).join('\n') : '';
+    return {
+      reviewed: {
+        snapshotId: reviewed.snapshotId,
+        version: snapshot?.version ?? 1,
+        headSha: snapshot?.headSha ?? '',
+        mark: reviewed.mark,
+        side: isNewSide ? DIFF_SIDES.NEW : DIFF_SIDES.OLD,
+        startLine,
+        endLine,
+        text,
+      },
+    };
   }
 
   public async setMark(snapshotId: string, unitId: string, mark: UnitMark | undefined) {

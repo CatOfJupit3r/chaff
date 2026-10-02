@@ -7,6 +7,7 @@ import {
   unitChangeSchema,
   unitKindSchema,
   unitMarkSchema,
+  unitRevisionSchema,
 } from '@chaff/common/enums/review.enums';
 
 import type { snapshotFiles, units } from '@~/db/schema/snapshots.schema';
@@ -15,7 +16,7 @@ import { createRowResolver } from '@~/lib/row-resolver';
 import type { iSnapshotFileRecord, iUnitRecord } from './snapshots.types';
 
 type SnapshotFileRow = Omit<typeof snapshotFiles.$inferSelect, 'patch'>;
-type UnitWithMarkRow = typeof units.$inferSelect & { mark: string | null };
+type UnitWithMarkRow = typeof units.$inferSelect & { mark: string | null; isMarkCarried: boolean | null };
 
 @singleton()
 export class SnapshotResolver {
@@ -29,10 +30,12 @@ export class SnapshotResolver {
   });
 
   public toUnitRecord = createRowResolver<UnitWithMarkRow, iUnitRecord>({
-    optional: ['oldStartLine', 'oldEndLine', 'newStartLine', 'newEndLine'],
+    optional: ['oldStartLine', 'oldEndLine', 'newStartLine', 'newEndLine', 'previousUnitId'],
     omit: ['snapshotId'],
     overrides: (row) => ({
       kind: unitKindSchema.parse(row.kind),
+      revision: row.revision ? unitRevisionSchema.parse(row.revision) : undefined,
+      isMarkCarried: row.isMarkCarried === true,
       change: unitChangeSchema.parse(row.change),
       symbolKind: row.symbolKind ? symbolKindSchema.parse(row.symbolKind) : undefined,
       mark: row.mark ? unitMarkSchema.parse(row.mark) : undefined,

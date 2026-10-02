@@ -1,8 +1,15 @@
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { DIFF_SIDES, FINDING_STATUSES, IS_ACTIVE_FINDING_STATUS } from '@chaff/common/enums/review.enums';
+import {
+  ANCHOR_MATCHES,
+  DIFF_SIDES,
+  FINDING_KINDS,
+  FINDING_STATUSES,
+  IS_ACTIVE_FINDING_STATUS,
+} from '@chaff/common/enums/review.enums';
 import type { DiffSide, FindingStatus } from '@chaff/common/enums/review.enums';
+import { canSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
 
 import { FINDING_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
@@ -11,15 +18,23 @@ import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot
 import type { iSnapshotFileRecord } from '@~/features/reviews/snapshots/snapshots.types';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
+import { ANCHOR_CONTEXT_LINES, ANCHOR_QUOTE_MAX_LINES } from './anchor-matching.utils';
 import type { iFindingRepository } from './finding.repository';
-import type { iCreateFindingInput, iFindingAnchorInput, iListFindingsInput, iNewFindingAnchor } from './findings.types';
+import type {
+  iAnchorLocationRecord,
+  iAnchorText,
+  iCreateFindingInput,
+  iFindingAnchorInput,
+  iFindingAnchorRecord,
+  iFindingRecord,
+  iListFindingsInput,
+  iNewFindingAnchor,
+} from './findings.types';
 
 const MAX_FILE_BYTES = 5_000_000;
-const QUOTE_MAX_LINES = 200;
-const CONTEXT_LINES = 3;
 
-/** Statuses the reviewer can set by hand; the rest follow from newer snapshots or verification. */
-const MANUAL_STATUSES = new Set<FindingStatus>([FINDING_STATUSES.WITHDRAWN, FINDING_STATUSES.OPEN]);
+/** Statuses at which the reviewer said the code is still to be fixed or explained. */
+const RAISED_STATUSES = new Set<FindingStatus>([FINDING_STATUSES.OPEN, FINDING_STATUSES.REOPENED]);
 
 interface iAnchorDraft {
   file: iSnapshotFileRecord;
@@ -57,25 +72,84 @@ export class FindingsService {
     });
   }
 
-  /** Withdraws an active finding or opens a withdrawn one again, recording it against the given snapshot. */
-  public async setStatus(findingId: string, snapshotId: string, status: FindingStatus) {
+  /**
+   * Moves a finding on by hand (verify, reopen, answer, close, withdraw), recorded against the review's
+   * newest snapshot. Only the moves `manualFindingStatuses` lists are allowed; answering needs an answer.
+   */
+  public async setStatus(findingId: string, status: FindingStatus, answer?: string) {
     const finding = await this.getFinding(findingId);
-    await this.reviewsService.getContext(snapshotId);
-    const isAllowed =
-      MANUAL_STATUSES.has(status) &&
-      (status === FINDING_STATUSES.WITHDRAWN
-        ? IS_ACTIVE_FINDING_STATUS(finding.status)
-        : finding.status === FINDING_STATUSES.WITHDRAWN);
-    if (!isAllowed) throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
-    const updated = await this.findingRepository.setStatus(findingId, snapshotId, status);
+    const isAnswer = status === FINDING_STATUSES.ANSWERED;
+    if (!canSetFindingStatus(finding.kind, finding.status, status) || isAnswer !== (answer !== undefined)) {
+      throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
+    }
+    const snapshotId = await this.latestSnapshotId(finding);
+    const updated = await this.findingRepository.setStatus(findingId, snapshotId, status, answer);
     if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
     return updated;
+  }
+
+  /** Turns an active question into an open concern, keeping its comment and anchors. */
+  public async convertToConcern(findingId: string) {
+    const finding = await this.getFinding(findingId);
+    if (finding.kind !== FINDING_KINDS.QUESTION || !IS_ACTIVE_FINDING_STATUS(finding.status)) {
+      throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
+    }
+    const updated = await this.findingRepository.convertToConcern(findingId, await this.latestSnapshotId(finding));
+    if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
+    return updated;
+  }
+
+  /**
+   * Each anchor's code before and after: as it was when the reviewer last raised the finding, and as it
+   * is in the newest snapshot it was looked for in. After is null until a newer snapshot exists.
+   */
+  public async compare(findingId: string) {
+    const finding = await this.getFinding(findingId);
+    const raisedOn = finding.events.findLast((event) => RAISED_STATUSES.has(event.status))?.snapshotId;
+    const history = await this.findingRepository.listLocations(finding.anchors.map((anchor) => anchor.id));
+    return Promise.all(
+      finding.anchors.map(async (anchor) => {
+        const locations = history.filter((location) => location.anchorId === anchor.id);
+        const raised = locations.find(
+          (location) => location.snapshotId === raisedOn && location.match !== ANCHOR_MATCHES.UNMATCHED,
+        );
+        const before = raised ? this.locationText(raised) : await this.originalText(anchor);
+        const latest = locations.at(-1);
+        const after = latest && latest.version > before.version ? this.locationText(latest) : null;
+        return { anchorId: anchor.id, path: anchor.path, side: anchor.side, before, after };
+      }),
+    );
   }
 
   /** Deletes a finding outright; used to undo writing it. */
   public async remove(findingId: string) {
     await this.getFinding(findingId);
     await this.findingRepository.remove(findingId);
+  }
+
+  private async latestSnapshotId(finding: iFindingRecord) {
+    const latest = await this.snapshotRepository.findLatest(finding.targetId);
+    return latest?.id ?? finding.snapshotId;
+  }
+
+  private locationText(location: iAnchorLocationRecord): iAnchorText {
+    const { snapshotId, version, headSha, match, fileId, unitId, startLine, endLine, text } = location;
+    return { snapshotId, version, headSha, match, fileId, unitId, startLine, endLine, text };
+  }
+
+  private async originalText(anchor: iFindingAnchorRecord): Promise<iAnchorText> {
+    const snapshot = await this.snapshotRepository.findById(anchor.snapshotId);
+    return {
+      snapshotId: anchor.snapshotId,
+      version: snapshot?.version ?? 1,
+      headSha: snapshot?.headSha ?? '',
+      match: ANCHOR_MATCHES.EXACT,
+      fileId: anchor.fileId,
+      unitId: anchor.unitId,
+      startLine: anchor.startLine,
+      endLine: anchor.endLine,
+      text: anchor.quote,
+    };
   }
 
   private async getFinding(findingId: string) {
@@ -143,12 +217,14 @@ export class FindingsService {
       if (draft.unitId === undefined && draft.endLine > lines.length) {
         throw ORPCBadRequestError(errorCodes.INVALID_FINDING_ANCHOR);
       }
-      const quoteEnd = Math.min(draft.endLine, draft.startLine + QUOTE_MAX_LINES - 1);
+      const quoteEnd = Math.min(draft.endLine, draft.startLine + ANCHOR_QUOTE_MAX_LINES - 1);
       return {
         ...anchor,
         quote: lines.slice(draft.startLine - 1, quoteEnd).join('\n'),
-        contextBefore: lines.slice(Math.max(0, draft.startLine - 1 - CONTEXT_LINES), draft.startLine - 1).join('\n'),
-        contextAfter: lines.slice(draft.endLine, draft.endLine + CONTEXT_LINES).join('\n'),
+        contextBefore: lines
+          .slice(Math.max(0, draft.startLine - 1 - ANCHOR_CONTEXT_LINES), draft.startLine - 1)
+          .join('\n'),
+        contextAfter: lines.slice(draft.endLine, draft.endLine + ANCHOR_CONTEXT_LINES).join('\n'),
       };
     });
   }

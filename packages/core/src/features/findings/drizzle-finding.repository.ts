@@ -1,16 +1,23 @@
-import { and, asc, desc, eq, getTableColumns, inArray, max } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableColumns, inArray, max, sql } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
-import { FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { DatabaseService } from '@~/db/database.service';
-import { findingAnchors, findingEvents, findings } from '@~/db/schema/findings.schema';
+import { findingAnchorLocations, findingAnchors, findingEvents, findings } from '@~/db/schema/findings.schema';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
+import { snapshots } from '@~/db/schema/snapshots.schema';
 
 import type { iFindingRepository } from './finding.repository';
 import { FindingResolver } from './finding.resolver';
-import type { iListFindingsInput, iNewFinding } from './findings.types';
+import type { iListFindingsInput, iNewAnchorLocation, iNewFinding } from './findings.types';
+
+const locationColumns = {
+  ...getTableColumns(findingAnchorLocations),
+  version: snapshots.version,
+  headSha: snapshots.headSha,
+};
 
 const findingWithBranchColumns = {
   ...getTableColumns(findings),
@@ -55,7 +62,7 @@ export class DrizzleFindingRepository implements iFindingRepository {
   }
 
   public async findById(findingId: string) {
-    const [finding] = this.withAnchors(this.selectFindings().where(eq(findings.id, findingId)).all());
+    const [finding] = await this.withAnchors(this.selectFindings().where(eq(findings.id, findingId)).all());
     return finding;
   }
 
@@ -72,12 +79,48 @@ export class DrizzleFindingRepository implements iFindingRepository {
     return this.withAnchors(rows);
   }
 
-  public async setStatus(findingId: string, snapshotId: string, status: FindingStatus) {
+  public async setStatus(findingId: string, snapshotId: string, status: FindingStatus, answer?: string) {
     this.databaseService.getDb().transaction((transaction) => {
-      transaction.update(findings).set({ status }).where(eq(findings.id, findingId)).run();
+      transaction
+        .update(findings)
+        .set(answer === undefined ? { status } : { status, answer })
+        .where(eq(findings.id, findingId))
+        .run();
       transaction.insert(findingEvents).values({ findingId, snapshotId, status }).run();
     });
     return this.findById(findingId);
+  }
+
+  public async convertToConcern(findingId: string, snapshotId: string) {
+    const status = FINDING_STATUSES.OPEN;
+    this.databaseService.getDb().transaction((transaction) => {
+      transaction.update(findings).set({ kind: FINDING_KINDS.CONCERN, status }).where(eq(findings.id, findingId)).run();
+      transaction.insert(findingEvents).values({ findingId, snapshotId, status }).run();
+    });
+    return this.findById(findingId);
+  }
+
+  public async listLocations(anchorIds: readonly string[]) {
+    if (anchorIds.length === 0) return [];
+    return this.databaseService
+      .getDb()
+      .select(locationColumns)
+      .from(findingAnchorLocations)
+      .innerJoin(snapshots, eq(snapshots.id, findingAnchorLocations.snapshotId))
+      .where(inArray(findingAnchorLocations.anchorId, [...anchorIds]))
+      .orderBy(asc(snapshots.version))
+      .all()
+      .map((row) => this.findingResolver.toLocationRecord(row));
+  }
+
+  public async addLocations(locations: readonly iNewAnchorLocation[]) {
+    if (locations.length === 0) return;
+    this.databaseService
+      .getDb()
+      .insert(findingAnchorLocations)
+      .values([...locations])
+      .onConflictDoNothing()
+      .run();
   }
 
   public async remove(findingId: string) {
@@ -93,7 +136,7 @@ export class DrizzleFindingRepository implements iFindingRepository {
       .$dynamic();
   }
 
-  private withAnchors(rows: (typeof findings.$inferSelect & { branch: string; parentBranch: string })[]) {
+  private async withAnchors(rows: (typeof findings.$inferSelect & { branch: string; parentBranch: string })[]) {
     if (rows.length === 0) return [];
     const anchors = this.databaseService
       .getDb()
@@ -107,11 +150,35 @@ export class DrizzleFindingRepository implements iFindingRepository {
       )
       .orderBy(asc(findingAnchors.path), asc(findingAnchors.startLine))
       .all();
+    const locations = await this.listLocations(anchors.map((anchor) => anchor.id));
+    const events = this.databaseService
+      .getDb()
+      .select()
+      .from(findingEvents)
+      .where(
+        inArray(
+          findingEvents.findingId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(findingEvents.createdAt), sql`rowid`)
+      .all();
     return rows.map((row) => ({
       ...this.findingResolver.toFindingRecord(row),
+      events: events
+        .filter((event) => event.findingId === row.id)
+        .map((event) => this.findingResolver.toEventRecord(event)),
       anchors: anchors
         .filter((anchor) => anchor.findingId === row.id)
-        .map((anchor) => this.findingResolver.toAnchorRecord(anchor)),
+        .map((anchor) => ({
+          ...this.findingResolver.toAnchorRecord(anchor),
+          locations: locations
+            .filter((location) => location.anchorId === anchor.id)
+            .map(
+              ({ anchorId: _anchorId, text: _text, contextBefore: _before, contextAfter: _after, ...summary }) =>
+                summary,
+            ),
+        })),
     }));
   }
 }

@@ -39,6 +39,10 @@ export const reviewsRouter = base.reviews.router({
     container.resolve(UnitsService).getDetail(input.snapshotId, input.unitId),
   ),
 
+  unitInterdiff: procedure.reviews.unitInterdiff.handler(async ({ input }) =>
+    container.resolve(UnitsService).getInterdiff(input.snapshotId, input.unitId),
+  ),
+
   unitUsages: procedure.reviews.unitUsages.handler(async ({ input }) =>
     container.resolve(UnitsService).getUsages(input.snapshotId, input.unitId),
   ),

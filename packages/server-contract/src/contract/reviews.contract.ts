@@ -3,6 +3,7 @@ import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
 import {
+  diffSideSchema,
   fileKindSchema,
   fileStatusSchema,
   REVIEW_TARGET_KINDS,
@@ -11,6 +12,7 @@ import {
   unitChangeSchema,
   unitKindSchema,
   unitMarkSchema,
+  unitRevisionSchema,
 } from '@chaff/common/enums/review.enums';
 
 const idSchema = z.string().min(1).max(64);
@@ -123,6 +125,26 @@ export const unitSchema = z.object({
   deletions: z.number().int().nonnegative(),
   /** Absent while the reviewer has not decided on the unit. */
   mark: unitMarkSchema.optional(),
+  /** The mark was kept from the previous snapshot because the unit did not change. */
+  isMarkCarried: z.boolean(),
+  /** How the unit compares with the previous snapshot; absent in a review's first snapshot. */
+  revision: unitRevisionSchema.optional(),
+});
+
+export const unitInterdiffSchema = z.object({
+  /** The earlier version of an edited unit the reviewer decided on; null when there is none. */
+  reviewed: z
+    .object({
+      snapshotId: z.string(),
+      version: z.number().int().positive(),
+      headSha: z.string(),
+      mark: unitMarkSchema,
+      side: diffSideSchema,
+      startLine: z.number().int().positive().optional(),
+      endLine: z.number().int().positive().optional(),
+      text: z.string(),
+    })
+    .nullable(),
 });
 
 export const unitDetailSchema = z.object({
@@ -239,6 +261,15 @@ export const reviewsContract = oc.router({
     })
     .input(unitInput)
     .output(unitDetailSchema),
+
+  unitInterdiff: oc
+    .route({
+      summary: 'Get what changed in a unit since it was reviewed',
+      description:
+        'For a unit edited since an earlier snapshot, returns the version the reviewer last decided on, so only what changed since then needs reading.',
+    })
+    .input(unitInput)
+    .output(unitInterdiffSchema),
 
   unitUsages: oc
     .route({

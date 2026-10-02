@@ -1,6 +1,6 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-import type { DiffSide, FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
+import type { AnchorMatch, DiffSide, FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { idPrimaryKey, timestampColumn, timestamps } from '../schema.helpers';
 import { reviewTargets } from './review-targets.schema';
@@ -28,6 +28,8 @@ export const findings = sqliteTable(
     kind: text('kind').$type<FindingKind>().notNull(),
     status: text('status').$type<FindingStatus>().notNull(),
     body: text('body').notNull(),
+    /** The answer the reviewer recorded for a question. */
+    answer: text('answer'),
     ...timestamps(),
   },
   (table) => [
@@ -81,4 +83,31 @@ export const findingEvents = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   (table) => [index('finding_events_finding_idx').on(table.findingId)],
+);
+
+/**
+ * Where an anchor was found again in a later snapshot of the review. The text and context are those of the
+ * located lines, so the next snapshot is compared with the newest code rather than the original quote.
+ */
+export const findingAnchorLocations = sqliteTable(
+  'finding_anchor_locations',
+  {
+    id: idPrimaryKey(),
+    anchorId: text('anchor_id')
+      .notNull()
+      .references(() => findingAnchors.id, { onDelete: 'cascade' }),
+    snapshotId: text('snapshot_id')
+      .notNull()
+      .references(() => snapshots.id, { onDelete: 'cascade' }),
+    match: text('match').$type<AnchorMatch>().notNull(),
+    fileId: text('file_id').references(() => snapshotFiles.id, { onDelete: 'set null' }),
+    unitId: text('unit_id').references(() => units.id, { onDelete: 'set null' }),
+    /** 1-based and inclusive; the end is before the start when the anchored lines were removed. */
+    startLine: integer('start_line'),
+    endLine: integer('end_line'),
+    text: text('text').notNull(),
+    contextBefore: text('context_before').notNull(),
+    contextAfter: text('context_after').notNull(),
+  },
+  (table) => [uniqueIndex('finding_anchor_locations_anchor_snapshot_unique').on(table.anchorId, table.snapshotId)],
 );

@@ -20,7 +20,7 @@ export class DrizzleUnitMarkRepository implements iUnitMarkRepository {
       .getDb()
       .insert(unitMarks)
       .values({ unitId, snapshotId, mark })
-      .onConflictDoUpdate({ target: unitMarks.unitId, set: { mark, updatedAt: new Date() } })
+      .onConflictDoUpdate({ target: unitMarks.unitId, set: { mark, isCarried: false, updatedAt: new Date() } })
       .run();
   }
 
@@ -60,7 +60,9 @@ export class DrizzleUnitMarkRepository implements iUnitMarkRepository {
 
     const inserted = db
       .insert(unitMarks)
-      .values(matches.map((match) => ({ unitId: match.unitId, snapshotId: toSnapshotId, mark: match.mark })))
+      .values(
+        matches.map((match) => ({ unitId: match.unitId, snapshotId: toSnapshotId, mark: match.mark, isCarried: true })),
+      )
       .onConflictDoNothing()
       .returning({ unitId: unitMarks.unitId })
       .all();

@@ -43,6 +43,13 @@
       "when": 1790901633421,
       "tag": "0005_omniscient_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790902950705,
+      "tag": "0006_chief_saracen",
+      "breakpoints": true
     }
   ]
 }

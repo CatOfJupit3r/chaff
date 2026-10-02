@@ -110,6 +110,23 @@ export const IS_ACTIVE_FINDING_STATUS = findingStatusesEnumwaii.derive({
   [FINDING_STATUSES.UNMATCHED]: true,
 });
 
+/**
+ * How a unit compares with the same unit in the previous snapshot of its review. Possibly affected units
+ * did not change but use a declaration that did; their marks are kept and they are flagged for a recheck.
+ */
+export const unitRevisionsEnumwaii = new Enumwaii('UnitRevision', ['UNCHANGED', 'EDITED', 'NEW', 'POSSIBLY_AFFECTED']);
+
+export const UNIT_REVISIONS = unitRevisionsEnumwaii.enum;
+export type UnitRevision = InferEnumwaii<typeof unitRevisionsEnumwaii>;
+export const unitRevisionSchema = unitRevisionsEnumwaii.schema;
+
+/** How a finding's anchor was found again in a newer snapshot: the same code, changed code between the same context, or not at all. */
+export const anchorMatchesEnumwaii = new Enumwaii('AnchorMatch', ['EXACT', 'CHANGED', 'UNMATCHED']);
+
+export const ANCHOR_MATCHES = anchorMatchesEnumwaii.enum;
+export type AnchorMatch = InferEnumwaii<typeof anchorMatchesEnumwaii>;
+export const anchorMatchSchema = anchorMatchesEnumwaii.schema;
+
 export const diffSidesEnumwaii = new Enumwaii('DiffSide', ['OLD', 'NEW']);
 
 export const DIFF_SIDES = diffSidesEnumwaii.enum;

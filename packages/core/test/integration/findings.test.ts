@@ -107,7 +107,7 @@ describe('findings', () => {
     );
   });
 
-  it('withdraws a finding and opens it again, but cannot verify it by hand', async () => {
+  it('withdraws a finding and opens it again, but cannot propose a fix or answer a concern by hand', async () => {
     const { snapshotId, unitTitled } = await featureReview();
     const finding = await call(appRouter.findings.create, {
       snapshotId,
@@ -118,21 +118,60 @@ describe('findings', () => {
 
     const withdrawn = await call(appRouter.findings.setStatus, {
       findingId: finding.id,
-      snapshotId,
       status: FINDING_STATUSES.WITHDRAWN,
     });
-    const reopened = await call(appRouter.findings.setStatus, {
-      findingId: finding.id,
-      snapshotId,
-      status: FINDING_STATUSES.OPEN,
-    });
+    const reopened = await call(appRouter.findings.setStatus, { findingId: finding.id, status: FINDING_STATUSES.OPEN });
 
     expect(withdrawn.status).toBe(FINDING_STATUSES.WITHDRAWN);
     expect(reopened.status).toBe(FINDING_STATUSES.OPEN);
+    expect(reopened.events.map((event) => event.status)).toEqual([
+      FINDING_STATUSES.OPEN,
+      FINDING_STATUSES.WITHDRAWN,
+      FINDING_STATUSES.OPEN,
+    ]);
     await expectORPCError(
-      call(appRouter.findings.setStatus, { findingId: finding.id, snapshotId, status: FINDING_STATUSES.VERIFIED }),
+      call(appRouter.findings.setStatus, { findingId: finding.id, status: FINDING_STATUSES.FIX_PROPOSED }),
       { code: errorCodes.INVALID_FINDING_STATUS },
     );
+    await expectORPCError(
+      call(appRouter.findings.setStatus, { findingId: finding.id, status: FINDING_STATUSES.ANSWERED, answer: 'No' }),
+      { code: errorCodes.INVALID_FINDING_STATUS },
+    );
+  });
+
+  it('answers a question, closes it, and turns another into a concern', async () => {
+    const { snapshotId, unitTitled } = await featureReview();
+    const ask = async (body: string) =>
+      call(appRouter.findings.create, {
+        snapshotId,
+        kind: FINDING_KINDS.QUESTION,
+        body,
+        anchors: [{ unitId: unitTitled('backoff').id }],
+      });
+    const question = await ask('Why powers of two?');
+    const other = await ask('Is 2 ** 30 too long?');
+
+    await expectORPCError(
+      call(appRouter.findings.setStatus, { findingId: question.id, status: FINDING_STATUSES.ANSWERED }),
+      { code: errorCodes.INVALID_FINDING_STATUS },
+    );
+    const answered = await call(appRouter.findings.setStatus, {
+      findingId: question.id,
+      status: FINDING_STATUSES.ANSWERED,
+      answer: '  It matches the queue.  ',
+    });
+    const closed = await call(appRouter.findings.setStatus, {
+      findingId: question.id,
+      status: FINDING_STATUSES.CLOSED,
+    });
+    const concern = await call(appRouter.findings.convertToConcern, { findingId: other.id });
+
+    expect(answered).toMatchObject({ status: FINDING_STATUSES.ANSWERED, answer: 'It matches the queue.' });
+    expect(closed).toMatchObject({ status: FINDING_STATUSES.CLOSED, answer: 'It matches the queue.' });
+    expect(concern).toMatchObject({ kind: FINDING_KINDS.CONCERN, status: FINDING_STATUSES.OPEN, body: other.body });
+    await expectORPCError(call(appRouter.findings.convertToConcern, { findingId: concern.id }), {
+      code: errorCodes.INVALID_FINDING_STATUS,
+    });
   });
 
   it('deletes a finding to undo writing it', async () => {

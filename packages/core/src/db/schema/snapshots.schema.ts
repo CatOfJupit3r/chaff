@@ -1,6 +1,13 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-import type { FileKind, FileStatus, SymbolKind, UnitChange, UnitKind } from '@chaff/common/enums/review.enums';
+import type {
+  FileKind,
+  FileStatus,
+  SymbolKind,
+  UnitChange,
+  UnitKind,
+  UnitRevision,
+} from '@chaff/common/enums/review.enums';
 
 import { idPrimaryKey, timestampColumn } from '../schema.helpers';
 import { reviewTargets } from './review-targets.schema';
@@ -88,6 +95,10 @@ export const units = sqliteTable(
     additions: integer('additions').notNull(),
     deletions: integer('deletions').notNull(),
     contentHash: text('content_hash').notNull(),
+    /** How the unit compares with the previous snapshot; null in a review's first snapshot. */
+    revision: text('revision').$type<UnitRevision>(),
+    /** The same unit in the previous snapshot, when it was there. */
+    previousUnitId: text('previous_unit_id'),
   },
   (table) => [index('units_snapshot_ordinal_idx').on(table.snapshotId, table.ordinal)],
 );

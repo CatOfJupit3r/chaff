@@ -1,11 +1,41 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
-import { diffSideSchema, findingKindSchema, findingStatusSchema } from '@chaff/common/enums/review.enums';
+import {
+  anchorMatchSchema,
+  diffSideSchema,
+  findingKindSchema,
+  findingStatusSchema,
+} from '@chaff/common/enums/review.enums';
 
 const idSchema = z.string().min(1).max(64);
 const MAX_BODY_LENGTH = 20_000;
 const MAX_ANCHORS = 50;
+
+const lineSchema = z.number().int().nonnegative();
+
+/** Where an anchor was found in a later snapshot of the review. */
+export const anchorLocationSchema = z.object({
+  id: z.string(),
+  snapshotId: z.string(),
+  version: z.number().int().positive(),
+  headSha: z.string(),
+  match: anchorMatchSchema,
+  fileId: z.string().optional(),
+  unitId: z.string().optional(),
+  /** 1-based and inclusive; the end is before the start when the anchored lines were removed. */
+  startLine: lineSchema.optional(),
+  endLine: lineSchema.optional(),
+});
+
+export const findingEventSchema = z.object({
+  status: findingStatusSchema,
+  snapshotId: z.string(),
+  createdAt: z.date(),
+});
+
+/** An anchor's code in one snapshot. */
+export const anchorTextSchema = anchorLocationSchema.omit({ id: true }).extend({ text: z.string() });
 
 export const findingAnchorSchema = z.object({
   id: z.string(),
@@ -21,6 +51,8 @@ export const findingAnchorSchema = z.object({
   quote: z.string(),
   contextBefore: z.string(),
   contextAfter: z.string(),
+  /** Where the anchor was found in each later snapshot, oldest first. */
+  locations: z.array(anchorLocationSchema),
 });
 
 export const findingSchema = z.object({
@@ -31,6 +63,10 @@ export const findingSchema = z.object({
   status: findingStatusSchema,
   /** The reviewer's comment, verbatim. */
   body: z.string(),
+  /** The answer recorded for a question. */
+  answer: z.string().optional(),
+  /** Every status the finding went through, oldest first. */
+  events: z.array(findingEventSchema),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
@@ -80,11 +116,46 @@ export const findingsContract = oc.router({
 
   setStatus: oc
     .route({
-      summary: 'Withdraw or reopen a finding',
-      description: 'Withdraws an active finding, or opens a withdrawn one again, recorded against the given snapshot.',
+      summary: 'Move a finding on',
+      description:
+        "Verifies, reopens, answers, closes, withdraws or reopens a finding by hand, recorded against the review's newest snapshot. Answering a question needs the answer.",
     })
-    .input(z.object({ findingId: idSchema, snapshotId: idSchema, status: findingStatusSchema }))
+    .input(
+      z.object({
+        findingId: idSchema,
+        status: findingStatusSchema,
+        answer: z.string().trim().min(1).max(MAX_BODY_LENGTH).optional(),
+      }),
+    )
     .output(findingSchema),
+
+  convertToConcern: oc
+    .route({
+      summary: 'Turn a question into a concern',
+      description: 'Makes an active question an open concern, keeping its comment and anchors.',
+    })
+    .input(z.object({ findingId: idSchema }))
+    .output(findingSchema),
+
+  compare: oc
+    .route({
+      summary: "Compare a finding's code before and after",
+      description:
+        'Returns, per anchor, the code as it was when the finding was last raised and as it is in the newest snapshot it was looked for in.',
+    })
+    .input(z.object({ findingId: idSchema }))
+    .output(
+      z.array(
+        z.object({
+          anchorId: z.string(),
+          path: z.string(),
+          side: diffSideSchema,
+          before: anchorTextSchema,
+          /** Null until a newer snapshot of the review exists. */
+          after: anchorTextSchema.nullable(),
+        }),
+      ),
+    ),
 
   remove: oc
     .route({

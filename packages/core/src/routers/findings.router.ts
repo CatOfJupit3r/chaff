@@ -9,7 +9,15 @@ export const findingsRouter = base.findings.router({
   create: procedure.findings.create.handler(async ({ input }) => container.resolve(FindingsService).create(input)),
 
   setStatus: procedure.findings.setStatus.handler(async ({ input }) =>
-    container.resolve(FindingsService).setStatus(input.findingId, input.snapshotId, input.status),
+    container.resolve(FindingsService).setStatus(input.findingId, input.status, input.answer),
+  ),
+
+  convertToConcern: procedure.findings.convertToConcern.handler(async ({ input }) =>
+    container.resolve(FindingsService).convertToConcern(input.findingId),
+  ),
+
+  compare: procedure.findings.compare.handler(async ({ input }) =>
+    container.resolve(FindingsService).compare(input.findingId),
   ),
 
   remove: procedure.findings.remove.handler(async ({ input }) => {

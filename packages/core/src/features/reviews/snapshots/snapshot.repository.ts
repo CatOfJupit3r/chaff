@@ -5,6 +5,7 @@ import type {
   iSnapshotFileSummary,
   iSnapshotRecord,
   iUnitRecord,
+  iUnitRevisionUpdate,
 } from './snapshots.types';
 
 export interface iSnapshotRepository {
@@ -18,4 +19,8 @@ export interface iSnapshotRepository {
   /** The snapshot's units in reading order, with the reviewer's marks. */
   listUnits: (snapshotId: string) => Promise<iUnitRecord[]>;
   findUnit: (snapshotId: string, unitId: string) => Promise<iUnitRecord | undefined>;
+  /** A unit from any snapshot, with the snapshot it belongs to. */
+  findUnitById: (unitId: string) => Promise<(iUnitRecord & { snapshotId: string }) | undefined>;
+  /** Records how each unit compares with the previous snapshot. */
+  setRevisions: (revisions: readonly iUnitRevisionUpdate[]) => Promise<void>;
 }
