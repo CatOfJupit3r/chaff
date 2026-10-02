@@ -1,22 +1,12 @@
 import { Button } from '@~/components/ui/button';
 import { cn } from '@~/lib/utils';
-import { pluralize } from '@~/utils/pluralize';
 
 import { useLiveStatus } from '../hooks/use-live-status';
 import { useRefreshReview } from '../hooks/use-refresh-review';
-import type { iSnapshot, iSnapshotLiveStatus } from '../reviews.types';
+import { describeChange } from '../live-status.utils';
+import type { iSnapshot } from '../reviews.types';
 
 const SHORT_SHA_LENGTH = 7;
-
-function describeChange(snapshot: iSnapshot, status: iSnapshotLiveStatus | undefined) {
-  if (!status) return undefined;
-  if (status.isBranchMissing) return 'branch deleted';
-  if (status.isBranchRewritten) return 'branch rewritten';
-  if (status.newCommitCount > 0) return pluralize(status.newCommitCount, 'new commit');
-  if (status.isParentMoved) return `${snapshot.parentBranch} moved`;
-  if (snapshot.version < snapshot.latestVersion) return 'newer snapshot';
-  return undefined;
-}
 
 /** The frozen snapshot being reviewed and what changed on disk since; Update freezes a new one. */
 export function SnapshotChip({ snapshot }: { snapshot: iSnapshot }) {

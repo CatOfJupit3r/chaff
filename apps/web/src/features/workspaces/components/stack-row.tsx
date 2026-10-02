@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router';
+
 import { Button } from '@~/components/ui/button';
 import { ListRow } from '@~/components/ui/list';
 import { Pill } from '@~/components/ui/pill';
@@ -29,8 +31,15 @@ export function StackRow({ stack, reviewTargets }: iStackRowProps) {
     <ListRow>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 font-medium">
-          <span className="truncate">{tip.name}</span>
+          <Link
+            to="/stack"
+            search={{ workspace: workspace.id, branch: tip.name }}
+            className="truncate hover:text-accent hover:underline"
+          >
+            {tip.name}
+          </Link>
           <Pill variant="neutral">local</Pill>
+          {branches.some((branch) => branch.hasWorkingChanges) ? <Pill variant="open">uncommitted</Pill> : null}
         </div>
         <div className="mt-[3px] flex flex-wrap gap-x-3.5 text-[12.5px] text-muted">
           <span>{workspace.name}</span>

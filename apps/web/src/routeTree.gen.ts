@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root';
+import { Route as StackRouteImport } from './routes/stack';
 import { Route as FindingsRouteImport } from './routes/findings';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
 import { Route as ReviewsSnapshotIdIndexRouteImport } from './routes/reviews.$snapshotId.index';
 import { Route as ReviewsSnapshotIdDiffRouteImport } from './routes/reviews.$snapshotId.diff';
 
+const StackRoute = StackRouteImport.update({
+  id: '/stack',
+  path: '/stack',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const FindingsRoute = FindingsRouteImport.update({
   id: '/findings',
   path: '/findings',
@@ -44,6 +50,7 @@ const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/findings': typeof FindingsRoute;
+  '/stack': typeof StackRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
   '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/findings': typeof FindingsRoute;
+  '/stack': typeof StackRoute;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdIndexRoute;
 }
@@ -58,6 +66,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/findings': typeof FindingsRoute;
+  '/stack': typeof StackRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
   '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
@@ -67,15 +76,22 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/findings'
+    | '/stack'
     | '/reviews/$snapshotId'
     | '/reviews/$snapshotId/diff'
     | '/reviews/$snapshotId/';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/findings' | '/reviews/$snapshotId/diff' | '/reviews/$snapshotId';
+  to:
+    | '/'
+    | '/findings'
+    | '/stack'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId';
   id:
     | '__root__'
     | '/'
     | '/findings'
+    | '/stack'
     | '/reviews/$snapshotId'
     | '/reviews/$snapshotId/diff'
     | '/reviews/$snapshotId/';
@@ -84,11 +100,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   FindingsRoute: typeof FindingsRoute;
+  StackRoute: typeof StackRoute;
   ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRouteWithChildren;
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stack': {
+      id: '/stack';
+      path: '/stack';
+      fullPath: '/stack';
+      preLoaderRoute: typeof StackRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/findings': {
       id: '/findings';
       path: '/findings';
@@ -143,6 +167,7 @@ const ReviewsSnapshotIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FindingsRoute: FindingsRoute,
+  StackRoute: StackRoute,
   ReviewsSnapshotIdRoute: ReviewsSnapshotIdRouteWithChildren,
 };
 export const routeTree = rootRouteImport

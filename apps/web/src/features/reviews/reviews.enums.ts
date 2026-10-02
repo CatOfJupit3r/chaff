@@ -1,3 +1,5 @@
+import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
@@ -69,3 +71,9 @@ export const FILE_DECISION_DOTS = fileDecisionsEnumwaii.derive({
   [FILE_DECISIONS.LOOKS_GOOD]: 'bg-good',
   [FILE_DECISIONS.CONCERN]: 'bg-warn',
 });
+
+/** Marks a review that is not a branch's own changes. */
+export const REVIEW_TARGET_KIND_PILLS = new Map<ReviewTargetKind, string>([
+  [REVIEW_TARGET_KINDS.WORKING_CHANGES, 'working changes'],
+  [REVIEW_TARGET_KINDS.CUMULATIVE, 'cumulative'],
+]);

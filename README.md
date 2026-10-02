@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks, frozen snapshots, Focus review with the AI digest, the Full diff and findings work today. GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, frozen snapshots, Focus review with the AI digest, the Full diff and findings work today. GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -48,6 +48,29 @@ Every repository you add, with its local branch stacks. Click a branch in the ch
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/reviews-dark.png" />
   <img src="docs/screenshots/reviews-light.png" alt="Reviews screen listing a three-branch local stack and a single-branch stack" />
+</picture>
+
+### Stack overview
+
+The whole stack top to bottom, each branch with its decisions so far, and the selected branch beside it: its parent (confirm Chaff's suggestion or pick another), what moved since your snapshot, its units, and the branches that build on it. **Cumulative from main** reviews everything from the stack's base to this branch in one pass.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stack-overview-dark.png" />
+  <img src="docs/screenshots/stack-overview-light.png" alt="Stack overview with a two-branch stack on the left and the selected branch's parent, dependents and units on the right" />
+</picture>
+
+### Working changes
+
+A branch checked out with uncommitted work gets an **uncommitted** tag. **Review working changes** copies the files into Chaff's own store as a snapshot on top of the branch, so you can read what the agent has not committed yet. Your files, index and stash stay as they were.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stack-working-changes-dark.png" />
+  <img src="docs/screenshots/stack-working-changes-light.png" alt="Selected branch with uncommitted changes and a Review working changes button" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-working-changes-dark.png" />
+  <img src="docs/screenshots/focus-working-changes-light.png" alt="Focus review of uncommitted changes, marked working changes in the top bar" />
 </picture>
 
 ### Focus review
@@ -168,10 +191,10 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Decisions on every unit, shown in Full diff with line coverage | Works |
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
-| Stack overview with parent editing and cumulative view | Planned |
+| Stack overview with parent editing and cumulative view | Works |
 | GitLab merge requests and stacked MRs | Planned |
 | GitHub pull requests, exported as a pending review | Planned |
-| Working changes (uncommitted work) as a review target | Planned |
+| Working changes (uncommitted work) as a review target | Works |
 | Second pass: interdiffs, re-anchored findings, Verify screen | Planned |
 | Export: Markdown and JSON packets, GitLab draft notes, agent report import | Planned |
 

@@ -47,7 +47,19 @@ Chaff lists your local branches and suggests a parent for each one:
 - Ties go to the branch's upstream, then the default branch, then alphabetical order. At the branch's own tip, only the default branch or an alphabetically earlier branch can be the parent, so two branches on the same commit don't claim each other.
 - A branch with no other branch in its history stacks on the default branch.
 
-Branches that chain this way form a stack, shown on the Reviews screen as `feature/async-input <- feature/job-options <- feature/consent`. Each branch is reviewed against its parent, so you read only what that branch adds. Editing parents by hand and a cumulative view of the whole stack are **planned** for the Stack overview.
+Branches that chain this way form a stack, shown on the Reviews screen as `feature/async-input <- feature/job-options <- feature/consent`. Each branch is reviewed against its parent, so you read only what that branch adds. On the Stack overview you can confirm a suggested parent or pick another one; a confirmed parent is stored with the review target and wins over the suggestion from then on. Chaff refuses a parent that already builds on the branch, so a stack can't loop. When a parent moves under a branch you are reviewing, the snapshot chip says so and **Update** compares against the new parent.
+
+A **cumulative** review reads a branch against the stack's base instead of its parent, so the whole stack up to that branch is one review. It is its own review target, so its marks and findings never mix with the branch's own review.
+
+## Working changes
+
+`git worktree list` tells Chaff which branches are checked out and where. For a checked-out branch with uncommitted changes, **Review working changes** builds a commit in the snapshot store without touching your repository:
+
+1. A temporary index file in Chaff's data folder is filled from the branch's head (`read-tree`).
+2. `git add --all` runs with `GIT_INDEX_FILE` pointing at that temporary index and `GIT_DIR` pointing at the store, so the blobs land in the store and your index, stash and files are untouched.
+3. `write-tree` and `commit-tree` record that tree as a commit on top of the branch head, authored by Chaff, and the snapshot diffs it against the branch head.
+
+The working tree is fingerprinted (paths, sizes and modification times of changed files), so the snapshot chip reports new working changes while you review. Untracked files are included and `.gitignore` is honored; the repository's `info/exclude` is not, because Chaff reads it through the store.
 
 ## Snapshots
 

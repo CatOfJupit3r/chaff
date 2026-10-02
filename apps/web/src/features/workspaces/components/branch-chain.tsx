@@ -24,7 +24,7 @@ export function BranchChain({ links, nextBranch, onOpen }: iBranchChainProps) {
             title={`${pluralize(link.branch.commitsAhead, 'commit')} · ${link.branch.subject}`}
             onClick={() => onOpen(link)}
             className="inline-flex items-center gap-[5px] rounded-[5px] border border-line bg-canvas px-[7px] py-0.5 font-mono text-[11.5px] text-muted hover:border-line-strong hover:text-fg aria-current:border-line-strong aria-current:bg-raised aria-current:text-fg data-[started=true]:text-fg"
-            data-started={link.target ? 'true' : undefined}
+            data-started={link.target?.latestSnapshot ? 'true' : undefined}
           >
             {link.branch.name}
           </button>

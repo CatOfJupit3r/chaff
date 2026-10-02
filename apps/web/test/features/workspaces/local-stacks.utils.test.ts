@@ -1,32 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildLocalStacks } from '@~/features/workspaces/local-stacks.utils';
-import type { iBranch, iWorkspace } from '@~/features/workspaces/workspaces.types';
+import type { iBranch } from '@~/features/workspaces/workspaces.types';
 
-const workspace: iWorkspace = {
-  id: 'workspace-1',
-  name: 'chaff',
-  repoPath: '/home/me/chaff',
-  defaultBranch: 'main',
-  isAvailable: true,
-  createdAt: new Date('2026-09-01T10:00:00Z'),
-};
+import { branch, workspace } from './workspace-fixtures';
 
-function branch(name: string, overrides: Partial<iBranch> = {}): iBranch {
-  return {
-    name,
-    headSha: `${name}-sha`,
-    subject: `Work on ${name}`,
-    authorName: 'Roman',
-    committedAt: new Date('2026-09-20T10:00:00Z'),
-    isDefault: false,
-    suggestedParent: 'main',
-    commitsAhead: 1,
-    ...overrides,
-  };
-}
-
-const main = branch('main', { isDefault: true, suggestedParent: undefined, commitsAhead: 0 });
+const main = branch('main', { isDefault: true, parent: undefined, commitsAhead: 0 });
 
 function stackNames(branches: iBranch[]) {
   return buildLocalStacks(workspace, branches).map((stack) => stack.branches.map(({ name }) => name));
@@ -36,9 +15,9 @@ describe('buildLocalStacks', () => {
   it('chains branches that build on each other into one stack', () => {
     const [stack, ...rest] = buildLocalStacks(workspace, [
       main,
-      branch('feature/b', { suggestedParent: 'feature/a', commitsAhead: 2 }),
+      branch('feature/b', { parent: 'feature/a', commitsAhead: 2 }),
       branch('feature/a', { commitsAhead: 3 }),
-      branch('feature/c', { suggestedParent: 'feature/b', commitsAhead: 1 }),
+      branch('feature/c', { parent: 'feature/b', commitsAhead: 1 }),
     ]);
 
     expect(rest).toHaveLength(0);
@@ -52,8 +31,8 @@ describe('buildLocalStacks', () => {
     const names = stackNames([
       main,
       branch('feature/a'),
-      branch('feature/b', { suggestedParent: 'feature/a', committedAt: new Date('2026-09-21T10:00:00Z') }),
-      branch('feature/c', { suggestedParent: 'feature/a', committedAt: new Date('2026-09-22T10:00:00Z') }),
+      branch('feature/b', { parent: 'feature/a', committedAt: new Date('2026-09-21T10:00:00Z') }),
+      branch('feature/c', { parent: 'feature/a', committedAt: new Date('2026-09-22T10:00:00Z') }),
     ]);
 
     expect(names).toEqual([
@@ -85,7 +64,7 @@ describe('buildLocalStacks', () => {
   });
 
   it('keeps the base of a stack whose bottom branch sits on another non-local start point', () => {
-    const [stack] = buildLocalStacks(workspace, [main, branch('feature/a', { suggestedParent: 'release/1.2' })]);
+    const [stack] = buildLocalStacks(workspace, [main, branch('feature/a', { parent: 'release/1.2' })]);
 
     expect(stack?.base).toBe('release/1.2');
   });
