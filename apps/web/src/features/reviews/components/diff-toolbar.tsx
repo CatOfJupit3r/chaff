@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 
+import { DIFF_LAYOUT_LABELS, diffLayoutValues } from '@chaff/common/enums/diff.enums';
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
+
 import { SidebarIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
-import { DIFF_LAYOUT_LABELS, DIFF_MODE_LABELS, diffLayoutValues, diffModeValues } from '../reviews.enums';
-import type { DiffLayout, DiffMode } from '../reviews.enums';
+import { DIFF_MODE_LABELS, diffModeValues } from '../reviews.enums';
+import type { DiffMode } from '../reviews.enums';
 
 const MODE_OPTIONS = diffModeValues.map((value) => ({ value, label: DIFF_MODE_LABELS(value) }));
 const LAYOUT_OPTIONS = diffLayoutValues.map((value) => ({ value, label: DIFF_LAYOUT_LABELS(value) }));

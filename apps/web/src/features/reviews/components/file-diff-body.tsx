@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
 import { FILE_STATUS_LABELS } from '@chaff/common/enums/review.enums';
 
 import { pluralize } from '@~/utils/pluralize';
@@ -8,7 +9,6 @@ import { getErrorMessage } from '@~/utils/rpc-errors';
 import { getFileDisplay } from '../file-display.utils';
 import { useFileDiff } from '../hooks/use-file-diff';
 import { FILE_DISPLAYS } from '../reviews.enums';
-import type { DiffLayout } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { CollapsedFileNote, FileNote } from './file-notes';
 import { PatchView } from './patch-view';

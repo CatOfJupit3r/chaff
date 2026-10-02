@@ -4,6 +4,7 @@ import { List } from '@~/components/ui/list';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { PreferencesSection } from '@~/features/preferences/components/preferences-section';
 import { AgentsSection } from '@~/features/settings/components/agents-section';
+import { DiffLayoutSection } from '@~/features/settings/components/diff-layout-section';
 import { ShortcutsSection } from '@~/features/settings/components/shortcuts-section';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 
@@ -12,8 +13,8 @@ import { ConnectionsSection } from './connections-section';
 import { RepositoryRemoteRow } from './repository-remote-row';
 
 /**
- * Accounts on GitLab and GitHub, the project each repository reads its merge requests from, the coding agents,
- * preferences and the keyboard map.
+ * Accounts on GitLab and GitHub, the project each repository reads its merge requests from, diff and layout
+ * defaults, the coding agents, preferences and the keyboard map.
  */
 export function SettingsScreen() {
   const workspaces = useWorkspaces();
@@ -41,6 +42,7 @@ export function SettingsScreen() {
               </List>
             </section>
           ) : null}
+          <DiffLayoutSection />
           <AgentsSection />
           <PreferencesSection workspaces={workspaces} />
           <ShortcutsSection />

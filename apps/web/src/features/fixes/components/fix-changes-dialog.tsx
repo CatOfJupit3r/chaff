@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogBody, DialogContent, DialogHeader } from '@~/components/ui/dialog';
 import { useIsDarkMode } from '@~/features/appearance/hooks/use-is-dark-mode';
 import { DIFF_THEME_NAME } from '@~/features/reviews/diff-theme';
+import { useDiffPreferences } from '@~/features/reviews/hooks/use-diff-preferences';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import type { iFix } from '../fixes.types';
@@ -18,6 +19,7 @@ interface iFixChangesDialogProps {
 /** What the agent changed, file by file, read from its branch in the store. */
 export function FixChangesDialog({ fix, isOpen, onOpenChange }: iFixChangesDialogProps) {
   const isDark = useIsDarkMode();
+  const { viewerOptions } = useDiffPreferences();
   const { data } = useQuery(tanstackRPC.fixes.patch.queryOptions({ input: { fixId: fix.id }, enabled: isOpen }));
   const files = splitPatch(data?.patch ?? '');
 
@@ -44,6 +46,7 @@ export function FixChangesDialog({ fix, isOpen, onOpenChange }: iFixChangesDialo
                   disableFileHeader: true,
                   preferredHighlighter: 'shiki-js',
                   diffIndicators: 'classic',
+                  lineDiffType: viewerOptions.lineDiffType,
                 }}
               />
             </section>

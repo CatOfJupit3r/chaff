@@ -1,9 +1,9 @@
+import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
 import { DIFF_SIDES } from '@chaff/common/enums/review.enums';
 
 import { ContentsDiff } from '@~/features/reviews/components/contents-diff';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
 import { spliceLines } from '@~/features/reviews/contents-splice.utils';
-import { DIFF_LAYOUTS } from '@~/features/reviews/reviews.enums';
 import type { iSnapshotFile, iUnit } from '@~/features/reviews/reviews.types';
 
 import type { useUnitInterdiff } from '../hooks/use-unit-interdiff';

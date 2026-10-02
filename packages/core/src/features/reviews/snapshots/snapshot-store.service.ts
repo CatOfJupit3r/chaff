@@ -32,6 +32,15 @@ const CHAFF_AUTHOR_ENV = {
 const MAX_GREP_HITS_PER_FILE = 20;
 
 /** Options that keep `git diff` output stable whatever the user's git configuration says. */
+/** Lines of context the patch frozen with a snapshot keeps around each change. */
+export const SNAPSHOT_CONTEXT_LINES = 3;
+
+export interface iPatchOptions {
+  contextLines?: number;
+  isWhitespaceIgnored?: boolean;
+  paths?: readonly string[];
+}
+
 const DIFF_OPTIONS = ['--find-renames', '--no-ext-diff', '--no-textconv', '--no-relative', '--ignore-submodules=none'];
 
 function pinnedRefs(snapshotId: string, shas: iSnapshotShas) {
@@ -248,21 +257,26 @@ export class SnapshotStoreService {
     return stdout;
   }
 
-  /** The unified patch between two commits in the store, listing files in the same order as `rawDiff`. */
-  public async patch(workspaceId: string, baseSha: string, headSha: string) {
+  /**
+   * The unified patch between two commits in the store, listing files in the same order as `rawDiff`.
+   * Options widen the context, ignore whitespace, or limit the patch to some paths.
+   */
+  public async patch(workspaceId: string, baseSha: string, headSha: string, options: iPatchOptions = {}) {
     const { stdout } = await this.gitService.run(this.storePath(workspaceId), [
       '-c',
       'core.quotePath=false',
       'diff',
       '--no-color',
       '--full-index',
-      '--unified=3',
+      `--unified=${options.contextLines ?? SNAPSHOT_CONTEXT_LINES}`,
       '--src-prefix=a/',
       '--dst-prefix=b/',
       '--submodule=short',
+      ...(options.isWhitespaceIgnored ? ['--ignore-all-space'] : []),
       ...DIFF_OPTIONS,
       baseSha,
       headSha,
+      ...(options.paths ? ['--', ...options.paths.map((filePath) => `:(literal)${filePath}`)] : []),
     ]);
     return stdout;
   }

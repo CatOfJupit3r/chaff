@@ -11,6 +11,11 @@ import { DEFAULT_SETTINGS } from './settings.constants';
 import type { iSettingsRepository } from './settings.repository';
 import type { iSettingsResponse, iSettingsUpdate } from './settings.types';
 
+/** The changes actually given; a key present with `undefined` leaves the stored value alone. */
+function withoutUndefined(changes: iSettingsUpdate): iSettingsUpdate {
+  return Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
+}
+
 @singleton()
 export class SettingsService {
   constructor(
@@ -26,15 +31,7 @@ export class SettingsService {
     const conflicts = changes.shortcuts ? findShortcutConflicts(changes.shortcuts) : [];
     if (conflicts.length > 0) throw ORPCBadRequestError(errorCodes.SHORTCUT_CONFLICT, { actions: conflicts });
     const current = await this.get();
-    const saved = await this.settingsRepository.save({
-      editor: changes.editor ?? current.editor,
-      theme: changes.theme ?? current.theme,
-      accent: changes.accent ?? current.accent,
-      codeSize: changes.codeSize ?? current.codeSize,
-      digestRunner: changes.digestRunner ?? current.digestRunner,
-      agentCommands: changes.agentCommands ?? current.agentCommands,
-      shortcuts: changes.shortcuts ?? current.shortcuts,
-    });
+    const saved = await this.settingsRepository.save({ ...current, ...withoutUndefined(changes) });
     if (saved.theme !== current.theme) await this.host.applyTheme(saved.theme);
     return saved;
   }

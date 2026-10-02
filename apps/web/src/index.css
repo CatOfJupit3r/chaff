@@ -61,8 +61,10 @@
   --accent-orange: #e0773a;
   --accent: var(--accent-default);
 
+  --code-font: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --code-size: 12.5px;
-  --code-lh: 20px;
+  --code-lh-ratio: 1.6;
+  --code-lh: round(calc(var(--code-size) * var(--code-lh-ratio)), 1px);
   --radius-control: 6px;
   --radius-panel: 10px;
 }
@@ -129,16 +131,80 @@
 }
 :root[data-code-size='SMALL'] {
   --code-size: 12px;
-  --code-lh: 19px;
 }
 :root[data-code-size='LARGE'] {
   --code-size: 14px;
-  --code-lh: 22px;
+}
+:root[data-code-line-height='COMPACT'] {
+  --code-lh-ratio: 1.4;
+}
+:root[data-code-line-height='RELAXED'] {
+  --code-lh-ratio: 1.8;
+}
+:root[data-code-font='JETBRAINS_MONO'] {
+  --code-font: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+:root[data-code-font='SYSTEM'] {
+  --code-font: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+}
+/* Compact density tightens every spacing utility, since they all scale from --spacing. */
+:root[data-density='COMPACT'] {
+  --spacing: 0.2rem;
+}
+
+/* Syntax themes: the light variant applies without .dark, the dark variant with it. */
+:root[data-syntax-light='GITHUB']:not(.dark) {
+  --tok-kw: #cf222e;
+  --tok-str: #0a3069;
+  --tok-num: #0550ae;
+  --tok-com: #6e7781;
+  --tok-type: #953800;
+  --tok-fn: #8250df;
+}
+:root.dark[data-syntax-dark='GITHUB'] {
+  --tok-kw: #ff7b72;
+  --tok-str: #a5d6ff;
+  --tok-num: #79c0ff;
+  --tok-com: #8b949e;
+  --tok-type: #ffa657;
+  --tok-fn: #d2a8ff;
+}
+:root[data-syntax-light='SOLARIZED']:not(.dark) {
+  --tok-kw: #859900;
+  --tok-str: #2aa198;
+  --tok-num: #d33682;
+  --tok-com: #93a1a1;
+  --tok-type: #b58900;
+  --tok-fn: #268bd2;
+}
+:root.dark[data-syntax-dark='SOLARIZED'] {
+  --tok-kw: #9cb300;
+  --tok-str: #2aa198;
+  --tok-num: #e35f9f;
+  --tok-com: #657b83;
+  --tok-type: #c99a06;
+  --tok-fn: #3e9fe0;
+}
+:root[data-syntax-light='MONOCHROME']:not(.dark) {
+  --tok-kw: #17171c;
+  --tok-str: #5d5d69;
+  --tok-num: #3a3a44;
+  --tok-com: #8b8b97;
+  --tok-type: #17171c;
+  --tok-fn: #17171c;
+}
+:root.dark[data-syntax-dark='MONOCHROME'] {
+  --tok-kw: #ededf0;
+  --tok-str: #a9a9b3;
+  --tok-num: #c9c9d1;
+  --tok-com: #6b6b76;
+  --tok-type: #ededf0;
+  --tok-fn: #ededf0;
 }
 
 @theme inline {
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-mono: var(--code-font);
   --text-code: var(--code-size);
   --text-code--line-height: var(--code-lh);
 

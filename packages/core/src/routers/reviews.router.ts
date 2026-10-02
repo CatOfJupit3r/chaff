@@ -26,7 +26,10 @@ export const reviewsRouter = base.reviews.router({
   ),
 
   fileDiff: procedure.reviews.fileDiff.handler(async ({ input }) =>
-    container.resolve(ReviewsService).getFileDiff(input.snapshotId, input.fileId),
+    container.resolve(ReviewsService).getFileDiff(input.snapshotId, input.fileId, {
+      contextLines: input.contextLines,
+      isWhitespaceIgnored: input.isWhitespaceIgnored,
+    }),
   ),
 
   fileContents: procedure.reviews.fileContents.handler(async ({ input }) =>

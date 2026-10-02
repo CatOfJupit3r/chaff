@@ -1,10 +1,12 @@
 import { MultiFileDiff } from '@pierre/diffs/react';
 import { useMemo } from 'react';
 
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
+
 import { useIsDarkMode } from '@~/features/appearance/hooks/use-is-dark-mode';
 
 import { DIFF_THEME_NAME } from '../diff-theme';
-import type { DiffLayout } from '../reviews.enums';
+import { useDiffPreferences } from '../hooks/use-diff-preferences';
 
 interface iContentsDiffProps {
   path: string;
@@ -16,6 +18,7 @@ interface iContentsDiffProps {
 /** Two versions of a file compared, with unchanged lines folded away and expandable. */
 export function ContentsDiff({ path, oldContents, newContents, layout }: iContentsDiffProps) {
   const isDark = useIsDarkMode();
+  const { viewerOptions } = useDiffPreferences();
   const options = useMemo(
     () => ({
       theme: DIFF_THEME_NAME,
@@ -25,8 +28,9 @@ export function ContentsDiff({ path, oldContents, newContents, layout }: iConten
       disableFileHeader: true,
       preferredHighlighter: 'shiki-js' as const,
       diffIndicators: 'classic' as const,
+      ...viewerOptions,
     }),
-    [isDark, layout],
+    [isDark, layout, viewerOptions],
   );
 
   return (

@@ -100,6 +100,32 @@ describe('reviews', () => {
     });
   });
 
+  it('diffs a file again with more context, or without its whitespace-only changes', async () => {
+    const lines = Array.from({ length: 30 }, (_, index) => `const line${index + 1} = ${index + 1};`);
+    const repo = createTestGitRepo();
+    repo.commitFiles('base', { 'src/lines.ts': `${lines.join('\n')}\n` });
+    repo.branch('feature');
+    const changed = lines.map((line, index) => {
+      if (index === 3) return 'const line4 = 40;';
+      if (index === 24) return `  ${line}`;
+      return line;
+    });
+    repo.commitFiles('feature work', { 'src/lines.ts': `${changed.join('\n')}\n` });
+    const { snapshotId } = await startFeatureReview(repo);
+    const [file] = (await call(appRouter.reviews.snapshot, { snapshotId })).files;
+    const fileId = file?.id ?? '';
+
+    const frozen = await call(appRouter.reviews.fileDiff, { snapshotId, fileId });
+    const wide = await call(appRouter.reviews.fileDiff, { snapshotId, fileId, contextLines: 10 });
+    const quiet = await call(appRouter.reviews.fileDiff, { snapshotId, fileId, isWhitespaceIgnored: true });
+
+    expect(frozen.patch).not.toContain(' const line15 = 15;');
+    expect(wide.patch).toContain(' const line15 = 15;');
+    expect(quiet.patch).toContain('+const line4 = 40;');
+    expect(quiet.patch).not.toContain('+  const line25 = 25;');
+    expect(frozen.patch).toContain('+  const line25 = 25;');
+  });
+
   it('accounts for renames, deletions, binaries, mode and type changes', async () => {
     const repo = createTestGitRepo();
     repo.commitFiles('base', {

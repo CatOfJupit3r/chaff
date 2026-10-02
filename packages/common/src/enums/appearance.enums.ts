@@ -40,3 +40,56 @@ export const CODE_SIZE_LABELS = codeSizesEnumwaii.derive({
   [CODE_SIZES.DEFAULT]: 'Default',
   [CODE_SIZES.LARGE]: 'Large',
 });
+
+export const codeFontsEnumwaii = new Enumwaii('CodeFont', ['GEIST_MONO', 'JETBRAINS_MONO', 'SYSTEM']);
+
+export const CODE_FONTS = codeFontsEnumwaii.enum;
+export type CodeFont = InferEnumwaii<typeof codeFontsEnumwaii>;
+export const codeFontSchema = codeFontsEnumwaii.schema;
+export const codeFontValues = codeFontsEnumwaii.values;
+
+export const CODE_FONT_LABELS = codeFontsEnumwaii.derive({
+  [CODE_FONTS.GEIST_MONO]: 'Geist Mono',
+  [CODE_FONTS.JETBRAINS_MONO]: 'JetBrains Mono',
+  [CODE_FONTS.SYSTEM]: 'System',
+});
+
+export const codeLineHeightsEnumwaii = new Enumwaii('CodeLineHeight', ['COMPACT', 'DEFAULT', 'RELAXED']);
+
+export const CODE_LINE_HEIGHTS = codeLineHeightsEnumwaii.enum;
+export type CodeLineHeight = InferEnumwaii<typeof codeLineHeightsEnumwaii>;
+export const codeLineHeightSchema = codeLineHeightsEnumwaii.schema;
+export const codeLineHeightValues = codeLineHeightsEnumwaii.values;
+
+export const CODE_LINE_HEIGHT_LABELS = codeLineHeightsEnumwaii.derive({
+  [CODE_LINE_HEIGHTS.COMPACT]: 'Compact',
+  [CODE_LINE_HEIGHTS.DEFAULT]: 'Default',
+  [CODE_LINE_HEIGHTS.RELAXED]: 'Relaxed',
+});
+
+export const densitiesEnumwaii = new Enumwaii('Density', ['COMFORTABLE', 'COMPACT']);
+
+export const DENSITIES = densitiesEnumwaii.enum;
+export type Density = InferEnumwaii<typeof densitiesEnumwaii>;
+export const densitySchema = densitiesEnumwaii.schema;
+export const densityValues = densitiesEnumwaii.values;
+
+export const DENSITY_LABELS = densitiesEnumwaii.derive({
+  [DENSITIES.COMFORTABLE]: 'Comfortable',
+  [DENSITIES.COMPACT]: 'Compact',
+});
+
+/** Syntax colors; each theme has a light and a dark variant, and one is picked per mode. */
+export const syntaxThemesEnumwaii = new Enumwaii('SyntaxTheme', ['CHAFF', 'GITHUB', 'SOLARIZED', 'MONOCHROME']);
+
+export const SYNTAX_THEMES = syntaxThemesEnumwaii.enum;
+export type SyntaxTheme = InferEnumwaii<typeof syntaxThemesEnumwaii>;
+export const syntaxThemeSchema = syntaxThemesEnumwaii.schema;
+export const syntaxThemeValues = syntaxThemesEnumwaii.values;
+
+export const SYNTAX_THEME_LABELS = syntaxThemesEnumwaii.derive({
+  [SYNTAX_THEMES.CHAFF]: 'Chaff',
+  [SYNTAX_THEMES.GITHUB]: 'GitHub',
+  [SYNTAX_THEMES.SOLARIZED]: 'Solarized',
+  [SYNTAX_THEMES.MONOCHROME]: 'Monochrome',
+});

@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { DIFF_LAYOUT_LABELS, DIFF_LAYOUTS, diffLayoutValues } from '@chaff/common/enums/diff.enums';
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
 import { ANCHOR_MATCHES, DIFF_SIDES } from '@chaff/common/enums/review.enums';
 
 import { Callout } from '@~/components/ui/callout';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { ContentsDiff } from '@~/features/reviews/components/contents-diff';
 import { spliceLines } from '@~/features/reviews/contents-splice.utils';
-import { DIFF_LAYOUT_LABELS, DIFF_LAYOUTS, diffLayoutValues } from '@~/features/reviews/reviews.enums';
-import type { DiffLayout } from '@~/features/reviews/reviews.enums';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import type { iAnchorComparison } from '../findings.types';

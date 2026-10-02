@@ -29,7 +29,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
   const focus = useFocusReview(snapshotId);
   const { snapshot, card } = focus;
   const unit = card && !card.change ? card.units[0] : undefined;
-  const [isContextOpen, setIsContextOpen] = useState(false);
+  const [isContextOpen, setIsContextOpen] = useState(focus.isContextPanelPinned);
   const [isEditingChanges, setIsEditingChanges] = useState(false);
   const [noteMark, setNoteMark] = useState<NoteMark>();
 

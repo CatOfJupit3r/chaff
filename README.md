@@ -343,13 +343,29 @@ File names and line numbers link into VS Code, VS Code Insiders or Cursor, at th
 
 <img src="docs/screenshots/editor-dark.png" alt="Open in your editor dialog with VS Code, Insiders and Cursor" />
 
-### Light and dark, your accent
+### Make it yours
 
-Theme (system, dark, light), accent color and code size. Every color comes from a theme token, so a whole theme can be swapped by changing CSS variables.
+**Appearance** sets the theme (system, dark, light) and accent color. It also sets the UI density (comfortable or compact) and the code font (Geist Mono, JetBrains Mono or the system's monospace), with its size and line height. Syntax colors (Chaff, GitHub, Solarized or Monochrome) are picked separately for light and dark mode. Every color comes from a theme token, so a whole theme can be swapped by changing CSS variables.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/appearance-dark.png" />
-  <img src="docs/screenshots/appearance-light.png" alt="Appearance dialog with theme, accent and code size" />
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/appearance-custom-dark.png" />
+  <img src="docs/screenshots/appearance-custom-light.png" alt="Appearance dialog with density, code font, line height and syntax colors per mode" />
+</picture>
+
+**Settings → Diffs and layout** sets:
+
+- which layout the Full diff opens in;
+- how many unchanged lines show around each change (3, 5, 10 or the whole file);
+- whether whitespace-only changes are hidden;
+- whether changes inside a line are marked by word, by character or not at all;
+- which progression Focus starts with;
+- whether the Focus context panel opens with every review.
+
+The width you drag the Full diff's file list to is kept.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-diffs-layout-dark.png" />
+  <img src="docs/screenshots/settings-diffs-layout-light.png" alt="Diffs and layout settings: layout, context lines, whitespace, changes inside a line, Focus progression and context panel" />
 </picture>
 
 ## What works today
@@ -365,6 +381,8 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | New commits, rewritten branches and moved parents detected; Update | Works |
 | Open in VS Code, Insiders or Cursor | Works |
 | Light and dark themes, accent, code size | Works |
+| Code font, line height, UI density, syntax colors per mode | Works |
+| Diff defaults (layout, context lines, whitespace, changes inside a line), file list width, pinned context panel, default progression | Works |
 | Focus review: one unit at a time, keyboard decisions, undo, Later queue | Works |
 | Decisions on every unit, shown in Full diff with line coverage | Works |
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |

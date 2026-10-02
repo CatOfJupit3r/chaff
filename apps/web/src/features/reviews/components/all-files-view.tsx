@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
+
 import { pluralize } from '@~/utils/pluralize';
 
 import { scrollToFileSection } from '../hooks/use-scroll-spy';
-import type { DiffLayout } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffFileSection } from './diff-file-section';
 

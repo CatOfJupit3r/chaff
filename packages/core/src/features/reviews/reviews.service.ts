@@ -28,7 +28,8 @@ import type {
 } from './reviews.types';
 import { SecondPassService } from './second-pass/second-pass.service';
 import { SnapshotBuilderService } from './snapshots/snapshot-builder.service';
-import { SnapshotStoreService } from './snapshots/snapshot-store.service';
+import { SnapshotStoreService, SNAPSHOT_CONTEXT_LINES } from './snapshots/snapshot-store.service';
+import type { iPatchOptions } from './snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from './snapshots/snapshot.repository';
 import type { iSnapshotHeads, iSnapshotRecord } from './snapshots/snapshots.types';
 
@@ -253,10 +254,28 @@ export class ReviewsService {
     return { snapshot, target };
   }
 
-  public async getFileDiff(snapshotId: string, fileId: string) {
+  /**
+   * The file's patch as frozen with the snapshot. Asking for other context or for whitespace to be ignored
+   * diffs the file again between the snapshot's commits in the store; a file whose only changes are
+   * whitespace keeps its frozen patch.
+   */
+  public async getFileDiff(snapshotId: string, fileId: string, options: iPatchOptions = {}) {
     const file = await this.snapshotRepository.findPatch(snapshotId, fileId);
     if (!file) throw ORPCNotFoundError(errorCodes.SNAPSHOT_FILE_NOT_FOUND);
-    return { patch: file.patch ?? null };
+    const contextLines = options.contextLines ?? SNAPSHOT_CONTEXT_LINES;
+    const isWhitespaceIgnored = options.isWhitespaceIgnored ?? false;
+    if (!file.patch || (contextLines === SNAPSHOT_CONTEXT_LINES && !isWhitespaceIgnored)) {
+      return { patch: file.patch ?? null };
+    }
+    const { snapshot, target } = await this.getContext(snapshotId);
+    const record = await this.snapshotRepository.findFile(snapshotId, fileId);
+    if (!record) throw ORPCNotFoundError(errorCodes.SNAPSHOT_FILE_NOT_FOUND);
+    const patch = await this.snapshotStoreService.patch(target.workspaceId, snapshot.baseSha, snapshot.headSha, {
+      contextLines,
+      isWhitespaceIgnored,
+      paths: record.oldPath ? [record.oldPath, record.path] : [record.path],
+    });
+    return { patch: patch.trim() ? patch : file.patch };
   }
 
   public async getFileContents(snapshotId: string, fileId: string) {

@@ -174,6 +174,7 @@ export const unitUsageSchema = z.object({
 const snapshotIdInput = z.object({ snapshotId: idSchema });
 const unitInput = z.object({ snapshotId: idSchema, unitId: idSchema });
 const fileInput = z.object({ snapshotId: idSchema, fileId: idSchema });
+const MAX_CONTEXT_LINES = 50;
 
 export const reviewsContract = oc.router({
   list: oc
@@ -238,9 +239,17 @@ export const reviewsContract = oc.router({
   fileDiff: oc
     .route({
       summary: "Get a file's patch",
-      description: "Returns the file's section of the snapshot diff, or null when it was too large to keep.",
+      description:
+        "Returns the file's section of the snapshot diff, or null when it was too large to keep. With more context or whitespace ignored, the section is diffed again from the store.",
     })
-    .input(fileInput)
+    .input(
+      fileInput.extend({
+        /** Unchanged lines around each change; the snapshot keeps 3. */
+        contextLines: z.number().int().min(0).max(MAX_CONTEXT_LINES).optional(),
+        /** Leave out changes that only add or remove whitespace. */
+        isWhitespaceIgnored: z.boolean().optional(),
+      }),
+    )
     .output(z.object({ patch: z.string().nullable() })),
 
   fileContents: oc

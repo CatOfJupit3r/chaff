@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
 import { FILE_KINDS } from '@chaff/common/enums/review.enums';
 
 import { DownIcon, ExternalIcon } from '@~/components/icons/icons';
 
 import { useIsNearViewport } from '../hooks/use-is-near-viewport';
 import { FILE_SECTION_ATTRIBUTE } from '../hooks/use-scroll-spy';
-import type { DiffLayout } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffStat } from './diff-stat';
 import { FileDiffBody } from './file-diff-body';

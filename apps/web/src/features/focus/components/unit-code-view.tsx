@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
+import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
+
 import { ExternalIcon, FileIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
@@ -8,7 +10,7 @@ import { DiffStat } from '@~/features/reviews/components/diff-stat';
 import { FileNote } from '@~/features/reviews/components/file-notes';
 import { PatchView } from '@~/features/reviews/components/patch-view';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
-import { DIFF_LAYOUTS, DIFF_MODES } from '@~/features/reviews/reviews.enums';
+import { DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/reviews.types';
 
 import { CODE_SCOPE_LABELS, CODE_SCOPES, codeScopeValues } from '../focus.enums';

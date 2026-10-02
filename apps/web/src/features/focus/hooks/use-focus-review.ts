@@ -14,6 +14,7 @@ import { useStackFindings } from '@~/features/findings/hooks/use-stack-findings'
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
 import { useSnapshot } from '@~/features/reviews/hooks/use-snapshot';
 import type { iUnit } from '@~/features/reviews/reviews.types';
+import { useSettings } from '@~/features/settings/hooks/use-settings';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 
@@ -63,6 +64,7 @@ export function useFocusReview(snapshotId: string) {
   const readingOrder = readyContent(digest)?.readingOrder;
   const units = useMemo(() => orderByReading(unitsInFileOrder, readingOrder), [unitsInFileOrder, readingOrder]);
   const position = useFocusPosition();
+  const { isContextPanelPinned } = useSettings();
   const cards = useMemo(
     () => buildFocusCards(units, changes, position.progression),
     [units, changes, position.progression],
@@ -163,6 +165,8 @@ export function useFocusReview(snapshotId: string) {
   return {
     snapshot,
     digest,
+    /** The context panel opens with the review. */
+    isContextPanelPinned,
     changes,
     repositoryName: workspace?.name ?? snapshot.branch,
     openInEditor,

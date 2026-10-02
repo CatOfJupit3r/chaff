@@ -2,6 +2,8 @@ import type { SelectedLineRange } from '@pierre/diffs';
 import { PatchDiff } from '@pierre/diffs/react';
 import { useMemo } from 'react';
 
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
+
 import { useIsDarkMode } from '@~/features/appearance/hooks/use-is-dark-mode';
 import { DiscussionThread } from '@~/features/code-hosts/components/discussion-thread';
 
@@ -9,9 +11,9 @@ import { buildNoteAnnotations, draftFromSelection } from '../diff-annotations.ut
 import type { iDiffNote } from '../diff-annotations.utils';
 import { useOptionalDiffReview } from '../diff-review.context';
 import { DIFF_THEME_NAME } from '../diff-theme';
+import { useDiffPreferences } from '../hooks/use-diff-preferences';
 import { useLoadDiffFiles } from '../hooks/use-load-diff-files';
 import { buildDecisionGutterCss } from '../review-coverage.utils';
-import type { DiffLayout } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffFindingNote } from './diff-finding-note';
 import { DiffNoteComposer } from './diff-note-composer';
@@ -31,6 +33,7 @@ interface iPatchViewProps {
  */
 export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatchViewProps) {
   const isDark = useIsDarkMode();
+  const { viewerOptions } = useDiffPreferences();
   const loadDiffFiles = useLoadDiffFiles(snapshotId, file);
   const review = useOptionalDiffReview();
   const units = review?.unitsByFile.get(file.id);
@@ -54,12 +57,14 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatch
       preferredHighlighter: 'shiki-js' as const,
       loadDiffFiles,
       diffIndicators: 'classic' as const,
+      lineDiffType: viewerOptions.lineDiffType,
+      expandUnchanged: viewerOptions.expandUnchanged,
       unsafeCSS: gutterCss,
       enableLineSelection: startDraft !== undefined,
       enableGutterUtility: startDraft !== undefined,
       onGutterUtilityClick: (range: SelectedLineRange) => startDraft?.(draftFromSelection(file.id, range)),
     }),
-    [isDark, layout, isWrapped, loadDiffFiles, gutterCss, startDraft, file.id],
+    [isDark, layout, isWrapped, loadDiffFiles, viewerOptions, gutterCss, startDraft, file.id],
   );
 
   return (
