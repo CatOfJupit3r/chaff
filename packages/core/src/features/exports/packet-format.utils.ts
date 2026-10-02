@@ -10,6 +10,7 @@ import {
 } from '@chaff/common/enums/review.enums';
 
 import type { iFindingRecord } from '@~/features/findings/findings.types';
+import { preferencesPromptSection } from '@~/features/preferences/preference-format.utils';
 import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
 
 import type { iPacket, iPacketAnchor, iPacketFinding, iPacketLines, iPacketReview } from './exports.types';
@@ -137,6 +138,12 @@ export function agentPrompt(packet: iPacket, markdown: string) {
     '- Never mark a finding resolved or verified. The reviewer checks every fix.',
     '- If you disagree with a finding, leave it out of the report and explain why in your reply.',
     '',
+    ...(packet.preferences.length > 0
+      ? [
+          preferencesPromptSection(packet.preferences, "The reviewer's preferences for this repository; follow them:"),
+          '',
+        ]
+      : []),
     'When you are done, end your reply with a JSON report in a ```json block, one entry per finding you addressed:',
     '',
     '```json',
@@ -160,6 +167,7 @@ export function packetJson(packet: iPacket) {
     version: 1,
     repository: packet.repository,
     exportedAt: packet.exportedAt.toISOString(),
+    preferences: packet.preferences,
     report: { statuses: Object.values(AGENT_REPORT_STATUSES), example: REPORT_EXAMPLE },
     reviews: packet.reviews.map(({ target, snapshot, findings, unreviewed }) => ({
       title: reviewTitle(target),

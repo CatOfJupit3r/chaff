@@ -10,6 +10,7 @@ import type { iCoreOptions } from '@~/core.types';
 import { CORE_OPTIONS_TOKEN, DIGEST_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { AgentCommandsService } from '@~/features/agents/agent-commands.service';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
+import { PreferencesService } from '@~/features/preferences/preferences.service';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
@@ -56,6 +57,7 @@ export class DigestsService {
     private readonly claudeCodeAdapter: ClaudeCodeAdapter,
     private readonly codexAdapter: CodexAdapter,
     private readonly agentCommandsService: AgentCommandsService,
+    private readonly preferencesService: PreferencesService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('digests');
@@ -181,7 +183,7 @@ export class DigestsService {
   }
 
   private async preparePrompt(snapshot: iSnapshotRecord, target: { workspaceId: string; branch: string }) {
-    const [units, files, commits, patch] = await Promise.all([
+    const [units, files, commits, patch, preferences] = await Promise.all([
       this.snapshotRepository.listUnits(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
       this.snapshotStoreService.commitMessages(
@@ -191,6 +193,7 @@ export class DigestsService {
         MAX_COMMIT_MESSAGES,
       ),
       this.snapshotStoreService.patch(target.workspaceId, snapshot.baseSha, snapshot.headSha),
+      this.preferencesService.texts(target.workspaceId),
     ]);
     const paths = new Map(files.map((file) => [file.id, file.path]));
     const promptUnits: iPromptUnit[] = units.map((unit, index) => ({
@@ -214,6 +217,7 @@ export class DigestsService {
       units: promptUnits,
       patch: patch.slice(0, MAX_PROMPT_PATCH_CHARS),
       isPatchTruncated: patch.length > MAX_PROMPT_PATCH_CHARS,
+      preferences,
     });
     return {
       prompt,

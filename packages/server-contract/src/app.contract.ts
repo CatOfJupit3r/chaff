@@ -5,6 +5,7 @@ import { exportsContract } from './contract/exports.contract';
 import { findingsContract } from './contract/findings.contract';
 import { fixesContract } from './contract/fixes.contract';
 import { hostContract } from './contract/host.contract';
+import { preferencesContract } from './contract/preferences.contract';
 import { reviewsContract } from './contract/reviews.contract';
 import { settingsContract } from './contract/settings.contract';
 import { workspacesContract } from './contract/workspaces.contract';
@@ -17,6 +18,7 @@ export const CONTRACT = {
   findings: findingsContract,
   fixes: fixesContract,
   host: hostContract,
+  preferences: preferencesContract,
   reviews: reviewsContract,
   settings: settingsContract,
   workspaces: workspacesContract,

@@ -51,6 +51,8 @@ export interface iDigestPromptInput {
   patch: string;
   /** The patch was cut to fit; the agent should read files for the rest. */
   isPatchTruncated: boolean;
+  /** The reviewer's project preferences for the repository. */
+  preferences: string[];
 }
 
 export interface iDigestRunInput {

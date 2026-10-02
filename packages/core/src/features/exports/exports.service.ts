@@ -8,6 +8,7 @@ import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPO
 import { raisedLocation, raisedSnapshotId } from '@~/features/findings/finding-location.utils';
 import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import type { iAnchorLocationRecord, iFindingRecord } from '@~/features/findings/findings.types';
+import { PreferencesService } from '@~/features/preferences/preferences.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
@@ -41,6 +42,7 @@ export class ExportsService {
     @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
     private readonly reviewsService: ReviewsService,
     private readonly workspacesService: WorkspacesService,
+    private readonly preferencesService: PreferencesService,
   ) {}
 
   public async packet(options: iPacketOptions) {
@@ -96,6 +98,7 @@ export class ExportsService {
       reviews,
       findingCount: findings.length,
       statusCounts: countStatuses(inScope),
+      preferences: await this.preferencesService.texts(workspace.id),
     };
   }
 

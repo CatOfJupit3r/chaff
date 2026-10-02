@@ -7,6 +7,7 @@ import { exportsRouter } from './exports.router';
 import { findingsRouter } from './findings.router';
 import { fixesRouter } from './fixes.router';
 import { hostRouter } from './host.router';
+import { preferencesRouter } from './preferences.router';
 import { reviewsRouter } from './reviews.router';
 import { settingsRouter } from './settings.router';
 import { workspacesRouter } from './workspaces.router';
@@ -19,6 +20,7 @@ export const appRouter = base.router({
   findings: findingsRouter,
   fixes: fixesRouter,
   host: hostRouter,
+  preferences: preferencesRouter,
   reviews: reviewsRouter,
   settings: settingsRouter,
   workspaces: workspacesRouter,

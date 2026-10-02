@@ -1,3 +1,5 @@
+import { preferencesPromptSection } from '@~/features/preferences/preference-format.utils';
+
 import type { iDigestPromptInput, iPromptUnit } from './digests.types';
 
 function describeUnit(unit: iPromptUnit) {
@@ -9,6 +11,10 @@ function describeUnit(unit: iPromptUnit) {
 
 /** Instructions for the agent. The answer's shape is enforced separately by the JSON schema. */
 export function buildDigestPrompt(input: iDigestPromptInput) {
+  const preferences = preferencesPromptSection(
+    input.preferences,
+    "The reviewer's preferences for this repository. Where a unit goes against one, say so in its worthChecking:",
+  );
   const commits = input.commits.length > 0 ? input.commits.map((message) => `- ${message}`).join('\n') : '(none)';
 
   return `You are preparing a review digest for a human reviewer in Chaff. The reviewer decides everything; your job is to make the code faster to read. You can read and search files in the working directory, which is a checkout of the branch's head commit. Do not try to change anything.
@@ -26,7 +32,7 @@ The diff${input.isPatchTruncated ? ' (cut short; read the files for the rest)' :
 ${input.patch}
 \`\`\`
 
-Answer with:
+${preferences ? `${preferences}\n\n` : ''}Answer with:
 1. overview: two to four plain sentences on what the branch does.
 2. groups: the meaningful behavior or design changes. Give each a short title, the behavior before and after in plain words, and the reason for it in intent. Set intentSource to DOCUMENTED only when a commit message or a code comment states the reason; otherwise INFERRED. List the ids of the units that make up the change. Put each unit in at most one group; leave out units you cannot explain rather than forcing them in.
 3. readingOrder: every unit id once, in the order a reviewer should read them: contracts and types before the code that uses them, the mechanism before its integration, and each implementation right before its tests.

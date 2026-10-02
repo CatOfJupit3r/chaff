@@ -64,6 +64,13 @@
       "when": 1790907293417,
       "tag": "0008_petite_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790908350188,
+      "tag": "0009_crazy_invaders",
+      "breakpoints": true
     }
   ]
 }

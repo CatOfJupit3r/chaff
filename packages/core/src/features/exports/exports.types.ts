@@ -61,4 +61,6 @@ export interface iPacket {
   findingCount: number;
   /** Findings in scope at each status, whatever statuses were chosen. */
   statusCounts: { status: FindingStatus; count: number }[];
+  /** The reviewer's project preferences for the repository. */
+  preferences: string[];
 }
