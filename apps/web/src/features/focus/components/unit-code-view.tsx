@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 
 import { ExternalIcon, FileIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
@@ -67,6 +68,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             variant="ghost"
             size="sm"
             aria-pressed={expansion.isExpanded}
+            data-onboarding={ONBOARDING_ITEMS.WHOLE_FILE}
             title="Show every line of the file around the change"
             onClick={expansion.toggle}
           >

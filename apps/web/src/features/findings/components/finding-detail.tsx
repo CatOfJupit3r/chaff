@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { ANCHOR_MATCHES, FINDING_KINDS, IS_ACTIVE_FINDING_STATUS } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
@@ -114,10 +115,12 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
         </div>
         <h2 className="m-0 text-[17px] font-semibold tracking-[-0.01em] text-balance">{findingTitle(finding)}</h2>
         {canSetSeverity ? (
-          <SeverityPicker
-            severity={finding.severity}
-            onChange={(severity) => setSeverity.mutate({ findingId: finding.id, severity: severity ?? null })}
-          />
+          <div data-onboarding={ONBOARDING_ITEMS.FINDINGS} className="flex self-start">
+            <SeverityPicker
+              severity={finding.severity}
+              onChange={(severity) => setSeverity.mutate({ findingId: finding.id, severity: severity ?? null })}
+            />
+          </div>
         ) : null}
         <div className="flex items-center justify-between gap-2">
           <p className="m-0 font-mono text-[12px] text-muted">

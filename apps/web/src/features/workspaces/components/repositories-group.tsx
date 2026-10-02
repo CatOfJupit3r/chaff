@@ -1,3 +1,5 @@
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+
 import { Button } from '@~/components/ui/button';
 import { List } from '@~/components/ui/list';
 import { SectionLabel } from '@~/components/ui/section-label';
@@ -16,7 +18,7 @@ export function RepositoriesGroup({ workspaces, onAdd, isAdding }: iRepositories
     <section aria-label="Repositories" className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3">
         <SectionLabel>Repositories</SectionLabel>
-        <Button size="sm" onClick={onAdd} disabled={isAdding}>
+        <Button size="sm" data-onboarding={ONBOARDING_ITEMS.ADD_REPOSITORY} onClick={onAdd} disabled={isAdding}>
           Add repository
         </Button>
       </div>

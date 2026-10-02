@@ -20,7 +20,7 @@ function ProjectChanges({ project, workspaceName }: { project: iInboxProject; wo
   const stacks = groupChangeStacks(project.changes);
 
   return (
-    <div data-onboarding-hosted-stack={`${project.workspaceId}:${project.project}`} className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <span className="text-[12.5px] text-muted">
         {workspaceName} · {CODE_HOST_LABELS(project.host)} <span className="font-mono">{project.project}</span>
       </span>
