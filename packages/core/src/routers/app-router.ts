@@ -1,6 +1,7 @@
 import { base } from '@~/lib/orpc';
 
 import { appInfoRouter } from './app.router';
+import { changeUnitsRouter } from './change-units.router';
 import { codeHostsRouter } from './code-hosts.router';
 import { digestsRouter } from './digests.router';
 import { exportsRouter } from './exports.router';
@@ -14,6 +15,7 @@ import { workspacesRouter } from './workspaces.router';
 
 export const appRouter = base.router({
   app: appInfoRouter,
+  changeUnits: changeUnitsRouter,
   codeHosts: codeHostsRouter,
   digests: digestsRouter,
   exports: exportsRouter,

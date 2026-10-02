@@ -81,7 +81,7 @@ Each snapshot is broken down before you read it:
 - A **unit** is something you review. Chaff parses the old and new version of each file with tree-sitter and assigns each region to the declaration that encloses it: a function, method, class or other declaration becomes a **Function** unit, shown whole. Changes outside any declaration (imports, top-level statements, config, deleted, generated or unsupported files) become **Section** units. Nothing is dropped for being small or uninteresting.
 - Supported grammars: TypeScript, TSX, JavaScript, Python, Go, Rust, Java, C#, Ruby, PHP, C++, Bash and PowerShell.
 
-Units are numbered across the snapshot in reading order, and their count shows on the Reviews screen. Focus review walks them one at a time; a decision on a unit covers every region in it, so the Full diff can show line coverage. The AI digest groups units into the behavior changes they make up (below).
+Units are numbered across the snapshot in reading order, and their count shows on the Reviews screen. Focus review walks them one at a time; a decision on a unit covers every region in it, so the Full diff can show line coverage. A **Change** unit groups Function and Section units into one behavior or design change, possibly across files. The AI digest proposes them (below) and you can make, split, merge, rename, reorder or ungroup them; a unit is in one Change unit at most, and units in none get a card of their own, so every region stays reachable. Deciding on a Change unit marks each of its units, so coverage is still counted over regions. When a review gets a new version, Change units follow their units to it.
 
 ## Reading order
 

@@ -11,6 +11,7 @@ import { CORE_OPTIONS_TOKEN, DIGEST_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN 
 import { AgentCommandsService } from '@~/features/agents/agent-commands.service';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
 import { PreferencesService } from '@~/features/preferences/preferences.service';
+import { ChangeUnitsService } from '@~/features/reviews/change-units/change-units.service';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
@@ -58,6 +59,7 @@ export class DigestsService {
     private readonly codexAdapter: CodexAdapter,
     private readonly agentCommandsService: AgentCommandsService,
     private readonly preferencesService: PreferencesService,
+    private readonly changeUnitsService: ChangeUnitsService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('digests');
@@ -157,9 +159,11 @@ export class DigestsService {
       });
       const parsed = agentDigestSchema.safeParse(answer);
       if (!parsed.success) throw new Error('The agent answered in an unexpected shape');
+      const content = checkDigest(parsed.data, unitIds, shortIds, checkout);
+      await this.changeUnitsService.adoptDigest(snapshot.id, content);
       await this.digestRepository.update(digestId, {
         status: DIGEST_STATUSES.READY,
-        content: checkDigest(parsed.data, unitIds, shortIds, checkout),
+        content,
         progress: null,
         finishedAt: new Date(),
       });

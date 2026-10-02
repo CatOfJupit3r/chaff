@@ -173,3 +173,21 @@ export const reviewTargetKindsEnumwaii = new Enumwaii('ReviewTargetKind', [
 export const REVIEW_TARGET_KINDS = reviewTargetKindsEnumwaii.enum;
 export type ReviewTargetKind = InferEnumwaii<typeof reviewTargetKindsEnumwaii>;
 export const reviewTargetKindSchema = reviewTargetKindsEnumwaii.schema;
+
+/** Where a Change unit came from: a group the AI digest proposed, or one the reviewer made. */
+export const changeUnitSourcesEnumwaii = new Enumwaii('ChangeUnitSource', ['DIGEST', 'REVIEWER']);
+
+export const CHANGE_UNIT_SOURCES = changeUnitSourcesEnumwaii.enum;
+export type ChangeUnitSource = InferEnumwaii<typeof changeUnitSourcesEnumwaii>;
+export const changeUnitSourceSchema = changeUnitSourcesEnumwaii.schema;
+
+/**
+ * The order Focus walks a review in: Change units with the units no change covers after them, every Function
+ * unit, or every Section unit. Lowercase because it appears in the URL.
+ */
+export const reviewProgressionsEnumwaii = new Enumwaii('ReviewProgression', ['changes', 'functions', 'sections']);
+
+export const REVIEW_PROGRESSIONS = reviewProgressionsEnumwaii.enum;
+export type ReviewProgression = InferEnumwaii<typeof reviewProgressionsEnumwaii>;
+export const reviewProgressionSchema = reviewProgressionsEnumwaii.schema;
+export const reviewProgressionValues = reviewProgressionsEnumwaii.values;

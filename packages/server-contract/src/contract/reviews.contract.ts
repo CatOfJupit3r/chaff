@@ -287,11 +287,19 @@ export const reviewsContract = oc.router({
       }),
     ),
 
-  setMark: oc
+  setMarks: oc
     .route({
-      summary: 'Mark a unit',
-      description: 'Records the decision on a unit in this snapshot, or clears it when no mark is given.',
+      summary: 'Mark units',
+      description:
+        'Records a decision on each unit in this snapshot, or clears it when no mark is given. A Change unit is decided by marking all of its units at once.',
     })
-    .input(unitInput.extend({ mark: unitMarkSchema.optional() }))
-    .output(z.object({ unitId: z.string(), mark: unitMarkSchema.optional() })),
+    .input(
+      snapshotIdInput.extend({
+        marks: z
+          .array(z.object({ unitId: idSchema, mark: unitMarkSchema.optional() }))
+          .min(1)
+          .max(5000),
+      }),
+    )
+    .output(z.array(z.object({ unitId: z.string(), mark: unitMarkSchema.optional() }))),
 });

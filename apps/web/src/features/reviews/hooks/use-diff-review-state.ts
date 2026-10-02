@@ -10,7 +10,7 @@ import { useDiscussions } from '@~/features/code-hosts/hooks/use-discussions';
 import { anchorIn } from '@~/features/findings/findings.utils';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
-import { useSetMark } from '@~/features/focus/hooks/use-set-mark';
+import { useSetMarks } from '@~/features/focus/hooks/use-set-marks';
 import { unitsQueryOptions } from '@~/features/focus/hooks/use-units';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 
@@ -54,7 +54,7 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
   const units = useQuery(unitsQueryOptions(snapshotId)).data;
   const findings = useFindings(snapshot.targetId);
   const { create } = useFindingMutations();
-  const setMark = useSetMark(snapshotId);
+  const setMarks = useSetMarks(snapshotId);
   const [draft, setDraft] = useState<iDiffDraft>();
   const unitsByFile = useMemo(() => groupUnitsByFile(units ?? []), [units]);
   const placementsByFile = useMemo(() => placeFindings(snapshotId, findings), [snapshotId, findings]);
@@ -76,9 +76,9 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
 
   const markFile = (fileId: string) => {
     const undecided = (unitsByFile.get(fileId) ?? []).filter((unit) => unit.mark === undefined);
-    for (const unit of undecided) {
-      setMark.mutate(
-        { snapshotId, unitId: unit.id, mark: UNIT_MARKS.LOOKS_GOOD },
+    if (undecided.length > 0) {
+      setMarks.mutate(
+        { snapshotId, marks: undecided.map((unit) => ({ unitId: unit.id, mark: UNIT_MARKS.LOOKS_GOOD })) },
         { onError: (error) => showToast(getErrorMessage(error)) },
       );
     }

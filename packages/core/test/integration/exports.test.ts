@@ -79,10 +79,9 @@ describe('exports', () => {
   it('exports only the chosen statuses or findings, and lists units without a decision', async () => {
     const { snapshotId, concern, question, unitTitled } = await reviewWithFindings();
     await call(appRouter.findings.setStatus, { findingId: concern.id, status: FINDING_STATUSES.WITHDRAWN });
-    await call(appRouter.reviews.setMark, {
+    await call(appRouter.reviews.setMarks, {
       snapshotId,
-      unitId: unitTitled('Scheduler.next').id,
-      mark: UNIT_MARKS.LOOKS_GOOD,
+      marks: [{ unitId: unitTitled('Scheduler.next').id, mark: UNIT_MARKS.LOOKS_GOOD }],
     });
 
     const open = await call(appRouter.exports.packet, {

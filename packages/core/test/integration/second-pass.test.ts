@@ -65,7 +65,10 @@ describe('second pass', () => {
     const { snapshotId, targetId } = await startFeatureReview(repo);
     const first = await unitsOf(snapshotId);
     for (const title of ['Scheduler.next', 'retry', 'backoff']) {
-      await call(appRouter.reviews.setMark, { snapshotId, unitId: first(title).id, mark: UNIT_MARKS.LOOKS_GOOD });
+      await call(appRouter.reviews.setMarks, {
+        snapshotId,
+        marks: [{ unitId: first(title).id, mark: UNIT_MARKS.LOOKS_GOOD }],
+      });
     }
     expect(first('backoff')).toMatchObject({ isMarkCarried: false });
     expect(first('backoff').revision).toBeUndefined();
@@ -111,10 +114,9 @@ describe('second pass', () => {
     });
 
     // Deciding again in the new snapshot replaces the carried mark.
-    await call(appRouter.reviews.setMark, {
+    await call(appRouter.reviews.setMarks, {
       snapshotId: nextId,
-      unitId: second('retry').id,
-      mark: UNIT_MARKS.LOOKS_GOOD,
+      marks: [{ unitId: second('retry').id, mark: UNIT_MARKS.LOOKS_GOOD }],
     });
     expect((await unitsOf(nextId))('retry').isMarkCarried).toBe(false);
   });

@@ -7,14 +7,13 @@ import type { iDigest } from '@~/features/digests/digests.types';
 import { findUnitDiagrams, findUnitGroup, findUnitNote, readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
 import type { iSnapshot, iUnit } from '@~/features/reviews/reviews.types';
-import { cn } from '@~/lib/utils';
 
-import { swipeExit } from '../focus-swipe.utils';
-import { CARD_EXIT_CLASSES, CARD_EXITS, CARD_VIEWS, UNIT_MARK_LABELS } from '../focus.enums';
+import { CARD_VIEWS, UNIT_MARK_LABELS } from '../focus.enums';
 import type { CardExit, CardView } from '../focus.enums';
-import { useCardSwipe } from '../hooks/use-card-swipe';
 import { useUnitDetail } from '../hooks/use-unit-detail';
 import { useUnitUsages } from '../hooks/use-unit-usages';
+import { CardFindings } from './card-findings';
+import { FocusCardShell } from './focus-card-shell';
 import { UnitCardTop } from './unit-card-top';
 import { UnitCodeView } from './unit-code-view';
 import { UnitRevisionNote } from './unit-revision-note';
@@ -34,12 +33,6 @@ interface iUnitCardProps {
   onSwipe?: (exit: CardExit) => unknown;
 }
 
-/** Card border while dragged far enough that letting go decides. */
-const SWIPE_BORDER_CLASSES = new Map<CardExit | undefined, string>([
-  [CARD_EXITS.RIGHT, 'border-good'],
-  [CARD_EXITS.LEFT, 'border-warn'],
-]);
-
 /** One unit: what it is, what the digest says, the decision already made on it, and one of its views. */
 export function UnitCard({
   snapshot,
@@ -52,7 +45,6 @@ export function UnitCard({
   onOpenInEditor,
   onSwipe,
 }: iUnitCardProps) {
-  const swipe = useCardSwipe(onSwipe);
   const file = snapshot.files.find((candidate) => candidate.id === unit.fileId);
   const { data: detail } = useUnitDetail(snapshot.id, unit.id);
   const { data: usages } = useUnitUsages(snapshot.id, unit.id);
@@ -68,18 +60,7 @@ export function UnitCard({
   }
 
   return (
-    <article
-      aria-label={unit.title}
-      {...swipe.handlers}
-      style={swipe.isDragging ? { translate: `${swipe.offset}px 0`, rotate: `${swipe.offset / 70}deg` } : undefined}
-      className={cn(
-        'relative z-1 animate-card-in touch-pan-y overflow-hidden rounded-xl border border-line-strong bg-surface shadow-modal',
-        'transition-[translate,rotate,scale,opacity,border-color] duration-280 ease-[cubic-bezier(.3,.7,.3,1)]',
-        swipe.isDragging && 'transition-[border-color] duration-150',
-        SWIPE_BORDER_CLASSES.get(swipeExit(swipe.offset)),
-        exit && CARD_EXIT_CLASSES(exit),
-      )}
-    >
+    <FocusCardShell label={unit.title} exit={exit} onSwipe={onSwipe}>
       <UnitCardTop unit={unit} file={file} lastCommit={detail?.lastCommit} />
       {digest && content ? (
         <UnitDigestNotes runner={digest.runner} note={note} group={findUnitGroup(content, unit.id)} />
@@ -97,15 +78,7 @@ export function UnitCard({
           </span>
         </div>
       ) : null}
-      {findings.map((finding) => (
-        <div
-          key={finding.id}
-          className="flex items-baseline gap-2.5 border-t border-line bg-canvas px-[22px] py-[9px] text-[12.5px]"
-        >
-          <span className="font-mono text-muted">F-{finding.number}</span>
-          <span className="min-w-0 flex-1 whitespace-pre-wrap text-fg-soft">{finding.body}</span>
-        </div>
-      ))}
+      <CardFindings findings={findings} />
       <UnitDiscussions snapshot={snapshot} unit={unit} path={file?.path} />
       <UnitViewTabs view={view} counts={counts} onChange={onViewChange} />
       {view === CARD_VIEWS.code && file ? (
@@ -137,6 +110,6 @@ export function UnitCard({
           />
         </div>
       ) : null}
-    </article>
+    </FocusCardShell>
   );
 }

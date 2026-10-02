@@ -170,3 +170,11 @@ export const MergeIcon = createIcon(
     <path d="M6 8v8M18 16V11a4 4 0 0 0-4-4H9" />
   </>,
 );
+export const EditIcon = createIcon(
+  'EditIcon',
+  <>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+    <path d="M13 7l4 4" />
+  </>,
+);
+export const UpIcon = createIcon('UpIcon', <path d="M6 15l6-6 6 6" />);

@@ -1,4 +1,6 @@
 import {
+  REVIEW_PROGRESSIONS,
+  reviewProgressionsEnumwaii,
   FILE_KINDS,
   fileKindsEnumwaii,
   SYMBOL_KINDS,
@@ -152,4 +154,10 @@ export const FILE_KIND_FACTS = fileKindsEnumwaii.derive({
   [FILE_KINDS.DOCS]: 'docs',
   [FILE_KINDS.GENERATED]: 'generated',
   [FILE_KINDS.BINARY]: 'binary',
+});
+
+export const REVIEW_PROGRESSION_LABELS = reviewProgressionsEnumwaii.derive({
+  [REVIEW_PROGRESSIONS.changes]: 'Changes',
+  [REVIEW_PROGRESSIONS.functions]: 'Functions',
+  [REVIEW_PROGRESSIONS.sections]: 'Sections',
 });

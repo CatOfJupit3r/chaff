@@ -164,15 +164,18 @@ export class UnitsService {
     };
   }
 
-  public async setMark(snapshotId: string, unitId: string, mark: UnitMark | undefined) {
+  public async setMarks(snapshotId: string, marks: readonly { unitId: string; mark?: UnitMark }[]) {
     await this.reviewsService.getContext(snapshotId);
-    await this.getUnit(snapshotId, unitId);
-    if (mark) {
-      await this.unitMarkRepository.set(snapshotId, unitId, mark);
-    } else {
-      await this.unitMarkRepository.clear(unitId);
+    const known = new Set((await this.snapshotRepository.listUnits(snapshotId)).map((unit) => unit.id));
+    if (marks.some(({ unitId }) => !known.has(unitId))) throw ORPCNotFoundError(errorCodes.UNIT_NOT_FOUND);
+    for (const { unitId, mark } of marks) {
+      if (mark) {
+        await this.unitMarkRepository.set(snapshotId, unitId, mark);
+      } else {
+        await this.unitMarkRepository.clear(unitId);
+      }
     }
-    return { unitId, mark };
+    return marks.map(({ unitId, mark }) => ({ unitId, mark }));
   }
 
   private async getUnit(snapshotId: string, unitId: string) {

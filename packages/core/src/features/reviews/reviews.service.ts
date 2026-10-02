@@ -13,6 +13,7 @@ import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
 import { KeyedMutex } from '@~/lib/concurrency';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
+import { ChangeUnitsService } from './change-units/change-units.service';
 import type { iUnitMarkRepository } from './marks/unit-mark.repository';
 import type { iReviewTargetRepository } from './review-targets/review-target.repository';
 import type { iReviewTargetRecord } from './review-targets/review-targets.types';
@@ -59,6 +60,7 @@ export class ReviewsService {
     private readonly remoteChangesService: RemoteChangesService,
     private readonly secondPassService: SecondPassService,
     private readonly anchorRelocationService: AnchorRelocationService,
+    private readonly changeUnitsService: ChangeUnitsService,
   ) {}
 
   public async list(workspaceId?: string): Promise<iReviewTargetResponse[]> {
@@ -312,6 +314,7 @@ export class ReviewsService {
   ) {
     await this.unitMarkRepository.carryOver(previous.id, snapshot.id);
     await this.secondPassService.classify(workspace.id, previous.id, snapshot.id);
+    await this.changeUnitsService.carryOver(previous.id, snapshot.id);
     await this.anchorRelocationService.relocate(workspace.id, target.id, snapshot);
   }
 

@@ -26,16 +26,16 @@ describe('review units', () => {
     const [first, second] = units;
     if (!first || !second) throw new Error('expected units');
 
-    await call(appRouter.reviews.setMark, { snapshotId, unitId: first.id, mark: UNIT_MARKS.LOOKS_GOOD });
-    await call(appRouter.reviews.setMark, { snapshotId, unitId: second.id, mark: UNIT_MARKS.LATER });
-    await call(appRouter.reviews.setMark, { snapshotId, unitId: second.id, mark: UNIT_MARKS.CONCERN });
+    await call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: first.id, mark: UNIT_MARKS.LOOKS_GOOD }] });
+    await call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: second.id, mark: UNIT_MARKS.LATER }] });
+    await call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: second.id, mark: UNIT_MARKS.CONCERN }] });
 
     const marked = await call(appRouter.reviews.units, { snapshotId });
     expect(marked.map((unit) => unit.mark)).toEqual([UNIT_MARKS.LOOKS_GOOD, UNIT_MARKS.CONCERN, undefined, undefined]);
     const [review] = await call(appRouter.reviews.list, { workspaceId: workspace.id });
     expect(review?.latestSnapshot).toMatchObject({ inspectedUnitCount: 2, laterUnitCount: 0, unitCount: 4 });
 
-    await call(appRouter.reviews.setMark, { snapshotId, unitId: first.id });
+    await call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: first.id }] });
     const cleared = await call(appRouter.reviews.units, { snapshotId });
     expect(cleared[0]?.mark).toBeUndefined();
   });
@@ -47,7 +47,7 @@ describe('review units', () => {
     if (!otherUnit) throw new Error('expected a unit');
 
     await expectORPCError(
-      call(appRouter.reviews.setMark, { snapshotId, unitId: otherUnit.id, mark: UNIT_MARKS.LOOKS_GOOD }),
+      call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: otherUnit.id, mark: UNIT_MARKS.LOOKS_GOOD }] }),
       { code: errorCodes.UNIT_NOT_FOUND },
     );
   });
@@ -155,7 +155,7 @@ describe('review units', () => {
     const repo = createFeatureRepo();
     const { targetId, snapshotId } = await startFeatureReview(repo);
     for (const unit of await call(appRouter.reviews.units, { snapshotId })) {
-      await call(appRouter.reviews.setMark, { snapshotId, unitId: unit.id, mark: UNIT_MARKS.LOOKS_GOOD });
+      await call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: unit.id, mark: UNIT_MARKS.LOOKS_GOOD }] });
     }
     repo.commitFiles('tune backoff', {
       'src/backoff.ts': 'export function backoff(attempt: number) {\n  return 3 ** attempt;\n}\n',

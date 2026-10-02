@@ -88,6 +88,18 @@ One unit at a time: a function, a type or a section of a file, shown whole with 
   <img src="docs/screenshots/focus-note-light.png" alt="Writing a concern on the unit in Focus review" />
 </picture>
 
+Cards come in three progressions, picked above the card. **Changes** shows each Change unit (one behavior or design change, often across files) as a single card with all of its code, then every unit no change covers. A decision on a Change card applies to all of its units, so progress is still counted unit by unit. **Functions** and **Sections** walk one kind of unit only. The digest's groups become the Change units when it finishes, and **Edit changes** lets you make your own, split one by taking some of its units into a new change, merge, rename, reorder or ungroup them. Change units carry over to the next version of the review.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-change-dark.png" />
+  <img src="docs/screenshots/focus-change-light.png" alt="A Change card with the digest's before and after, a mixed decision, and the code of its first unit" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/change-editor-dark.png" />
+  <img src="docs/screenshots/change-editor-light.png" alt="Edit changes dialog listing three Change units with their units, reorder and ungroup buttons, and a box to name a new change" />
+</picture>
+
 On a touch screen or with a pen, swipe the card: right is **Looks good**, left starts a **Concern**. The border turns green or amber once letting go will decide; a short drag slides back. A mouse keeps selecting code.
 
 <picture>
@@ -97,7 +109,7 @@ On a touch screen or with a pen, swipe the card: right is **Looks good**, left s
 
 ### AI digest
 
-Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits or inferred), the tests that cover the unit, and a diagram where one helps. The Context panel (I) lists the changes the branch is made of, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
+Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits or inferred), the tests that cover the unit, and a diagram where one helps. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-digest-dark.png" />
@@ -106,7 +118,7 @@ Chaff can ask the coding agent already on your computer (Claude Code or Codex) t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-context-dark.png" />
-  <img src="docs/screenshots/digest-context-light.png" alt="Context panel with the digest overview and the changes the branch is made of" />
+  <img src="docs/screenshots/digest-context-light.png" alt="Context panel with the digest overview, the notes on this card and the Change units to jump between" />
 </picture>
 
 <picture>
@@ -323,6 +335,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Fix hand-off: a local agent fixes findings in its own checkout, on a branch of Chaff's store | Works |
 | Project preferences: promoted from findings, exported for CLAUDE.md, given to digests and agents | Works |
 | Swipe decisions in Focus with a finger or pen | Works |
+| Change units: digest groups as Focus cards; make, split, merge, rename, reorder; Changes, Functions or Sections progression | Works |
 | Rebindable keys for Focus and Verify | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 

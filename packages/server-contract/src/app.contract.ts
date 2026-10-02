@@ -1,4 +1,5 @@
 import { appContract } from './contract/app.contract';
+import { changeUnitsContract } from './contract/change-units.contract';
 import { codeHostsContract } from './contract/code-hosts.contract';
 import { digestsContract } from './contract/digests.contract';
 import { exportsContract } from './contract/exports.contract';
@@ -12,6 +13,7 @@ import { workspacesContract } from './contract/workspaces.contract';
 
 export const CONTRACT = {
   app: appContract,
+  changeUnits: changeUnitsContract,
   codeHosts: codeHostsContract,
   digests: digestsContract,
   exports: exportsContract,

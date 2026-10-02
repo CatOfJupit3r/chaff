@@ -43,6 +43,7 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'NOTHING_TO_FIX',
   'PREFERENCE_NOT_FOUND',
   'SHORTCUT_CONFLICT',
+  'CHANGE_UNIT_NOT_FOUND',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -92,4 +93,5 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.PREFERENCE_NOT_FOUND]: 'Preference not found',
   [errorCodes.SHORTCUT_CONFLICT]: 'Two actions on the same screen cannot share a key',
   [errorCodes.NOTHING_TO_FIX]: 'None of the selected findings is open for the agent to work on',
+  [errorCodes.CHANGE_UNIT_NOT_FOUND]: 'Change not found in this snapshot',
 });

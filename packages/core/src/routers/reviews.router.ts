@@ -47,7 +47,7 @@ export const reviewsRouter = base.reviews.router({
     container.resolve(UnitsService).getUsages(input.snapshotId, input.unitId),
   ),
 
-  setMark: procedure.reviews.setMark.handler(async ({ input }) =>
-    container.resolve(UnitsService).setMark(input.snapshotId, input.unitId, input.mark),
+  setMarks: procedure.reviews.setMarks.handler(async ({ input }) =>
+    container.resolve(UnitsService).setMarks(input.snapshotId, input.marks),
   ),
 });
