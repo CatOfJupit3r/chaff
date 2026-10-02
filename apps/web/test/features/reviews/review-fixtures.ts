@@ -35,6 +35,8 @@ export function reviewTarget(branch: string, overrides: Partial<iReviewTarget> =
     branch,
     kind: REVIEW_TARGET_KINDS.BRANCH,
     parentBranch: 'main',
+    findingCount: 0,
+    activeFindingCount: 0,
     ...overrides,
   };
 }

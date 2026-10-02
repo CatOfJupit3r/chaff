@@ -1,6 +1,6 @@
 import { inject, singleton } from 'tsyringe';
 
-import { IS_ACTIVE_FINDING_STATUS, REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { RemoteChangesService } from '@~/features/code-hosts/remote-changes.service';
@@ -54,8 +54,6 @@ export class ReviewHistoryService {
             ...target,
             latestSnapshot,
             workspaceName: names.get(target.workspaceId) ?? '',
-            findingCount: own.length,
-            activeFindingCount: own.filter((finding) => IS_ACTIVE_FINDING_STATUS(finding.status)).length,
             lastActivityAt: latest([latestSnapshot.createdAt, lastMarkedAt, ...own.map(findingActivity)]),
           },
         ];

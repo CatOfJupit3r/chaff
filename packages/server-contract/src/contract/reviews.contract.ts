@@ -57,6 +57,9 @@ export const reviewTargetSchema = z.object({
   change: changeRequestInfoSchema.optional(),
   /** Missing until a review is started; a branch target with only a confirmed parent has none. */
   latestSnapshot: snapshotSummarySchema.optional(),
+  findingCount: z.number().int().nonnegative(),
+  /** Findings still open or waiting on a fix or a check. */
+  activeFindingCount: z.number().int().nonnegative(),
   /** Set once the review moved to History. */
   archived: z.object({ at: z.date(), reason: archiveReasonSchema }).optional(),
 });
@@ -65,9 +68,6 @@ export const reviewTargetSchema = z.object({
 export const reviewHistoryEntrySchema = reviewTargetSchema.extend({
   latestSnapshot: snapshotSummarySchema,
   workspaceName: z.string(),
-  findingCount: z.number().int().nonnegative(),
-  /** Findings still open or waiting on a fix or a check. */
-  activeFindingCount: z.number().int().nonnegative(),
   /** The newest snapshot, decision or finding change. */
   lastActivityAt: z.date(),
 });

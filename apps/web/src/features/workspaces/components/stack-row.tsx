@@ -40,6 +40,9 @@ export function StackRow({ stack, reviewTargets }: iStackRowProps) {
           </Link>
           <Pill variant="neutral">local</Pill>
           {branches.some((branch) => branch.hasWorkingChanges) ? <Pill variant="open">uncommitted</Pill> : null}
+          {review.activeFindingCount > 0 ? (
+            <Pill variant="open">{pluralize(review.activeFindingCount, 'open finding')}</Pill>
+          ) : null}
         </div>
         <div className="mt-[3px] flex flex-wrap gap-x-3.5 text-[12.5px] text-muted">
           <span>{workspace.name}</span>
