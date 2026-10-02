@@ -4,4 +4,4 @@ type SettingsRow = typeof settings.$inferSelect;
 
 export type iSettingsResponse = Omit<SettingsRow, 'id' | 'updatedAt'>;
 
-export type iSettingsUpdate = Partial<iSettingsResponse>;
+export type iSettingsUpdate = Partial<Omit<iSettingsResponse, 'onboarding'>>;

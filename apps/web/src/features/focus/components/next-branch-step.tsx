@@ -22,7 +22,10 @@ export function NextBranchStep({ snapshot }: { snapshot: iSnapshot }) {
   if (!next) return null;
 
   return (
-    <div className="mt-3 flex w-full max-w-[52ch] items-center gap-3 rounded-lg border border-line bg-canvas px-4 py-3 text-left">
+    <div
+      data-onboarding-next-branch
+      className="mt-3 flex w-full max-w-[52ch] items-center gap-3 rounded-lg border border-line bg-canvas px-4 py-3 text-left"
+    >
       <BranchIcon className="size-4 flex-none text-muted" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <SectionLabel>Next in the stack</SectionLabel>

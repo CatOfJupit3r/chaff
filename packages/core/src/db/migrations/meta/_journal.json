@@ -141,6 +141,13 @@
       "when": 1790943962209,
       "tag": "0019_bored_sharon_ventura",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790950796797,
+      "tag": "0020_sticky_thunderbird",
+      "breakpoints": true
     }
   ]
 }

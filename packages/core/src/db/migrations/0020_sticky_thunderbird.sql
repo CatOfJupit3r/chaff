@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `onboarding` text DEFAULT '{"status":"NOT_STARTED","step":"CHOOSE_CHANGE","reviewId":null}' NOT NULL;

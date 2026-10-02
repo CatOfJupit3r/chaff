@@ -98,7 +98,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               onRecheck={() => focus.setQueue(FOCUS_QUEUES.recheck)}
             />
             <StackFindingsBanner findings={focus.stackFindings} onShow={() => setIsContextOpen(true)} />
-            <div className="relative w-full max-w-[920px]">
+            <div data-onboarding-card className="relative w-full max-w-[920px]">
               <div className="absolute inset-x-[22px] top-[-7px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-55" />
               <div className="absolute inset-x-[44px] top-[-13px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-30" />
               {card?.change ? (

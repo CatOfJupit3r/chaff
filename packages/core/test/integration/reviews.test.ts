@@ -1,5 +1,5 @@
 import { call } from '@orpc/server';
-import { chmodSync, existsSync, readdirSync, statSync, symlinkSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -128,6 +128,7 @@ describe('reviews', () => {
 
   it('accounts for renames, deletions, binaries, mode and type changes', async () => {
     const repo = createTestGitRepo();
+    repo.git('config', 'core.fileMode', 'false');
     repo.commitFiles('base', {
       'docs/guide.md': 'Read me first.\nSecond line.\nThird line.\n',
       'scripts/run.sh': 'echo run\n',
@@ -138,7 +139,7 @@ describe('reviews', () => {
     });
     repo.branch('cleanup');
     repo.git('mv', 'docs/guide.md', 'docs/handbook.md');
-    chmodSync(path.join(repo.path, 'scripts/run.sh'), 0o755);
+    repo.git('update-index', '--chmod=+x', '--', 'scripts/run.sh');
     repo.git('rm', '--quiet', 'pointer.txt');
     symlinkSync('link-target.txt', path.join(repo.path, 'pointer.txt'));
     repo.commitFiles('cleanup', { 'assets/logo.bin': Buffer.from([0, 1, 2, 4]), 'src/gone.ts': null });

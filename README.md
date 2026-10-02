@@ -410,6 +410,7 @@ The width you drag the Full diff's file list to is kept.
 | --- | --- |
 | Electron desktop app, unsigned installers for Windows, macOS and Linux | Works |
 | Add repositories from disk, read-only | Works |
+| Onboarding guide: first run, saved progress, skip at any step, replay from Settings | Works |
 | Local branch stacks with suggested parents, kept together when a lower branch gets new commits | Works |
 | Frozen snapshots in Chaff's own git store | Works |
 | Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
