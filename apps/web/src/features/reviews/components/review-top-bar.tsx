@@ -7,6 +7,7 @@ import { DigestChip } from '@~/features/digests/components/digest-chip';
 
 import { REVIEW_TARGET_KIND_PILLS } from '../reviews.enums';
 import type { iSnapshot } from '../reviews.types';
+import { ReviewSwitcher } from './review-switcher';
 import { SnapshotChip } from './snapshot-chip';
 
 /** Crumbs for the review: repository, the branch under review and the parent it is compared with. */
@@ -38,6 +39,7 @@ export function ReviewTopBar({ snapshot, repositoryName }: { snapshot: iSnapshot
           <span className="truncate font-mono text-[12.5px]">{snapshot.branch}</span>
         </Link>
       )}
+      <ReviewSwitcher snapshot={snapshot} />
       {REVIEW_TARGET_KIND_PILLS.has(snapshot.kind) ? (
         <Pill variant="fix">{REVIEW_TARGET_KIND_PILLS.get(snapshot.kind)}</Pill>
       ) : null}

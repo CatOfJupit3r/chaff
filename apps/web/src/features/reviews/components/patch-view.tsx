@@ -10,7 +10,7 @@ import { DiscussionThread } from '@~/features/code-hosts/components/discussion-t
 import { buildNoteAnnotations, draftFromSelection } from '../diff-annotations.utils';
 import type { iDiffNote } from '../diff-annotations.utils';
 import { useOptionalDiffReview } from '../diff-review.context';
-import { DIFF_THEME_NAME } from '../diff-theme';
+import { DIFF_THEME_NAME, UNIFIED_LINE_NUMBERS_CSS } from '../diff-theme';
 import { useDiffPreferences } from '../hooks/use-diff-preferences';
 import { useLoadDiffFiles } from '../hooks/use-load-diff-files';
 import { buildDecisionGutterCss } from '../review-coverage.utils';
@@ -61,7 +61,7 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped, isExpand
       diffIndicators: 'classic' as const,
       lineDiffType: viewerOptions.lineDiffType,
       expandUnchanged: isExpanded || viewerOptions.expandUnchanged,
-      unsafeCSS: gutterCss,
+      unsafeCSS: [UNIFIED_LINE_NUMBERS_CSS, gutterCss].filter(Boolean).join('\n'),
       enableLineSelection: startDraft !== undefined,
       enableGutterUtility: startDraft !== undefined,
       onGutterUtilityClick: (range: SelectedLineRange) => startDraft?.(draftFromSelection(file.id, range)),

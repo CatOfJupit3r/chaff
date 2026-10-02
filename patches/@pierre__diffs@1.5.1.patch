@@ -1,0 +1,17 @@
+diff --git a/dist/renderers/DiffHunksRenderer.js b/dist/renderers/DiffHunksRenderer.js
+index c759c0b0db7cc78356eda791e3bab4d8d1ee1503..b2496882e81ed016975a4be211600857308a164f 100644
+--- a/dist/renderers/DiffHunksRenderer.js
++++ b/dist/renderers/DiffHunksRenderer.js
+@@ -767,7 +767,11 @@ var DiffHunksRenderer = class {
+ 						additionLineIndex: additionLine?.lineIndex,
+ 						deletionLineIndex: deletionLine?.lineIndex
+ 					});
+-					pushGutterLineNumber("unified", lineDecoration.gutterLineType, additionLine != null ? additionLine.lineNumber : deletionLine.lineNumber, `${unifiedLineIndex},${splitLineIndex}`, lineDecoration.gutterProperties);
++					pushGutterLineNumber("unified", lineDecoration.gutterLineType, additionLine != null ? additionLine.lineNumber : deletionLine.lineNumber, `${unifiedLineIndex},${splitLineIndex}`, {
++						"data-old-line": deletionLine?.lineNumber ?? "",
++						"data-new-line": additionLine?.lineNumber ?? "",
++						...lineDecoration.gutterProperties
++					});
+ 					if (additionLineContent != null) additionLineContent = withContentProperties(additionLineContent, lineDecoration.contentProperties, isRenderCacheDirty && additionLine != null ? {
+ 						"data-line": additionLine.lineNumber,
+ 						"data-line-index": `${unifiedLineIndex},${splitLineIndex}`
