@@ -52,6 +52,13 @@ function parseBranches(output: string): iRawBranch[] {
     });
 }
 
+interface iSuggestionContext {
+  /** Branch names by the commit at their tip. */
+  tips: ReadonlyMap<string, string[]>;
+  defaultBranch: string | undefined;
+  knownParent: string | undefined;
+}
+
 function upstreamMatches(branch: iRawBranch, candidate: string) {
   return branch.upstream === candidate || branch.upstream?.endsWith(`/${candidate}`) === true;
 }
@@ -61,7 +68,12 @@ function upstreamMatches(branch: iRawBranch, candidate: string) {
 export class BranchesService {
   constructor(private readonly gitService: GitService) {}
 
-  public async listBranches(repoPath: string, defaultBranch: string | undefined): Promise<iGitBranch[]> {
+  /** `knownParents` holds the parent suggested last time for each branch. */
+  public async listBranches(
+    repoPath: string,
+    defaultBranch: string | undefined,
+    knownParents: ReadonlyMap<string, string> = new Map(),
+  ): Promise<iGitBranch[]> {
     const output = await this.gitService.output(repoPath, ['for-each-ref', `--format=${BRANCH_FORMAT}`, 'refs/heads']);
     const branches = parseBranches(output);
 
@@ -74,7 +86,9 @@ export class BranchesService {
       branches,
       GIT_CONCURRENCY,
       async (branch): Promise<iParentSuggestion> =>
-        branch.name === defaultBranch ? { commitsAhead: 0 } : this.suggestParent(repoPath, branch, tips, defaultBranch),
+        branch.name === defaultBranch
+          ? { commitsAhead: 0 }
+          : this.suggestParent(repoPath, branch, { tips, defaultBranch, knownParent: knownParents.get(branch.name) }),
     );
 
     return branches
@@ -96,13 +110,14 @@ export class BranchesService {
    * its parent, or of the default branch, still stacks on its parent. Ties go to the branch's upstream,
    * then the default branch, then alphabetical order. At the branch's own tip, another branch only
    * qualifies if it is the default branch or sorts before this one, which keeps two branches on the
-   * same commit from suggesting each other.
+   * same commit from suggesting each other. The parent suggested last time wins ties, and stays the
+   * parent after it gets commits this branch doesn't have, as long as this branch still holds commits of
+   * its own (beyond the default branch) and no other branch is nearer.
    */
   private async suggestParent(
     repoPath: string,
     branch: iRawBranch,
-    tips: Map<string, string[]>,
-    defaultBranch: string | undefined,
+    { tips, defaultBranch, knownParent }: iSuggestionContext,
   ): Promise<iParentSuggestion> {
     const history = await this.gitService.output(repoPath, [
       'rev-list',
@@ -124,10 +139,14 @@ export class BranchesService {
     for (const { name, sha } of candidates) {
       ranked.push({ name, commitsAhead: await this.countCommits(repoPath, sha, branch.headSha) });
     }
+    const moved = knownParent && !candidates.some(({ name }) => name === knownParent);
+    const movedParent = moved ? await this.movedParent(repoPath, branch, knownParent, defaultBranch) : undefined;
+    if (movedParent) ranked.push(movedParent);
     if (ranked.length > 0) {
       const [parent] = ranked.sort(
         (left, right) =>
           left.commitsAhead - right.commitsAhead ||
+          Number(right.name === knownParent) - Number(left.name === knownParent) ||
           Number(upstreamMatches(branch, right.name)) - Number(upstreamMatches(branch, left.name)) ||
           Number(right.name === defaultBranch) - Number(left.name === defaultBranch) ||
           left.name.localeCompare(right.name),
@@ -142,6 +161,30 @@ export class BranchesService {
       { allowFailure: true },
     );
     return { parent: defaultBranch, commitsAhead: exitCode === 0 ? Number(stdout.trim()) : shas.length };
+  }
+
+  /** The parent from last time, counted from where this branch left it, when the branch still builds on it. */
+  private async movedParent(
+    repoPath: string,
+    branch: iRawBranch,
+    parent: string,
+    defaultBranch: string | undefined,
+  ): Promise<{ name: string; commitsAhead: number } | undefined> {
+    if (parent === defaultBranch) return undefined;
+    const forkPoint = await this.gitService.run(repoPath, ['merge-base', `refs/heads/${parent}`, branch.headSha], {
+      allowFailure: true,
+    });
+    const forkSha = forkPoint.stdout.trim();
+    if (forkPoint.exitCode !== 0 || !forkSha) return undefined;
+    if (defaultBranch) {
+      const onDefault = await this.gitService.run(
+        repoPath,
+        ['merge-base', '--is-ancestor', forkSha, `refs/heads/${defaultBranch}`],
+        { allowFailure: true },
+      );
+      if (onDefault.exitCode === 0) return undefined;
+    }
+    return { name: parent, commitsAhead: await this.countCommits(repoPath, forkSha, branch.headSha) };
   }
 
   private async countCommits(repoPath: string, from: string, to: string) {

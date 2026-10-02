@@ -92,6 +92,26 @@ function hunkHeader(lines: readonly iAlignedLine[]) {
 }
 
 /**
+ * Widens a selection to every line of a change it touches. Lines left out of the hunks have to read the same
+ * on both sides, so a hunk never stops between a removed line and the line that replaced it.
+ */
+function withWholeChanges(lines: readonly iAlignedLine[], selected: readonly boolean[]) {
+  const widened = [...selected];
+  let start = 0;
+  while (start < lines.length) {
+    if (lines[start].type === DIFF_LINE_TYPES.CONTEXT) {
+      start += 1;
+      continue;
+    }
+    let end = start;
+    while (end + 1 < lines.length && lines[end + 1].type !== DIFF_LINE_TYPES.CONTEXT) end += 1;
+    if (widened.slice(start, end + 1).some(Boolean)) widened.fill(true, start, end + 1);
+    start = end + 1;
+  }
+  return widened;
+}
+
+/**
  * Cuts a file patch down to one unit: every line the unit spans on either side, unchanged lines included,
  * so a function reads whole with its changes marked. Returns undefined when the unit has no line range.
  */
@@ -100,11 +120,15 @@ export function buildUnitPatch(input: iUnitPatchInput): string | undefined {
   const headerEnd = input.patch.indexOf(`\n${HUNK_HEADER}`);
   const header = headerEnd === -1 ? input.patch.trimEnd() : input.patch.slice(0, headerEnd);
 
+  const aligned = alignFile(input);
+  const selected = withWholeChanges(
+    aligned,
+    aligned.map((line) => isInRange(line.newLine, input.newRange) || isInRange(line.oldLine, input.oldRange)),
+  );
   const hunks: iAlignedLine[][] = [];
   let current: iAlignedLine[] = [];
-  for (const line of alignFile(input)) {
-    const isSelected = isInRange(line.newLine, input.newRange) || isInRange(line.oldLine, input.oldRange);
-    if (isSelected) {
+  for (const [index, line] of aligned.entries()) {
+    if (selected[index]) {
       current.push(line);
     } else if (current.length > 0) {
       hunks.push(current);

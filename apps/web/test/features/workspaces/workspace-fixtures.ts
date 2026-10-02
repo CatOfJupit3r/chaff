@@ -20,6 +20,7 @@ export function branch(name: string, overrides: Partial<iBranch> = {}): iBranch 
     parent: 'main',
     commitsAhead: 1,
     isParentConfirmed: false,
+    isParentMoved: false,
     hasWorkingChanges: false,
     ...overrides,
   };

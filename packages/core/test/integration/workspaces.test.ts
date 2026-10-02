@@ -183,6 +183,33 @@ describe('workspace branches', () => {
     expect(branches.find((branch) => branch.name === 'feature/b')?.suggestedParent).toBe('feature/a');
   });
 
+  it('keeps a stack together and flags the parent when a lower branch gets a new commit', async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feat/base');
+    repo.commit('base1', 'base1.txt');
+    repo.branch('feat/flags');
+    repo.commit('flags1', 'flags1.txt');
+    repo.commit('flags2', 'flags2.txt');
+    repo.branch('feat/ui', 'feat/base');
+    repo.commit('ui1', 'ui1.txt');
+    const workspace = await addWorkspace(repo);
+    await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    repo.switch('feat/base');
+    repo.commit('fix', 'fix.txt');
+
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    const parents = Object.fromEntries(
+      branches.map((branch) => [branch.name, [branch.suggestedParent, branch.commitsAhead, branch.isParentMoved]]),
+    );
+
+    expect(parents).toEqual({
+      main: [undefined, 0, false],
+      'feat/base': ['main', 2, false],
+      'feat/flags': ['feat/base', 2, true],
+      'feat/ui': ['feat/base', 1, true],
+    });
+  });
+
   it('reports an unknown repository', async () => {
     await expectORPCError(call(appRouter.workspaces.branches, { workspaceId: 'missing' }), {
       code: errorCodes.WORKSPACE_NOT_FOUND,

@@ -8,7 +8,7 @@ export type iWorkspaceRecord = Omit<WorkspaceRow, 'defaultBranch'> & {
 
 export type iNewWorkspace = Pick<typeof workspaces.$inferInsert, 'name' | 'repoPath' | 'defaultBranch'>;
 
-export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt'> & {
+export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt' | 'knownParents'> & {
   isAvailable: boolean;
 };
 
@@ -24,9 +24,13 @@ export interface iBranchResponse {
   commitsAhead: number;
   parent?: string;
   isParentConfirmed: boolean;
+  isParentMoved: boolean;
   worktreePath?: string;
   hasWorkingChanges: boolean;
 }
 
 /** A branch as read from git, before Chaff adds its confirmed parent and working-changes state. */
-export type iGitBranch = Omit<iBranchResponse, 'parent' | 'isParentConfirmed' | 'worktreePath' | 'hasWorkingChanges'>;
+export type iGitBranch = Omit<
+  iBranchResponse,
+  'parent' | 'isParentConfirmed' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
+>;

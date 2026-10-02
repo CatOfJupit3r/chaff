@@ -32,6 +32,24 @@ describe('buildUnitPatch', () => {
     expect(patch).toBe(`${HEADER}\n@@ -2,2 +1,0 @@\n-gone1\n-gone2\n`);
   });
 
+  it('keeps a change whole when the unit covers only part of it, so the hidden lines match on both sides', () => {
+    const oldContents = 'import a\nimport b\nimport c\n\ncode\n';
+    const newContents = 'import a\nimport x\nimport y\nimport z\n\ncode\n';
+    const patch = unitPatch(
+      '@@ -1,5 +1,6 @@\n import a\n-import b\n-import c\n+import x\n+import y\n+import z\n \n code\n',
+      {
+        oldRange: { start: 1, end: 2 },
+        newRange: { start: 1, end: 2 },
+        oldContents,
+        newContents,
+      },
+    );
+
+    expect(patch).toBe(
+      `${HEADER}\n@@ -1,3 +1,4 @@\n import a\n-import b\n-import c\n+import x\n+import y\n+import z\n`,
+    );
+  });
+
   it('returns nothing for a unit without a line range', () => {
     expect(unitPatch('@@ -1 +1 @@\n-a\n+b\n', {})).toBeUndefined();
   });

@@ -15,7 +15,7 @@ import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError }
 
 import { BranchesService } from './branches.service';
 import type { iWorkspaceRepository } from './workspace.repository';
-import type { iBranchResponse, iWorkspaceRecord, iWorkspaceResponse } from './workspaces.types';
+import type { iBranchResponse, iGitBranch, iWorkspaceRecord, iWorkspaceResponse } from './workspaces.types';
 
 const DEFAULT_BRANCH_CANDIDATES = ['main', 'master', 'trunk', 'develop'];
 const STATUS_CONCURRENCY = 4;
@@ -70,7 +70,11 @@ export class WorkspacesService {
   public async listBranches(workspaceId: string): Promise<iBranchResponse[]> {
     const record = await this.getRecord(workspaceId);
     const [branches, targets, worktrees] = await Promise.all([
-      this.branchesService.listBranches(record.repoPath, record.defaultBranch),
+      this.branchesService.listBranches(
+        record.repoPath,
+        record.defaultBranch,
+        new Map(record.knownParents.map(({ branch, parent }) => [branch, parent])),
+      ),
       this.reviewTargetRepository.list(workspaceId),
       this.snapshotStoreService.listWorktrees(record.repoPath),
     ]);
@@ -79,24 +83,48 @@ export class WorkspacesService {
         .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
         .map((target) => [target.branch, target.parentBranch]),
     );
+    await this.rememberParents(record, branches);
     return mapWithConcurrency(branches, STATUS_CONCURRENCY, async (branch) => {
       const confirmedParent = confirmedParents.get(branch.name);
+      const parent = confirmedParent ?? branch.suggestedParent;
       const worktreePath = worktrees.get(branch.name);
       const hasWorkingChanges = worktreePath
         ? (await this.snapshotStoreService.workingFingerprint(worktreePath).catch(() => undefined)) !== undefined
         : false;
       return {
         ...branch,
-        parent: confirmedParent ?? branch.suggestedParent,
+        parent,
         isParentConfirmed: confirmedParent !== undefined,
+        isParentMoved:
+          parent !== undefined &&
+          parent !== record.defaultBranch &&
+          !(await this.contains(record.repoPath, branch, parent)),
         worktreePath,
         hasWorkingChanges,
       };
     });
   }
 
+  private async rememberParents(record: iWorkspaceRecord, branches: readonly iGitBranch[]) {
+    const knownParents = branches.flatMap((branch) =>
+      branch.suggestedParent ? [{ branch: branch.name, parent: branch.suggestedParent }] : [],
+    );
+    if (JSON.stringify(knownParents) === JSON.stringify(record.knownParents)) return;
+    await this.workspaceRepository.updateKnownParents(record.id, knownParents);
+  }
+
+  /** Whether the branch has every commit of its parent. A parent that no longer exists counts as contained. */
+  private async contains(repoPath: string, branch: iGitBranch, parent: string) {
+    const { exitCode } = await this.gitService.run(
+      repoPath,
+      ['merge-base', '--is-ancestor', `refs/heads/${parent}`, branch.headSha],
+      { allowFailure: true },
+    );
+    return exitCode !== 1;
+  }
+
   private async toResponse(record: iWorkspaceRecord): Promise<iWorkspaceResponse> {
-    const { updatedAt: _updatedAt, ...rest } = record;
+    const { updatedAt: _updatedAt, knownParents: _knownParents, ...rest } = record;
     return { ...rest, isAvailable: await pathExists(path.join(record.repoPath, '.git')) };
   }
 

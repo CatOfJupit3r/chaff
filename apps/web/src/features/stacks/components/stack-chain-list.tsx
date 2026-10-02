@@ -47,6 +47,14 @@ function StackChainItem({ link, findings, isSelected, onSelect }: iStackChainIte
           <span className="font-mono text-[13px] font-medium break-all text-fg">{link.branch.name}</span>
           {link.branch.hasWorkingChanges ? <Pill variant="open">uncommitted</Pill> : null}
           {link.branch.isParentConfirmed ? null : <Pill variant="out">parent suggested</Pill>}
+          {link.branch.isParentMoved ? (
+            <Pill
+              variant="open"
+              title={`${link.branch.parent} has commits this branch doesn't have yet; rebase to bring them in.`}
+            >
+              parent moved
+            </Pill>
+          ) : null}
         </span>
         <span className="mt-1 flex flex-wrap items-center gap-x-3.5 text-[12.5px] text-muted">
           <span className="max-w-[36ch] truncate">{link.branch.subject}</span>

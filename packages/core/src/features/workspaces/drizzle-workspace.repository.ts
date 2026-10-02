@@ -49,6 +49,10 @@ export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
     return row ? this.workspaceResolver.toWorkspaceRecord(row) : undefined;
   }
 
+  public async updateKnownParents(workspaceId: string, knownParents: iWorkspaceRecord['knownParents']) {
+    this.databaseService.getDb().update(workspaces).set({ knownParents }).where(eq(workspaces.id, workspaceId)).run();
+  }
+
   public async delete(workspaceId: string) {
     const result = this.databaseService.getDb().delete(workspaces).where(eq(workspaces.id, workspaceId)).run();
     return Number(result.changes) > 0;
