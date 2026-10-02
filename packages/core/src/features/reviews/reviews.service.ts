@@ -197,6 +197,7 @@ export class ReviewsService {
       parentHeadSha: snapshot.parentHeadSha,
       baseSha: snapshot.baseSha,
       latestVersion: latest?.version ?? snapshot.version,
+      remoteVersion: snapshot.remoteVersion ?? undefined,
       change: changeInfo(target),
       files,
     };
@@ -273,6 +274,10 @@ export class ReviewsService {
 
   private async capture(workspace: iWorkspaceRecord, target: iReviewTargetRecord) {
     const { heads, workingFingerprint } = await this.readHeads(workspace, target);
+    const remoteVersion =
+      target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST
+        ? await this.remoteChangesService.versionOf(target, heads.headSha).catch(() => undefined)
+        : undefined;
     const baseSha = await this.snapshotStoreService.mergeBase(workspace.id, heads);
     const shas = { ...heads, baseSha };
     const { content, totals } = await this.snapshotBuilderService.build(workspace.id, baseSha, heads.headSha);
@@ -291,6 +296,8 @@ export class ReviewsService {
           ...shas,
           ...totals,
           workingFingerprint,
+          remoteVersionId: remoteVersion?.id ?? null,
+          remoteVersion: remoteVersion?.number ?? null,
         },
         content,
       );

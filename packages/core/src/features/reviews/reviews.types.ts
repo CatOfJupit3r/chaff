@@ -46,6 +46,8 @@ export type iSnapshotResponse = iSnapshotSummary &
     kind: ReviewTargetKind;
     /** The branch's current parent, which differs from `parentBranch` after the reviewer changed it. */
     targetParentBranch: string;
+    /** The merge request's diff version on the host, when the host numbers them. */
+    remoteVersion?: number;
     latestVersion: number;
     change?: iChangeRequestInfo;
     files: iSnapshotFileSummary[];

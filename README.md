@@ -286,6 +286,13 @@ The merge request's discussions show read-only on the unit they are about, in Fo
 
 On a merge or pull request, the drafts tab posts the findings as GitLab draft notes or one pending GitHub review, each on the first changed line it is about. Nothing is published: you submit the review on the host. The same calls are shown as `glab`/`gh` and curl commands if you would rather run them yourself.
 
+Once the drafts are published, answers to them come back: the Findings screen shows the replies under each posted finding (**Check for replies** asks the host now), and a reply to a question can be taken as its answer with **Use as answer**. Each snapshot of a merge request also records the GitLab diff version it matches, shown as `v3` next to the commit and named in exports.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/finding-replies-dark.png" />
+  <img src="docs/screenshots/finding-replies-light.png" alt="A posted concern on the Findings screen with two replies pulled back from the merge request" />
+</picture>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/export-drafts-dark.png" />
   <img src="docs/screenshots/export-drafts-light.png" alt="GitLab drafts tab listing three findings and the lines they will be posted on" />
@@ -367,6 +374,8 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | GitHub pull requests, the same way | Works |
 | Linking a local branch's review to the merge request it became | Works |
 | Findings posted as GitLab draft notes or a pending GitHub review | Works |
+| Replies to posted findings pulled back, a reply taken as a question's answer | Works |
+| GitLab diff version stored with each merge request snapshot | Works |
 | Working changes (uncommitted work) as a review target | Works |
 | Second pass: interdiffs, re-anchored findings, Verify screen | Works |
 | Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import | Works |

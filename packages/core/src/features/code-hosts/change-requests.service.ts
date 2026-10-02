@@ -5,7 +5,8 @@ import type { InboxFilter } from '@chaff/common/enums/code-host.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
-import { REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
+import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import type { iChangeRequestFields } from '@~/features/reviews/review-targets/review-targets.types';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
@@ -21,6 +22,7 @@ import {
 
 import type { iRemoteChange, iRemoteDiscussion, iWorkspaceRemote } from './code-hosts.types';
 import { ConnectionsService } from './connections.service';
+import { matchReplies } from './discussion-replies.utils';
 import { RemoteChangesService } from './remote-changes.service';
 import { RemoteProjectsService } from './remote-projects.service';
 
@@ -58,6 +60,7 @@ export class ChangeRequestsService {
   constructor(
     @inject(WORKSPACE_REPOSITORY_TOKEN) private readonly workspaceRepository: iWorkspaceRepository,
     @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
+    @inject(FINDING_REPOSITORY_TOKEN) private readonly findingRepository: iFindingRepository,
     private readonly workspacesService: WorkspacesService,
     private readonly connectionsService: ConnectionsService,
     private readonly remoteProjectsService: RemoteProjectsService,
@@ -124,21 +127,42 @@ export class ChangeRequestsService {
     return { targetId: linked.id };
   }
 
-  /** The change's threads, marked when they were written against a different commit than the snapshot. */
-  public async discussions(snapshotId: string) {
+  /**
+   * The change's threads, marked when they were written against a different commit than the snapshot.
+   * Each time the host is asked, replies to findings Chaff posted are stored with the findings.
+   */
+  public async discussions(snapshotId: string, { isFresh = false }: { isFresh?: boolean } = {}) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
     if (target.kind !== REVIEW_TARGET_KINDS.CHANGE_REQUEST) return [];
     const cached = this.discussionsCache.get(target.id);
-    let discussions = cached && Date.now() - cached.at < DISCUSSIONS_CACHE_MS ? cached.discussions : undefined;
+    let discussions =
+      !isFresh && cached && Date.now() - cached.at < DISCUSSIONS_CACHE_MS ? cached.discussions : undefined;
     if (!discussions) {
       const { provider, access, project, changeNumber } = await this.remoteChangesService.locate(target);
       discussions = await provider.listDiscussions(access, project, changeNumber);
       this.discussionsCache.set(target.id, { at: Date.now(), discussions });
+      await this.storeReplies(target.id, discussions);
     }
     return discussions.map((discussion) => ({
       ...discussion,
       isOnSnapshot: discussion.commitSha === undefined || discussion.commitSha === snapshot.headSha,
     }));
+  }
+
+  /** Asks the host for the change's threads now and stores the replies to posted findings. */
+  public async pullReplies(snapshotId: string) {
+    const { target } = await this.reviewsService.getContext(snapshotId);
+    if (target.kind !== REVIEW_TARGET_KINDS.CHANGE_REQUEST) throw ORPCBadRequestError(errorCodes.NOT_A_CHANGE_REQUEST);
+    await this.discussions(snapshotId, { isFresh: true });
+    const findings = await this.findingRepository.list({ targetId: target.id });
+    return { replyCount: findings.reduce((count, finding) => count + finding.replies.length, 0) };
+  }
+
+  private async storeReplies(targetId: string, discussions: readonly iRemoteDiscussion[]) {
+    const findings = await this.findingRepository.list({ targetId });
+    const { links, replies } = matchReplies(findings, discussions);
+    await this.findingRepository.linkDiscussions(links);
+    await this.findingRepository.addReplies(replies);
   }
 
   private async find(workspaceId: string, changeNumber: number) {

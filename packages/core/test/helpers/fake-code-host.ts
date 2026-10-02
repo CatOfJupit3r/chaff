@@ -203,6 +203,7 @@ export class FakeCodeHost {
     const head = this.head(change.number);
     const start = this.repo.git('rev-parse', `refs/heads/${change.targetBranch}`);
     return {
+      id: Number.parseInt(head.slice(0, 6), 16),
       head_commit_sha: head,
       start_commit_sha: start,
       base_commit_sha: this.repo.git('merge-base', start, head),

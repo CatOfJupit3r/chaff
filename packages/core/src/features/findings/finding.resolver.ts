@@ -62,7 +62,7 @@ export class FindingResolver {
   });
 
   private readonly toPost = createRowResolver<FindingPostRow, iFindingPostRecord>({
-    optional: ['url'],
+    optional: ['url', 'discussionId'],
     omit: ['id', 'findingId'],
     overrides: (row) => ({ host: codeHostSchema.parse(row.host) }),
   });

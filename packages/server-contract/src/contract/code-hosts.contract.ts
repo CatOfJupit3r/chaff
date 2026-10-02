@@ -148,4 +148,13 @@ export const codeHostsContract = oc.router({
     })
     .input(z.object({ snapshotId: idSchema }))
     .output(z.array(discussionSchema)),
+
+  pullReplies: oc
+    .route({
+      summary: 'Check for replies to posted findings',
+      description:
+        "Reads the merge or pull request's threads now and stores the notes written after each posted finding.",
+    })
+    .input(z.object({ snapshotId: idSchema }))
+    .output(z.object({ replyCount: z.number().int() })),
 });

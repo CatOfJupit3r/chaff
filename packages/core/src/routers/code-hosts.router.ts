@@ -37,4 +37,8 @@ export const codeHostsRouter = base.codeHosts.router({
   discussions: procedure.codeHosts.discussions.handler(async ({ input }) =>
     container.resolve(ChangeRequestsService).discussions(input.snapshotId),
   ),
+
+  pullReplies: procedure.codeHosts.pullReplies.handler(async ({ input }) =>
+    container.resolve(ChangeRequestsService).pullReplies(input.snapshotId),
+  ),
 });

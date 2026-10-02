@@ -16,6 +16,7 @@ import type {
   findingAnchors,
   findingEvents,
   findingPosts,
+  findingReplies,
   findings,
   findingTasks,
 } from '@~/db/schema/findings.schema';
@@ -26,6 +27,7 @@ type AnchorLocationRow = typeof findingAnchorLocations.$inferSelect;
 type FindingEventRow = typeof findingEvents.$inferSelect;
 type FindingPostRow = typeof findingPosts.$inferSelect;
 type FindingTaskRow = typeof findingTasks.$inferSelect;
+type FindingReplyRow = typeof findingReplies.$inferSelect;
 
 /** The finding restated as a task for a coding agent, apart from the comment. */
 export type iFindingTaskRecord = Omit<
@@ -70,12 +72,18 @@ export type iFindingEventRecord = Omit<
 };
 
 /** Where a finding was posted on its merge or pull request. */
-export type iFindingPostRecord = Omit<FindingPostRow, 'id' | 'findingId' | 'host' | 'url'> & {
+export type iFindingPostRecord = Omit<FindingPostRow, 'id' | 'findingId' | 'host' | 'url' | 'discussionId'> & {
   host: CodeHost;
   url?: string;
+  discussionId?: string;
 };
 
-export type iNewFindingPost = Omit<FindingPostRow, 'id' | 'createdAt'>;
+export type iNewFindingPost = Omit<FindingPostRow, 'id' | 'createdAt' | 'discussionId'>;
+
+/** An answer on the host to a posted finding. */
+export type iFindingReplyRecord = Omit<FindingReplyRow, 'id' | 'findingId'>;
+
+export type iNewFindingReply = Omit<FindingReplyRow, 'id'>;
 
 /** Who moved a finding, and what they said about it. */
 export interface iStatusChange {
@@ -110,6 +118,8 @@ export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer' | 'se
   post?: iFindingPostRecord;
   /** Set once a task was suggested or written for it. */
   task?: iFindingTaskRecord;
+  /** Answers on the host since it was posted, oldest first. */
+  replies: iFindingReplyRecord[];
   /** Branch of the review the finding was written in. */
   branch: string;
   parentBranch: string;

@@ -90,6 +90,8 @@ export const snapshotSchema = snapshotSummarySchema.extend({
   baseSha: z.string(),
   /** Version of the newest snapshot of the same review. */
   latestVersion: z.number().int().positive(),
+  /** The merge request's diff version on the host, when the host numbers them (GitLab). */
+  remoteVersion: z.number().int().positive().optional(),
   change: changeRequestInfoSchema.optional(),
   files: z.array(snapshotFileSchema),
 });

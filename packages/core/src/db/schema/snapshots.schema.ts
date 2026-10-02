@@ -33,6 +33,9 @@ export const snapshots = sqliteTable(
     unitCount: integer('unit_count').notNull(),
     /** For working changes: a fingerprint of `git status` and the changed files, to notice later edits. */
     workingFingerprint: text('working_fingerprint'),
+    /** For merge requests: the host's diff version whose head is this snapshot's head, by id and by number. */
+    remoteVersionId: text('remote_version_id'),
+    remoteVersion: integer('remote_version'),
     createdAt: timestampColumn('created_at')
       .notNull()
       .$defaultFn(() => new Date()),

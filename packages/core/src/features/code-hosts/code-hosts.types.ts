@@ -57,6 +57,8 @@ export interface iDiffRefs {
   baseSha: string;
   startSha: string;
   headSha: string;
+  /** The host's diff version these refs belong to: its id, and its number counting from 1. GitLab only. */
+  version?: { id: string; number: number };
 }
 
 /** A comment for one finding: on one line of the diff, or on the change as a whole when `line` is absent. */

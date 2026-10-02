@@ -99,6 +99,9 @@ export class ReviewPostingService {
       this.snapshotRepository.listRegions(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
     ]);
+    if (refs?.version && snapshot.remoteVersionId !== refs.version.id) {
+      await this.snapshotRepository.setRemoteVersion(snapshot.id, refs.version);
+    }
     const comments = findings
       .filter((finding) => !finding.post)
       .map((finding) => {

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CODE_HOSTS, INBOX_FILTERS } from '@chaff/common/enums/code-host.enums';
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
 import {
   DIFF_SIDES,
   FINDING_KINDS,
@@ -333,6 +334,45 @@ describe('code hosts', () => {
           },
         },
       ]);
+    });
+
+    it('pulls replies to posted findings back from the threads they became, once each', async () => {
+      const { workspace, concern, note, selection, snapshotId } = await reviewWithFindings(CODE_HOSTS.GITLAB);
+      await call(appRouter.exports.post, selection);
+      const posted = codeHost.posts.map((post) => String(post.body.note));
+      codeHost.comments.set(2, [
+        { id: 20, author: REVIEWER, body: posted[0] ?? '', path: 'src/backoff.ts', line: 1 },
+        { id: 21, author: 'agent', body: 'Capped at 30 s in the next push.', replyTo: 20 },
+        { id: 22, author: REVIEWER, body: posted[1] ?? '' },
+        { id: 23, author: 'lead', body: 'Unrelated thread.' },
+      ]);
+
+      expect(await call(appRouter.codeHosts.pullReplies, { snapshotId })).toEqual({ replyCount: 1 });
+      codeHost.comments.get(2)?.push({ id: 24, author: REVIEWER, body: 'Thanks.', replyTo: 20 });
+      expect(await call(appRouter.codeHosts.pullReplies, { snapshotId })).toEqual({ replyCount: 2 });
+
+      const findings = await call(appRouter.findings.list, { workspaceId: workspace.id });
+      const byId = (id: string) => findings.find((finding) => finding.id === id);
+      expect(byId(concern.id)?.post?.discussionId).toBe('discussion-20');
+      expect(byId(concern.id)?.replies).toEqual([
+        expect.objectContaining({ remoteId: '21', authorName: 'agent', body: 'Capped at 30 s in the next push.' }),
+        expect.objectContaining({ remoteId: '24', body: 'Thanks.' }),
+      ]);
+      expect(byId(note.id)).toMatchObject({ post: { discussionId: 'discussion-22' }, replies: [] });
+    });
+
+    it("stores the merge request's diff version with each snapshot", async () => {
+      const { snapshotId } = await reviewWithFindings(CODE_HOSTS.GITLAB);
+      expect(await call(appRouter.reviews.snapshot, { snapshotId })).toMatchObject({ remoteVersion: 1 });
+
+      const packet = await call(appRouter.exports.packet, {
+        snapshotId,
+        scope: EXPORT_SCOPES.review,
+        statuses: [...findingStatusesEnumwaii.values],
+        shouldQuoteCode: false,
+        shouldListUnreviewed: false,
+      });
+      expect(packet.markdown).toContain('(diff version 1 on the host)');
     });
 
     it('records nothing when the host refuses the post', async () => {

@@ -196,6 +196,15 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
     });
   }
 
+  public async setRemoteVersion(snapshotId: string, version: { id: string; number: number }) {
+    this.databaseService
+      .getDb()
+      .update(snapshots)
+      .set({ remoteVersionId: version.id, remoteVersion: version.number })
+      .where(eq(snapshots.id, snapshotId))
+      .run();
+  }
+
   private countByFile(rows: { fileId: string; total: number }[]) {
     return new Map(rows.map((row) => [row.fileId, row.total]));
   }

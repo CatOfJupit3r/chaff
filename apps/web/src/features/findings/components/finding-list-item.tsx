@@ -1,6 +1,7 @@
 import { FINDING_KIND_LABELS, FINDING_SCOPE_LABELS } from '@chaff/common/enums/review.enums';
 
 import { cn } from '@~/lib/utils';
+import { pluralize } from '@~/utils/pluralize';
 
 import { FINDING_STATUS_DOTS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
@@ -37,6 +38,9 @@ export function FindingListItem({ finding, isSelected, onSelect }: iFindingListI
           {FINDING_KIND_LABELS(finding.kind)}
         </span>
         <SeverityPill finding={finding} />
+        {finding.replies.length > 0 ? (
+          <span className="text-[11px] text-accent">{pluralize(finding.replies.length, 'reply', 'replies')}</span>
+        ) : null}
       </span>
     </button>
   );

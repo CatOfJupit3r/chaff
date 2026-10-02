@@ -52,6 +52,16 @@ export const findingPostSchema = z.object({
   host: codeHostSchema,
   remoteId: z.string(),
   url: z.string().optional(),
+  /** The thread it became on the host, once seen there. */
+  discussionId: z.string().optional(),
+  createdAt: z.date(),
+});
+
+/** An answer on the host to a posted finding. */
+export const findingReplySchema = z.object({
+  remoteId: z.string(),
+  authorName: z.string(),
+  body: z.string(),
   createdAt: z.date(),
 });
 
@@ -120,6 +130,8 @@ export const findingSchema = z.object({
   events: z.array(findingEventSchema),
   post: findingPostSchema.optional(),
   task: findingTaskSchema.optional(),
+  /** Answers on the host since it was posted, oldest first. */
+  replies: z.array(findingReplySchema),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),

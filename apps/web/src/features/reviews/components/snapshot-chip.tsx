@@ -27,6 +27,9 @@ export function SnapshotChip({ snapshot }: { snapshot: iSnapshot }) {
       >
         <span aria-hidden="true" className={cn('size-1.5 rounded-full', change ? 'bg-warn' : 'bg-good')} />
         <span className="font-mono">{snapshot.headSha.slice(0, SHORT_SHA_LENGTH)}</span>
+        {snapshot.remoteVersion ? (
+          <span title="The merge request's diff version on the host">· v{snapshot.remoteVersion}</span>
+        ) : null}
         {change ? <span>· {change}</span> : null}
       </span>
       {canUpdate ? (

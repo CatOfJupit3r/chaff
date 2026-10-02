@@ -61,6 +61,7 @@ const discussionSchema = z.object({
 });
 
 const versionSchema = z.object({
+  id: z.union([z.number(), z.string()]),
   head_commit_sha: z.string(),
   base_commit_sha: z.string(),
   start_commit_sha: z.string(),
@@ -193,9 +194,16 @@ export class GitLabProvider implements iCodeHostProvider {
       this.request(access, `${this.projectPath(project)}/merge_requests/${changeNumber}/versions?per_page=100`),
       z.array(versionSchema),
     );
-    const version = versions.find((candidate) => candidate.head_commit_sha === headSha);
+    // GitLab lists versions newest first.
+    const index = versions.findIndex((candidate) => candidate.head_commit_sha === headSha);
+    const version = versions[index];
     return version
-      ? { baseSha: version.base_commit_sha, startSha: version.start_commit_sha, headSha: version.head_commit_sha }
+      ? {
+          baseSha: version.base_commit_sha,
+          startSha: version.start_commit_sha,
+          headSha: version.head_commit_sha,
+          version: { id: String(version.id), number: versions.length - index },
+        }
       : undefined;
   }
 

@@ -26,4 +26,6 @@ export interface iSnapshotRepository {
   findUnitById: (unitId: string) => Promise<(iUnitRecord & { snapshotId: string }) | undefined>;
   /** Records how each unit compares with the previous snapshot. */
   setRevisions: (revisions: readonly iUnitRevisionUpdate[]) => Promise<void>;
+  /** Records the host's diff version the snapshot's head belongs to. */
+  setRemoteVersion: (snapshotId: string, version: { id: string; number: number }) => Promise<void>;
 }

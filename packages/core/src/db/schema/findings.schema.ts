@@ -144,6 +144,8 @@ export const findingPosts = sqliteTable(
     /** The draft note's id on GitLab, the pending review's id on GitHub. */
     remoteId: text('remote_id').notNull(),
     url: text('url'),
+    /** The thread the comment became once the reviewer published it on the host. */
+    discussionId: text('discussion_id'),
     createdAt: timestampColumn('created_at')
       .notNull()
       .$defaultFn(() => new Date()),
@@ -167,3 +169,21 @@ export const findingTasks = sqliteTable('finding_tasks', {
   error: text('error'),
   ...timestamps(),
 });
+
+/** Answers on the host to a posted finding: the notes after the reviewer's own in its thread. */
+export const findingReplies = sqliteTable(
+  'finding_replies',
+  {
+    id: idPrimaryKey(),
+    findingId: text('finding_id')
+      .notNull()
+      .references(() => findings.id, { onDelete: 'cascade' }),
+    /** The note's id on the host. */
+    remoteId: text('remote_id').notNull(),
+    authorName: text('author_name').notNull(),
+    body: text('body').notNull(),
+    /** When it was written on the host. */
+    createdAt: timestampColumn('created_at').notNull(),
+  },
+  (table) => [uniqueIndex('finding_replies_finding_remote_unique').on(table.findingId, table.remoteId)],
+);

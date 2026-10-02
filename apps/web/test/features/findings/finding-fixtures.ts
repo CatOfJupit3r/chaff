@@ -18,6 +18,7 @@ export function findingFixture(overrides: Partial<iFinding> = {}): iFinding {
     snapshotId: 's',
     anchors: [],
     events: [],
+    replies: [],
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

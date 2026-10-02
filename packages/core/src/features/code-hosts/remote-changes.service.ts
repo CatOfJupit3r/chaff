@@ -106,6 +106,12 @@ export class RemoteChangesService {
     return status;
   }
 
+  /** The host's diff version whose head is `headSha`; undefined on GitHub, or while GitLab has not made it yet. */
+  public async versionOf(target: iReviewTargetRecord, headSha: string) {
+    const { provider, access, project, changeNumber } = await this.locate(target);
+    return (await provider.diffRefs(access, project, changeNumber, headSha))?.version;
+  }
+
   public forget(snapshotId: string) {
     this.statusCache.delete(snapshotId);
   }

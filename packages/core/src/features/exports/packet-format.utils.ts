@@ -125,7 +125,7 @@ function reviewMarkdown(review: iPacketReview, shouldQuoteCode: boolean) {
   const lines = [
     `## ${reviewTitle(review.target)}`,
     '',
-    `Snapshot ${short(review.snapshot.headSha)}, version ${review.snapshot.version}`,
+    `Snapshot ${short(review.snapshot.headSha)}, version ${review.snapshot.version}${review.snapshot.remoteVersion ? ` (diff version ${review.snapshot.remoteVersion} on the host)` : ''}`,
   ];
   for (const item of review.findings) lines.push('', findingMarkdown(item, shouldQuoteCode));
   if (review.unreviewed.length > 0) {
@@ -209,6 +209,7 @@ export function packetJson(packet: iPacket) {
       snapshot: {
         id: snapshot.id,
         version: snapshot.version,
+        remoteVersion: snapshot.remoteVersion,
         headSha: snapshot.headSha,
         parentHeadSha: snapshot.parentHeadSha,
         baseSha: snapshot.baseSha,

@@ -10,6 +10,7 @@ import {
   findingAnchors,
   findingEvents,
   findingPosts,
+  findingReplies,
   findings,
   findingTasks,
 } from '@~/db/schema/findings.schema';
@@ -21,6 +22,7 @@ import { FindingResolver } from './finding.resolver';
 import type {
   iFindingTaskChange,
   iListFindingsInput,
+  iNewFindingReply,
   iNewAnchorLocation,
   iNewFinding,
   iNewFindingPost,
@@ -162,6 +164,25 @@ export class DrizzleFindingRepository implements iFindingRepository {
     this.databaseService.getDb().delete(findings).where(eq(findings.id, findingId)).run();
   }
 
+  public async linkDiscussions(links: readonly { findingId: string; discussionId: string }[]) {
+    if (links.length === 0) return;
+    this.databaseService.getDb().transaction((transaction) => {
+      for (const { findingId, discussionId } of links) {
+        transaction.update(findingPosts).set({ discussionId }).where(eq(findingPosts.findingId, findingId)).run();
+      }
+    });
+  }
+
+  public async addReplies(replies: readonly iNewFindingReply[]) {
+    if (replies.length === 0) return;
+    this.databaseService
+      .getDb()
+      .insert(findingReplies)
+      .values([...replies])
+      .onConflictDoNothing()
+      .run();
+  }
+
   public async setTask(findingId: string, task: iFindingTaskChange) {
     const values = {
       state: task.state,
@@ -250,8 +271,23 @@ export class DrizzleFindingRepository implements iFindingRepository {
         ),
       )
       .all();
+    const replies = this.databaseService
+      .getDb()
+      .select()
+      .from(findingReplies)
+      .where(
+        inArray(
+          findingReplies.findingId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(findingReplies.createdAt))
+      .all();
     return rows.map((row) => ({
       ...this.findingResolver.toFindingRecord(row),
+      replies: replies
+        .filter((reply) => reply.findingId === row.id)
+        .map(({ id: _id, findingId: _findingId, ...reply }) => reply),
       post: this.findingResolver.toPostRecord(posts.find((post) => post.findingId === row.id)),
       task: this.findingResolver.toTaskRecord(tasks.find((task) => task.findingId === row.id)),
       events: events
