@@ -44,7 +44,7 @@ Chaff keeps the reviewer in charge: it never decides what you see or what is res
 
 ### Reviews
 
-Every repository you add, with its local branch stacks. Click a branch in the chain to review it against its parent, or **Continue** where you left off.
+Every repository you add, with its local branch stacks. Paste a merge request link, `!412`, or a branch name into the box at the top to start a review, click a branch in the chain to review it against its parent, or **Continue** where you left off.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/reviews-dark.png" />
@@ -413,7 +413,7 @@ The width you drag the Full diff's file list to is kept.
 | Local branch stacks with suggested parents, kept together when a lower branch gets new commits | Works |
 | Frozen snapshots in Chaff's own git store | Works |
 | Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
-| Full diff: tree or list, one or all files, unified or split, wrap, context; filter by file name or changed code | Works |
+| Full diff: tree or list, one or all files, unified (old and new line numbers) or split, wrap, context; filter by file name or changed code | Works |
 | New commits, rewritten branches and moved parents detected as they happen (refs are watched); Update | Works |
 | Open in VS Code, Insiders or Cursor | Works |
 | Light and dark themes, accent, code size | Works |
@@ -444,6 +444,9 @@ The width you drag the Full diff's file list to is kept.
 | Suggested task for a finding from your coding agent: accept, edit or discard; exported once accepted | Works |
 | Rebindable keys for Focus and Verify | Works |
 | Jump to (/ or Ctrl K), key list (?), Esc closes panels, E shows the whole file in Focus | Works |
+| Start a review from a pasted MR or PR link, `!412` / `#412`, or a branch name; switch reviews from the top bar | Works |
+| Open-finding counts on Reviews rows; per-unit progress and +/- before review on the Stack screen | Works |
+| Syntax colors in finding quotes and Usages | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 
 ## Stack
