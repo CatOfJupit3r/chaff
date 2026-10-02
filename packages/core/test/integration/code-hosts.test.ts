@@ -4,7 +4,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CODE_HOSTS, INBOX_FILTERS } from '@chaff/common/enums/code-host.enums';
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import {
+  DIFF_SIDES,
+  FINDING_KINDS,
+  FINDING_STATUSES,
+  REVIEW_TARGET_KINDS,
+  findingStatusesEnumwaii,
+} from '@chaff/common/enums/review.enums';
 
 import { FakeCodeHost, GOOD_TOKEN, REVIEWER } from '../helpers/fake-code-host';
 import { cloneTestGitRepo, createTestGitRepo } from '../helpers/git-repo';
@@ -26,6 +32,33 @@ function createServerRepo() {
   repo.commitFiles('Back off', { 'src/backoff.ts': 'export const backoff = (n: number) => 2 ** n;\n' });
   repo.switch('main');
   return repo;
+}
+
+/** A review of !2 with a concern on the line it adds and a note on the whole change. */
+async function reviewWithFindings(host: CodeHost) {
+  await connect(host);
+  const { workspace } = await addClone(host === CODE_HOSTS.GITHUB ? 'owner/repo' : 'group/project');
+  const { snapshotId } = await call(appRouter.codeHosts.startChange, { workspaceId: workspace.id, number: 2 });
+  const [file] = (await call(appRouter.reviews.snapshot, { snapshotId })).files;
+  const concern = await call(appRouter.findings.create, {
+    snapshotId,
+    kind: FINDING_KINDS.CONCERN,
+    body: 'Cap the backoff',
+    anchors: [{ fileId: file?.id ?? '', side: DIFF_SIDES.NEW, startLine: 1, endLine: 1 }],
+  });
+  const note = await call(appRouter.findings.create, {
+    snapshotId,
+    kind: FINDING_KINDS.NOTE,
+    body: 'Nice and small',
+    anchors: [],
+  });
+  return {
+    workspace,
+    snapshotId,
+    concern,
+    note,
+    selection: { snapshotId, statuses: [...findingStatusesEnumwaii.values] },
+  };
 }
 
 async function connect(host: CodeHost = CODE_HOSTS.GITLAB) {
@@ -237,6 +270,83 @@ describe('code hosts', () => {
     });
     await expectORPCError(call(appRouter.codeHosts.linkChange, { targetId: local.targetId, number: 1 }), {
       code: errorCodes.CHANGE_REQUEST_ALREADY_LINKED,
+    });
+  });
+
+  describe('posting findings', () => {
+    it('creates one GitLab draft note per finding, on the changed line when there is one, and only once', async () => {
+      const { workspace, concern, note, selection } = await reviewWithFindings(CODE_HOSTS.GITLAB);
+      const head = server.git('rev-parse', 'feature/backoff');
+
+      const preview = await call(appRouter.exports.postingPreview, selection);
+      expect(preview.items).toEqual([
+        expect.objectContaining({ number: concern.number, path: 'src/backoff.ts', line: 1, isPosted: false }),
+        expect.objectContaining({ number: note.number, line: undefined, isPosted: false }),
+      ]);
+      expect(preview.cliCommand).toContain("glab api --hostname '127.0.0.1:");
+      expect(preview.curlCommand).toContain('PRIVATE-TOKEN: $GITLAB_TOKEN');
+      expect(`${preview.cliCommand}${preview.curlCommand}`).not.toContain(GOOD_TOKEN);
+      expect(codeHost.posts).toEqual([]);
+
+      expect(await call(appRouter.exports.post, selection)).toEqual(expect.objectContaining({ postedCount: 2 }));
+      expect(codeHost.posts.map((post) => post.body)).toEqual([
+        {
+          note: `Cap the backoff\n\n_Chaff F-${concern.number} · Concern_`,
+          position: {
+            position_type: 'text',
+            base_sha: server.git('merge-base', 'feature/retry', head),
+            start_sha: server.git('rev-parse', 'feature/retry'),
+            head_sha: head,
+            old_path: 'src/backoff.ts',
+            new_path: 'src/backoff.ts',
+            new_line: 1,
+          },
+        },
+        { note: `Nice and small\n\n_Chaff F-${note.number} · Note_` },
+      ]);
+      expect(codeHost.posts.every((post) => post.path.endsWith('/merge_requests/2/draft_notes'))).toBe(true);
+      const findings = await call(appRouter.findings.list, { workspaceId: workspace.id });
+      expect(findings.every((finding) => finding.post?.host === CODE_HOSTS.GITLAB)).toBe(true);
+      await expectORPCError(call(appRouter.exports.post, selection), { code: errorCodes.NOTHING_TO_POST });
+    });
+
+    it('puts every finding in one pending GitHub review that is never submitted', async () => {
+      const { concern, note, selection } = await reviewWithFindings(CODE_HOSTS.GITHUB);
+
+      const posted = await call(appRouter.exports.post, selection);
+
+      expect(posted).toEqual({ postedCount: 2, url: expect.stringContaining('#pullrequestreview-1') });
+      expect(codeHost.posts).toEqual([
+        {
+          path: '/api/v3/repos/owner/repo/pulls/2/reviews',
+          body: {
+            commit_id: server.git('rev-parse', 'feature/backoff'),
+            body: `Nice and small\n\n_Chaff F-${note.number} · Note_`,
+            comments: [
+              {
+                path: 'src/backoff.ts',
+                line: 1,
+                side: 'RIGHT',
+                body: `Cap the backoff\n\n_Chaff F-${concern.number} · Concern_`,
+              },
+            ],
+          },
+        },
+      ]);
+    });
+
+    it('records nothing when the host refuses the post', async () => {
+      const { workspace, selection } = await reviewWithFindings(CODE_HOSTS.GITHUB);
+      codeHost.hasPendingReview = true;
+      await expectORPCError(call(appRouter.exports.post, selection), { code: errorCodes.REVIEW_ALREADY_PENDING });
+
+      codeHost.hasPendingReview = false;
+      codeHost.isReadOnly = true;
+      await expectORPCError(call(appRouter.exports.post, selection), { code: errorCodes.CODE_HOST_WRITE_REJECTED });
+
+      const findings = await call(appRouter.findings.list, { workspaceId: workspace.id });
+      expect(findings.map((finding) => finding.post)).toEqual([undefined, undefined]);
+      expect(findings.map((finding) => finding.status)).toEqual([FINDING_STATUSES.OPEN, FINDING_STATUSES.OPEN]);
     });
   });
 });

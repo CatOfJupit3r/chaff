@@ -1,9 +1,12 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
+import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
+import { reportSkipReasonSchema } from '@chaff/common/enums/export.enums';
 import {
   anchorMatchSchema,
   diffSideSchema,
+  findingEventSourceSchema,
   findingKindSchema,
   findingStatusSchema,
 } from '@chaff/common/enums/review.enums';
@@ -11,6 +14,7 @@ import {
 const idSchema = z.string().min(1).max(64);
 const MAX_BODY_LENGTH = 20_000;
 const MAX_ANCHORS = 50;
+const MAX_REPORT_LENGTH = 1_000_000;
 
 const lineSchema = z.number().int().nonnegative();
 
@@ -30,8 +34,27 @@ export const anchorLocationSchema = z.object({
 
 export const findingEventSchema = z.object({
   status: findingStatusSchema,
+  source: findingEventSourceSchema,
+  /** What a coding agent said it did, from its report. */
+  note: z.string().optional(),
+  commits: z.array(z.string()).optional(),
   snapshotId: z.string(),
   createdAt: z.date(),
+});
+
+/** Where a finding was posted: a GitLab draft note or a comment in a pending GitHub review. */
+export const findingPostSchema = z.object({
+  host: codeHostSchema,
+  remoteId: z.string(),
+  url: z.string().optional(),
+  createdAt: z.date(),
+});
+
+const reportedFindingSchema = z.object({
+  /** The id as the report wrote it. */
+  id: z.string(),
+  findingId: z.string(),
+  number: z.number().int().positive(),
 });
 
 /** An anchor's code in one snapshot. */
@@ -67,6 +90,7 @@ export const findingSchema = z.object({
   answer: z.string().optional(),
   /** Every status the finding went through, oldest first. */
   events: z.array(findingEventSchema),
+  post: findingPostSchema.optional(),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
@@ -155,6 +179,21 @@ export const findingsContract = oc.router({
           after: anchorTextSchema.nullable(),
         }),
       ),
+    ),
+
+  importReport: oc
+    .route({
+      summary: "Import a coding agent's report",
+      description:
+        'Reads a JSON report of findings an agent addressed. Concerns move to Fix proposed and questions to Answered, with the agent note; ids that match no finding in the repository are listed, never guessed.',
+    })
+    .input(z.object({ workspaceId: idSchema, report: z.string().min(1).max(MAX_REPORT_LENGTH) }))
+    .output(
+      z.object({
+        applied: z.array(reportedFindingSchema.extend({ status: findingStatusSchema })),
+        skipped: z.array(reportedFindingSchema.extend({ reason: reportSkipReasonSchema })),
+        unknown: z.array(z.string()),
+      }),
     ),
 
   remove: oc

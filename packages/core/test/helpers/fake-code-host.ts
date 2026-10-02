@@ -28,6 +28,11 @@ export interface iFakeComment {
 
 const user = (username: string) => ({ username, name: username, login: username });
 
+export interface iFakePost {
+  path: string;
+  body: Record<string, unknown>;
+}
+
 /**
  * A GitLab (`/api/v4`) and GitHub (`/api/v3`) API on localhost backed by a real repository: change
  * heads live under `refs/merge-requests/<n>/head` and `refs/pull/<n>/head`, as on the real hosts.
@@ -36,6 +41,12 @@ export class FakeCodeHost {
   public readonly changes: iFakeChange[] = [];
   public readonly comments = new Map<number, iFakeComment[]>();
   public readonly requests: string[] = [];
+  /** Bodies of every write, in order. */
+  public readonly posts: iFakePost[] = [];
+  /** Writes are refused, as with a read-only token. */
+  public isReadOnly = false;
+  /** GitHub answers that the reviewer already has a pending review. */
+  public hasPendingReview = false;
   private server: Server | undefined;
 
   constructor(public readonly repo: TestGitRepo) {}
@@ -142,6 +153,10 @@ export class FakeCodeHost {
         (match) => this.mapFound(this.branchSha(decodeURIComponent(match[1] ?? '')), (id) => ({ commit: { id } })),
       ],
       [
+        /^\/api\/v4\/projects\/[^/]+\/merge_requests\/(\d+)\/versions$/,
+        (match) => this.mapFound(find(match[1]), (change) => [this.gitlabVersion(change)]),
+      ],
+      [
         /^\/api\/v4\/projects\/[^/]+\/merge_requests\/(\d+)\/discussions$/,
         (match) => this.gitlabDiscussions(Number(match[1])),
       ],
@@ -182,6 +197,38 @@ export class FakeCodeHost {
 
   private mapFound<T>(value: T | undefined, map: (value: T) => unknown) {
     return value === undefined ? undefined : map(value);
+  }
+
+  private gitlabVersion(change: iFakeChange) {
+    const head = this.head(change.number);
+    const start = this.repo.git('rev-parse', `refs/heads/${change.targetBranch}`);
+    return {
+      head_commit_sha: head,
+      start_commit_sha: start,
+      base_commit_sha: this.repo.git('merge-base', start, head),
+    };
+  }
+
+  /** Draft notes on GitLab and pending reviews on GitHub; anything else is not a write the hosts take. */
+  private write(pathname: string, body: Record<string, unknown>): [number, unknown] {
+    if (this.isReadOnly) return [403, { message: '403 Forbidden - insufficient_scope' }];
+    const isDraftNote = /^\/api\/v4\/projects\/[^/]+\/merge_requests\/\d+\/draft_notes$/.test(pathname);
+    const review = /^\/api\/v3\/repos\/[^/]+\/[^/]+\/pulls\/(\d+)\/reviews$/.exec(pathname);
+    if (!isDraftNote && !review) return [404, { message: '404 Not Found' }];
+    if (review && this.hasPendingReview) {
+      return [
+        422,
+        { message: 'Unprocessable Entity', errors: ['User can only have one pending review per pull request'] },
+      ];
+    }
+    this.posts.push({ path: pathname, body });
+    const id = this.posts.length;
+    return review
+      ? [
+          200,
+          { id, state: 'PENDING', html_url: `${this.baseUrl}/owner/repo/pull/${review[1]}#pullrequestreview-${id}` },
+        ]
+      : [201, { id, note: body.note }];
   }
 
   private gitlabDiscussions(changeNumber: number) {
@@ -240,6 +287,17 @@ export class FakeCodeHost {
     this.requests.push(url.pathname);
     if (request.headers.authorization !== `Bearer ${GOOD_TOKEN}`) {
       response.writeHead(401).end('{"message":"401 Unauthorized"}');
+      return;
+    }
+    if (request.method === 'POST') {
+      let raw = '';
+      request.on('data', (chunk: Buffer) => {
+        raw += chunk.toString('utf8');
+      });
+      request.on('end', () => {
+        const [status, answer] = this.write(url.pathname, JSON.parse(raw || '{}') as Record<string, unknown>);
+        response.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(answer));
+      });
       return;
     }
     const body = this.route(url.pathname);

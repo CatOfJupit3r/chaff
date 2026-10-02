@@ -99,6 +99,23 @@ export const FINDING_STATUSES = findingStatusesEnumwaii.enum;
 export type FindingStatus = InferEnumwaii<typeof findingStatusesEnumwaii>;
 export const findingStatusSchema = findingStatusesEnumwaii.schema;
 
+export const FINDING_KIND_LABELS = findingKindsEnumwaii.derive({
+  [FINDING_KINDS.CONCERN]: 'Concern',
+  [FINDING_KINDS.QUESTION]: 'Question',
+  [FINDING_KINDS.NOTE]: 'Note',
+});
+
+export const FINDING_STATUS_LABELS = findingStatusesEnumwaii.derive({
+  [FINDING_STATUSES.OPEN]: 'Open',
+  [FINDING_STATUSES.FIX_PROPOSED]: 'Fix proposed',
+  [FINDING_STATUSES.VERIFIED]: 'Verified',
+  [FINDING_STATUSES.REOPENED]: 'Reopened',
+  [FINDING_STATUSES.ANSWERED]: 'Answered',
+  [FINDING_STATUSES.CLOSED]: 'Closed',
+  [FINDING_STATUSES.WITHDRAWN]: 'Withdrawn',
+  [FINDING_STATUSES.UNMATCHED]: 'Outdated',
+});
+
 export const IS_ACTIVE_FINDING_STATUS = findingStatusesEnumwaii.derive({
   [FINDING_STATUSES.OPEN]: true,
   [FINDING_STATUSES.FIX_PROPOSED]: true,
@@ -109,6 +126,13 @@ export const IS_ACTIVE_FINDING_STATUS = findingStatusesEnumwaii.derive({
   [FINDING_STATUSES.WITHDRAWN]: false,
   [FINDING_STATUSES.UNMATCHED]: true,
 });
+
+/** Who moved a finding: the reviewer by hand, Chaff after a new snapshot, or a coding agent's report. */
+export const findingEventSourcesEnumwaii = new Enumwaii('FindingEventSource', ['REVIEWER', 'CHAFF', 'AGENT']);
+
+export const FINDING_EVENT_SOURCES = findingEventSourcesEnumwaii.enum;
+export type FindingEventSource = InferEnumwaii<typeof findingEventSourcesEnumwaii>;
+export const findingEventSourceSchema = findingEventSourcesEnumwaii.schema;
 
 /**
  * How a unit compares with the same unit in the previous snapshot of its review. Possibly affected units

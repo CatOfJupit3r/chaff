@@ -1,5 +1,6 @@
 import { container } from 'tsyringe';
 
+import { AgentReportService } from '@~/features/findings/agent-report.service';
 import { FindingsService } from '@~/features/findings/findings.service';
 import { base, procedure } from '@~/lib/orpc';
 
@@ -18,6 +19,10 @@ export const findingsRouter = base.findings.router({
 
   compare: procedure.findings.compare.handler(async ({ input }) =>
     container.resolve(FindingsService).compare(input.findingId),
+  ),
+
+  importReport: procedure.findings.importReport.handler(async ({ input }) =>
+    container.resolve(AgentReportService).import(input.workspaceId, input.report),
   ),
 
   remove: procedure.findings.remove.handler(async ({ input }) => {

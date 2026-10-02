@@ -1,6 +1,6 @@
 import { inject, singleton } from 'tsyringe';
 
-import { ANCHOR_MATCHES, DIFF_SIDES } from '@chaff/common/enums/review.enums';
+import { ANCHOR_MATCHES, DIFF_SIDES, FINDING_EVENT_SOURCES } from '@chaff/common/enums/review.enums';
 import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import { FINDING_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
@@ -120,7 +120,11 @@ export class AnchorRelocationService {
     for (const finding of findings) {
       const matches = finding.anchors.flatMap((anchor) => matchOf.get(anchor.id) ?? []);
       const status = statusAfterRelocation(finding.kind, finding.status, matches);
-      if (status) await this.findingRepository.setStatus(finding.id, snapshot.id, status);
+      if (status) {
+        await this.findingRepository.setStatus(finding.id, snapshot.id, status, {
+          source: FINDING_EVENT_SOURCES.CHAFF,
+        });
+      }
     }
   }
 

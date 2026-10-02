@@ -2,9 +2,21 @@ import { singleton } from 'tsyringe';
 import z from 'zod';
 
 import { CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
+import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { DIFF_SIDES } from '@chaff/common/enums/review.enums';
 
-import { getAllPages, getJson } from './code-host-http';
-import type { iCodeHostAccess, iCodeHostProvider, iRemoteChange, iRemoteDiscussion } from './code-hosts.types';
+import { ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
+
+import { getAllPages, getJson, postJson } from './code-host-http';
+import type {
+  iCodeHostAccess,
+  iCodeHostProvider,
+  iDraftComment,
+  iHostWrite,
+  iRemoteChange,
+  iRemoteDiscussion,
+  iReviewDraft,
+} from './code-hosts.types';
 
 const userSchema = z.object({ username: z.string(), name: z.string().optional() });
 
@@ -47,6 +59,27 @@ const discussionSchema = z.object({
     }),
   ),
 });
+
+const versionSchema = z.object({
+  head_commit_sha: z.string(),
+  base_commit_sha: z.string(),
+  start_commit_sha: z.string(),
+});
+
+/** A draft note's position: the line on the side the finding is on, between the version's commits. */
+function notePosition(comment: iDraftComment, refs: NonNullable<iReviewDraft['refs']>) {
+  if (comment.line === undefined || !comment.path) return undefined;
+  const isNew = comment.side === DIFF_SIDES.NEW;
+  return {
+    position_type: 'text',
+    base_sha: refs.baseSha,
+    start_sha: refs.startSha,
+    head_sha: refs.headSha,
+    old_path: comment.oldPath ?? comment.path,
+    new_path: comment.path,
+    ...(isNew ? { new_line: comment.line } : { old_line: comment.line }),
+  };
+}
 
 function toChange(request: z.infer<typeof mergeRequestSchema>): iRemoteChange {
   return {
@@ -155,14 +188,53 @@ export class GitLabProvider implements iCodeHostProvider {
     return `Basic ${Buffer.from(`oauth2:${token}`).toString('base64')}`;
   }
 
+  public async diffRefs(access: iCodeHostAccess, project: string, changeNumber: number, headSha: string) {
+    const versions = await getAllPages(
+      this.request(access, `${this.projectPath(project)}/merge_requests/${changeNumber}/versions?per_page=100`),
+      z.array(versionSchema),
+    );
+    const version = versions.find((candidate) => candidate.head_commit_sha === headSha);
+    return version
+      ? { baseSha: version.base_commit_sha, startSha: version.start_commit_sha, headSha: version.head_commit_sha }
+      : undefined;
+  }
+
+  /** One draft note per finding. Draft notes stay private until the reviewer submits the review in GitLab. */
+  public draftWrites(project: string, changeNumber: number, draft: iReviewDraft): iHostWrite[] {
+    const path = `${this.projectPath(project).slice(1)}/merge_requests/${changeNumber}/draft_notes`;
+    return draft.comments.map((comment) => {
+      const position = draft.refs ? notePosition(comment, draft.refs) : undefined;
+      return {
+        path,
+        body: position ? { note: comment.body, position } : { note: comment.body },
+        findingIds: [comment.findingId],
+      };
+    });
+  }
+
+  public async postWrite(access: iCodeHostAccess, write: iHostWrite) {
+    const result = await postJson(
+      { url: `${this.apiUrl(access.baseUrl)}/${write.path}`, headers: this.headers(access) },
+      write.body,
+      z.object({ id: z.number() }),
+    );
+    if (!result.isOk) throw ORPCUnprocessableContentError(errorCodes.CODE_HOST_ERROR, { status: result.status });
+    return { remoteId: String(result.data.id) };
+  }
+
+  public apiUrl(baseUrl: string) {
+    return `${baseUrl}/api/v4`;
+  }
+
   private projectPath(project: string) {
     return `/projects/${encodeURIComponent(project)}`;
   }
 
+  private headers(access: iCodeHostAccess) {
+    return { Authorization: `Bearer ${access.token}`, Accept: 'application/json' };
+  }
+
   private request(access: iCodeHostAccess, pathname: string) {
-    return {
-      url: `${access.baseUrl}/api/v4${pathname}`,
-      headers: { Authorization: `Bearer ${access.token}`, Accept: 'application/json' },
-    };
+    return { url: `${this.apiUrl(access.baseUrl)}${pathname}`, headers: this.headers(access) };
   }
 }

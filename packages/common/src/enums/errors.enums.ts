@@ -32,6 +32,11 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'CHANGE_REQUEST_NOT_FOUND',
   'CHANGE_REQUEST_ALREADY_LINKED',
   'SECRETS_UNAVAILABLE',
+  'CODE_HOST_WRITE_REJECTED',
+  'REVIEW_ALREADY_PENDING',
+  'NOT_A_CHANGE_REQUEST',
+  'NOTHING_TO_POST',
+  'INVALID_AGENT_REPORT',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -68,4 +73,11 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.CHANGE_REQUEST_NOT_FOUND]: 'Merge request not found',
   [errorCodes.CHANGE_REQUEST_ALREADY_LINKED]: 'That merge request already has its own review',
   [errorCodes.SECRETS_UNAVAILABLE]: 'This computer has no secure storage for tokens',
+  [errorCodes.CODE_HOST_WRITE_REJECTED]:
+    'The host refused to post. Comments need a token with write access (the api scope on GitLab, pull requests: write on GitHub)',
+  [errorCodes.REVIEW_ALREADY_PENDING]:
+    'You already have a pending review on this pull request. Submit or delete it on GitHub first',
+  [errorCodes.NOT_A_CHANGE_REQUEST]: 'Only merge requests and pull requests can take comments',
+  [errorCodes.NOTHING_TO_POST]: 'None of the selected findings can be posted; they were posted already',
+  [errorCodes.INVALID_AGENT_REPORT]: 'The report is not JSON Chaff understands',
 });

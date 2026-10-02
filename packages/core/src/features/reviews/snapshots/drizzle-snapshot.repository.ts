@@ -72,6 +72,22 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
     });
   }
 
+  public async listRegions(snapshotId: string) {
+    return this.databaseService
+      .getDb()
+      .select({
+        fileId: regions.fileId,
+        oldStartLine: regions.oldStartLine,
+        newStartLine: regions.newStartLine,
+        deletions: regions.deletions,
+        additions: regions.additions,
+      })
+      .from(regions)
+      .where(eq(regions.snapshotId, snapshotId))
+      .orderBy(asc(regions.ordinal))
+      .all();
+  }
+
   public async listFiles(snapshotId: string) {
     const db = this.databaseService.getDb();
     const rows = db

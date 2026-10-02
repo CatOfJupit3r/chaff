@@ -6,24 +6,7 @@ import { DIFF_SIDES, FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums
 
 import { appRouter } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
-import { createFeatureRepo, startFeatureReview } from '../helpers/review-repo';
-
-async function featureReview() {
-  const review = await startFeatureReview(createFeatureRepo());
-  const units = await call(appRouter.reviews.units, { snapshotId: review.snapshotId });
-  const { files } = await call(appRouter.reviews.snapshot, { snapshotId: review.snapshotId });
-  const unitTitled = (title: string) => {
-    const unit = units.find((candidate) => candidate.title === title);
-    if (!unit) throw new Error(`No unit titled ${title}`);
-    return unit;
-  };
-  const fileAt = (path: string) => {
-    const file = files.find((candidate) => candidate.path === path);
-    if (!file) throw new Error(`No file ${path}`);
-    return file;
-  };
-  return { ...review, unitTitled, fileAt };
-}
+import { featureReview } from '../helpers/review-repo';
 
 describe('findings', () => {
   it('quotes the code of the unit a concern is written on, with the lines around it', async () => {

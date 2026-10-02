@@ -1,11 +1,25 @@
-import type { AnchorMatch, DiffSide, FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
+import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import type {
+  AnchorMatch,
+  DiffSide,
+  FindingEventSource,
+  FindingKind,
+  FindingStatus,
+} from '@chaff/common/enums/review.enums';
 
-import type { findingAnchorLocations, findingAnchors, findingEvents, findings } from '@~/db/schema/findings.schema';
+import type {
+  findingAnchorLocations,
+  findingAnchors,
+  findingEvents,
+  findingPosts,
+  findings,
+} from '@~/db/schema/findings.schema';
 
 type FindingRow = typeof findings.$inferSelect;
 type FindingAnchorRow = typeof findingAnchors.$inferSelect;
 type AnchorLocationRow = typeof findingAnchorLocations.$inferSelect;
 type FindingEventRow = typeof findingEvents.$inferSelect;
+type FindingPostRow = typeof findingPosts.$inferSelect;
 
 /** Where an anchor was found in a later snapshot, with that snapshot's version and head. */
 export type iAnchorLocationRecord = Omit<AnchorLocationRow, 'match' | 'fileId' | 'unitId' | 'startLine' | 'endLine'> & {
@@ -25,7 +39,31 @@ export type iAnchorLocationSummary = Omit<
 
 export type iNewAnchorLocation = Omit<AnchorLocationRow, 'id'>;
 
-export type iFindingEventRecord = Omit<FindingEventRow, 'id' | 'findingId' | 'status'> & { status: FindingStatus };
+export type iFindingEventRecord = Omit<
+  FindingEventRow,
+  'id' | 'findingId' | 'status' | 'source' | 'note' | 'commits'
+> & {
+  status: FindingStatus;
+  source: FindingEventSource;
+  note?: string;
+  commits?: string[];
+};
+
+/** Where a finding was posted on its merge or pull request. */
+export type iFindingPostRecord = Omit<FindingPostRow, 'id' | 'findingId' | 'host' | 'url'> & {
+  host: CodeHost;
+  url?: string;
+};
+
+export type iNewFindingPost = Omit<FindingPostRow, 'id' | 'createdAt'>;
+
+/** Who moved a finding, and what they said about it. */
+export interface iStatusChange {
+  answer?: string;
+  source?: FindingEventSource;
+  note?: string;
+  commits?: string[];
+}
 
 export type iFindingAnchorRecord = Omit<
   FindingAnchorRow,
@@ -46,6 +84,8 @@ export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer'> & {
   answer?: string;
   /** Every status the finding went through, oldest first. */
   events: iFindingEventRecord[];
+  /** Set once the finding was posted to its merge or pull request. */
+  post?: iFindingPostRecord;
   /** Branch of the review the finding was written in. */
   branch: string;
   parentBranch: string;

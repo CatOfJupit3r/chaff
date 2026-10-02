@@ -1,6 +1,8 @@
+import { FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
+
 import { cn } from '@~/lib/utils';
 
-import { FINDING_KIND_LABELS, FINDING_STATUS_DOTS } from '../findings.enums';
+import { FINDING_STATUS_DOTS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
 import { findingTitle, formatAnchorLocation } from '../findings.utils';
 

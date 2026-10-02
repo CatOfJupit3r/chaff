@@ -5,13 +5,25 @@ import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enum
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { DatabaseService } from '@~/db/database.service';
-import { findingAnchorLocations, findingAnchors, findingEvents, findings } from '@~/db/schema/findings.schema';
+import {
+  findingAnchorLocations,
+  findingAnchors,
+  findingEvents,
+  findingPosts,
+  findings,
+} from '@~/db/schema/findings.schema';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
 import { snapshots } from '@~/db/schema/snapshots.schema';
 
 import type { iFindingRepository } from './finding.repository';
 import { FindingResolver } from './finding.resolver';
-import type { iListFindingsInput, iNewAnchorLocation, iNewFinding } from './findings.types';
+import type {
+  iListFindingsInput,
+  iNewAnchorLocation,
+  iNewFinding,
+  iNewFindingPost,
+  iStatusChange,
+} from './findings.types';
 
 const locationColumns = {
   ...getTableColumns(findingAnchorLocations),
@@ -79,14 +91,15 @@ export class DrizzleFindingRepository implements iFindingRepository {
     return this.withAnchors(rows);
   }
 
-  public async setStatus(findingId: string, snapshotId: string, status: FindingStatus, answer?: string) {
+  public async setStatus(findingId: string, snapshotId: string, status: FindingStatus, change: iStatusChange = {}) {
+    const { answer, source, note, commits } = change;
     this.databaseService.getDb().transaction((transaction) => {
       transaction
         .update(findings)
         .set(answer === undefined ? { status } : { status, answer })
         .where(eq(findings.id, findingId))
         .run();
-      transaction.insert(findingEvents).values({ findingId, snapshotId, status }).run();
+      transaction.insert(findingEvents).values({ findingId, snapshotId, status, source, note, commits }).run();
     });
     return this.findById(findingId);
   }
@@ -119,6 +132,16 @@ export class DrizzleFindingRepository implements iFindingRepository {
       .getDb()
       .insert(findingAnchorLocations)
       .values([...locations])
+      .onConflictDoNothing()
+      .run();
+  }
+
+  public async addPosts(posts: readonly iNewFindingPost[]) {
+    if (posts.length === 0) return;
+    this.databaseService
+      .getDb()
+      .insert(findingPosts)
+      .values([...posts])
       .onConflictDoNothing()
       .run();
   }
@@ -163,8 +186,20 @@ export class DrizzleFindingRepository implements iFindingRepository {
       )
       .orderBy(asc(findingEvents.createdAt), sql`rowid`)
       .all();
+    const posts = this.databaseService
+      .getDb()
+      .select()
+      .from(findingPosts)
+      .where(
+        inArray(
+          findingPosts.findingId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .all();
     return rows.map((row) => ({
       ...this.findingResolver.toFindingRecord(row),
+      post: this.findingResolver.toPostRecord(posts.find((post) => post.findingId === row.id)),
       events: events
         .filter((event) => event.findingId === row.id)
         .map((event) => this.findingResolver.toEventRecord(event)),

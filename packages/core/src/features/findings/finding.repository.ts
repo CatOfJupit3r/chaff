@@ -6,6 +6,8 @@ import type {
   iListFindingsInput,
   iNewAnchorLocation,
   iNewFinding,
+  iNewFindingPost,
+  iStatusChange,
 } from './findings.types';
 
 export interface iFindingRepository {
@@ -18,12 +20,14 @@ export interface iFindingRepository {
     findingId: string,
     snapshotId: string,
     status: FindingStatus,
-    answer?: string,
+    change?: iStatusChange,
   ) => Promise<iFindingRecord | undefined>;
   /** Turns a question into an open concern. */
   convertToConcern: (findingId: string, snapshotId: string) => Promise<iFindingRecord | undefined>;
   /** Where the anchors were found in later snapshots, oldest snapshot first. */
   listLocations: (anchorIds: readonly string[]) => Promise<iAnchorLocationRecord[]>;
   addLocations: (locations: readonly iNewAnchorLocation[]) => Promise<void>;
+  /** Records where findings were posted; a finding already posted keeps its first post. */
+  addPosts: (posts: readonly iNewFindingPost[]) => Promise<void>;
   remove: (findingId: string) => Promise<void>;
 }

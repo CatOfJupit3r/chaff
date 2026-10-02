@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { FINDING_KINDS, findingKindsEnumwaii } from '@chaff/common/enums/review.enums';
+import { FINDING_KINDS, findingKindsEnumwaii, FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
 import type { FindingKind } from '@chaff/common/enums/review.enums';
 
 import { Button } from '@~/components/ui/button';
 import { Kbd } from '@~/components/ui/kbd';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
-import { FINDING_KIND_LABELS } from '@~/features/findings/findings.enums';
 
 import { useDiffReview } from '../diff-review.context';
 

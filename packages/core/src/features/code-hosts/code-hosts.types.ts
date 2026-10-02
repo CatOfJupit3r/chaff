@@ -1,4 +1,5 @@
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import type { connections } from '@~/db/schema/connections.schema';
 
@@ -51,7 +52,40 @@ export interface iRemoteDiscussion {
   notes: iRemoteNote[];
 }
 
-/** One host's API. Every method reads; nothing here writes to the host. */
+/** The commits a change's diff is drawn between on the host, which a positioned comment must name. */
+export interface iDiffRefs {
+  baseSha: string;
+  startSha: string;
+  headSha: string;
+}
+
+/** A comment for one finding: on one line of the diff, or on the change as a whole when `line` is absent. */
+export interface iDraftComment {
+  findingId: string;
+  body: string;
+  path?: string;
+  oldPath?: string;
+  side: DiffSide;
+  line?: number;
+}
+
+export interface iReviewDraft {
+  refs?: iDiffRefs;
+  comments: iDraftComment[];
+}
+
+/** One API call that posts part of a draft, kept as data so it can also be shown as a command. */
+export interface iHostWrite {
+  /** Relative to the host's API root, without a leading slash. */
+  path: string;
+  body: Record<string, unknown>;
+  findingIds: string[];
+}
+
+/**
+ * One host's API. Everything reads, except posting a review draft: GitLab draft notes and a pending GitHub
+ * review, which stay invisible to others until the reviewer publishes or submits them on the host.
+ */
 export interface iCodeHostProvider {
   readonly host: CodeHost;
   currentUser: (access: iCodeHostAccess) => Promise<{ username: string }>;
@@ -66,6 +100,18 @@ export interface iCodeHostProvider {
   changeRef: (changeNumber: number) => string;
   /** Value of the `Authorization` header git sends when fetching over https. */
   gitAuthorization: (token: string) => string;
+  /** The diff commits of the change's version whose head is `headSha`; undefined when the host has no such version. */
+  diffRefs: (
+    access: iCodeHostAccess,
+    project: string,
+    changeNumber: number,
+    headSha: string,
+  ) => Promise<iDiffRefs | undefined>;
+  /** The API calls that post a draft. Nothing is published or submitted. */
+  draftWrites: (project: string, changeNumber: number, draft: iReviewDraft) => iHostWrite[];
+  /** Sends one write; returns the id and address of what the host created. */
+  postWrite: (access: iCodeHostAccess, write: iHostWrite) => Promise<{ remoteId: string; url?: string }>;
+  apiUrl: (baseUrl: string) => string;
 }
 
 /** The project a workspace's merge requests come from. */

@@ -1,29 +1,7 @@
-import {
-  FINDING_KINDS,
-  FINDING_STATUSES,
-  findingKindsEnumwaii,
-  findingStatusesEnumwaii,
-} from '@chaff/common/enums/review.enums';
+import { FINDING_STATUSES, findingStatusesEnumwaii } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
-
-export const FINDING_KIND_LABELS = findingKindsEnumwaii.derive({
-  [FINDING_KINDS.CONCERN]: 'Concern',
-  [FINDING_KINDS.QUESTION]: 'Question',
-  [FINDING_KINDS.NOTE]: 'Note',
-});
-
-export const FINDING_STATUS_LABELS = findingStatusesEnumwaii.derive({
-  [FINDING_STATUSES.OPEN]: 'Open',
-  [FINDING_STATUSES.FIX_PROPOSED]: 'Fix proposed',
-  [FINDING_STATUSES.VERIFIED]: 'Verified',
-  [FINDING_STATUSES.REOPENED]: 'Reopened',
-  [FINDING_STATUSES.ANSWERED]: 'Answered',
-  [FINDING_STATUSES.CLOSED]: 'Closed',
-  [FINDING_STATUSES.WITHDRAWN]: 'Withdrawn',
-  [FINDING_STATUSES.UNMATCHED]: 'Outdated',
-});
 
 /** `Pill` variant for each status. */
 export const FINDING_STATUS_PILLS = findingStatusesEnumwaii.derive({

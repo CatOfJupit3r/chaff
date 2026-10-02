@@ -14,13 +14,16 @@ export interface iHttpRequest {
   headers: Record<string, string>;
 }
 
-async function send({ url, headers }: iHttpRequest) {
-  let response: Response;
+async function fetchOrThrow(url: string, init: RequestInit) {
   try {
-    response = await fetch(url, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   } catch {
     throw ORPCUnprocessableContentError(errorCodes.CODE_HOST_UNREACHABLE);
   }
+}
+
+async function send({ url, headers }: iHttpRequest) {
+  const response = await fetchOrThrow(url, { headers });
   if (response.status === 401 || response.status === 403) {
     throw ORPCUnprocessableContentError(errorCodes.CONNECTION_REJECTED);
   }
@@ -55,6 +58,26 @@ export async function getAllPages<T>(request: iHttpRequest, schema: z.ZodType<T[
     url = nextUrl;
   }
   return items;
+}
+
+/**
+ * POSTs a JSON body and returns the host's JSON answer. A refusal means the token can read but not write;
+ * any other failure keeps the host's status and message so the caller can explain it.
+ */
+export async function postJson<T>(request: iHttpRequest, body: unknown, schema: z.ZodType<T>) {
+  const response = await fetchOrThrow(request.url, {
+    method: 'POST',
+    headers: { ...request.headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw ORPCUnprocessableContentError(errorCodes.CODE_HOST_WRITE_REJECTED);
+  }
+  if (!response.ok) {
+    const message = await response.text().catch(() => '');
+    return { isOk: false as const, status: response.status, message };
+  }
+  return { isOk: true as const, data: await parse(response, schema) };
 }
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);

@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { REVIEW_TARGET_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import { REVIEW_TARGET_KINDS, UNIT_MARKS, FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
 import type { FindingKind } from '@chaff/common/enums/review.enums';
 
 import { showToast } from '@~/components/toast/toast-store';
 import type { iDiscussion } from '@~/features/code-hosts/code-hosts.types';
 import { useDiscussions } from '@~/features/code-hosts/hooks/use-discussions';
-import { FINDING_KIND_LABELS } from '@~/features/findings/findings.enums';
 import { anchorIn } from '@~/features/findings/findings.utils';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';

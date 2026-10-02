@@ -1,6 +1,8 @@
+import { FINDING_KIND_LABELS, FINDING_STATUS_LABELS } from '@chaff/common/enums/review.enums';
+
 import { Pill } from '@~/components/ui/pill';
 
-import { FINDING_KIND_LABELS, FINDING_STATUS_LABELS, FINDING_STATUS_PILLS } from '../findings.enums';
+import { FINDING_STATUS_PILLS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
 
 /** Status, kind and number of a finding, as shown above its note. */

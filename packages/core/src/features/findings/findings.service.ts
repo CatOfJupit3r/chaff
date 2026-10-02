@@ -19,6 +19,7 @@ import type { iSnapshotFileRecord } from '@~/features/reviews/snapshots/snapshot
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
 import { ANCHOR_CONTEXT_LINES, ANCHOR_QUOTE_MAX_LINES } from './anchor-matching.utils';
+import { raisedLocation, raisedSnapshotId } from './finding-location.utils';
 import type { iFindingRepository } from './finding.repository';
 import type {
   iAnchorLocationRecord,
@@ -32,9 +33,6 @@ import type {
 } from './findings.types';
 
 const MAX_FILE_BYTES = 5_000_000;
-
-/** Statuses at which the reviewer said the code is still to be fixed or explained. */
-const RAISED_STATUSES = new Set<FindingStatus>([FINDING_STATUSES.OPEN, FINDING_STATUSES.REOPENED]);
 
 interface iAnchorDraft {
   file: iSnapshotFileRecord;
@@ -83,7 +81,7 @@ export class FindingsService {
       throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
     }
     const snapshotId = await this.latestSnapshotId(finding);
-    const updated = await this.findingRepository.setStatus(findingId, snapshotId, status, answer);
+    const updated = await this.findingRepository.setStatus(findingId, snapshotId, status, { answer });
     if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
     return updated;
   }
@@ -105,14 +103,12 @@ export class FindingsService {
    */
   public async compare(findingId: string) {
     const finding = await this.getFinding(findingId);
-    const raisedOn = finding.events.findLast((event) => RAISED_STATUSES.has(event.status))?.snapshotId;
+    const raisedOn = raisedSnapshotId(finding);
     const history = await this.findingRepository.listLocations(finding.anchors.map((anchor) => anchor.id));
     return Promise.all(
       finding.anchors.map(async (anchor) => {
         const locations = history.filter((location) => location.anchorId === anchor.id);
-        const raised = locations.find(
-          (location) => location.snapshotId === raisedOn && location.match !== ANCHOR_MATCHES.UNMATCHED,
-        );
+        const raised = raisedLocation(locations, anchor.id, raisedOn);
         const before = raised ? this.locationText(raised) : await this.originalText(anchor);
         const latest = locations.at(-1);
         const after = latest && latest.version > before.version ? this.locationText(latest) : null;

@@ -34,3 +34,21 @@ export async function startFeatureReview(repo: TestGitRepo, branch = 'feature', 
   const started = await call(appRouter.reviews.start, { workspaceId: workspace.id, branch, parentBranch });
   return { workspace, ...started };
 }
+
+/** A review of `feature` with lookups for its units by title and files by path. */
+export async function featureReview(repo = createFeatureRepo()) {
+  const review = await startFeatureReview(repo);
+  const units = await call(appRouter.reviews.units, { snapshotId: review.snapshotId });
+  const { files } = await call(appRouter.reviews.snapshot, { snapshotId: review.snapshotId });
+  const unitTitled = (title: string) => {
+    const unit = units.find((candidate) => candidate.title === title);
+    if (!unit) throw new Error(`No unit titled ${title}`);
+    return unit;
+  };
+  const fileAt = (path: string) => {
+    const file = files.find((candidate) => candidate.path === path);
+    if (!file) throw new Error(`No file ${path}`);
+    return file;
+  };
+  return { ...review, repo, unitTitled, fileAt };
+}

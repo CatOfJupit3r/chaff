@@ -1,6 +1,14 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-import type { AnchorMatch, DiffSide, FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
+import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import { FINDING_EVENT_SOURCES } from '@chaff/common/enums/review.enums';
+import type {
+  AnchorMatch,
+  DiffSide,
+  FindingEventSource,
+  FindingKind,
+  FindingStatus,
+} from '@chaff/common/enums/review.enums';
 
 import { idPrimaryKey, timestampColumn, timestamps } from '../schema.helpers';
 import { reviewTargets } from './review-targets.schema';
@@ -78,6 +86,11 @@ export const findingEvents = sqliteTable(
       .notNull()
       .references(() => snapshots.id, { onDelete: 'cascade' }),
     status: text('status').$type<FindingStatus>().notNull(),
+    source: text('source').$type<FindingEventSource>().notNull().default(FINDING_EVENT_SOURCES.REVIEWER),
+    /** What a coding agent said it did, from its report. */
+    note: text('note'),
+    /** Commits a coding agent's report named. */
+    commits: text('commits', { mode: 'json' }).$type<string[]>(),
     createdAt: timestampColumn('created_at')
       .notNull()
       .$defaultFn(() => new Date()),
@@ -110,4 +123,23 @@ export const findingAnchorLocations = sqliteTable(
     contextAfter: text('context_after').notNull(),
   },
   (table) => [uniqueIndex('finding_anchor_locations_anchor_snapshot_unique').on(table.anchorId, table.snapshotId)],
+);
+
+/** A finding posted to its merge or pull request: a GitLab draft note, or a comment in a pending GitHub review. */
+export const findingPosts = sqliteTable(
+  'finding_posts',
+  {
+    id: idPrimaryKey(),
+    findingId: text('finding_id')
+      .notNull()
+      .references(() => findings.id, { onDelete: 'cascade' }),
+    host: text('host').$type<CodeHost>().notNull(),
+    /** The draft note's id on GitLab, the pending review's id on GitHub. */
+    remoteId: text('remote_id').notNull(),
+    url: text('url'),
+    createdAt: timestampColumn('created_at')
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [uniqueIndex('finding_posts_finding_unique').on(table.findingId)],
 );

@@ -5,6 +5,7 @@ import type { regions, snapshotFiles, snapshots, units } from '@~/db/schema/snap
 type SnapshotRow = typeof snapshots.$inferSelect;
 type SnapshotFileRow = typeof snapshotFiles.$inferSelect;
 type UnitRow = typeof units.$inferSelect;
+type RegionRow = typeof regions.$inferSelect;
 
 export interface iSnapshotHeads {
   headSha: string;
@@ -78,3 +79,6 @@ export interface iUnitRevisionUpdate {
   revision: UnitRevision;
   previousUnitId?: string;
 }
+
+/** A region's changed lines: removed ones from `oldStartLine`, added ones from `newStartLine`. */
+export type iRegionLines = Pick<RegionRow, 'fileId' | 'oldStartLine' | 'newStartLine' | 'deletions' | 'additions'>;

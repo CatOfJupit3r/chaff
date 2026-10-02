@@ -3,6 +3,7 @@ import type {
   iSnapshotContent,
   iSnapshotFileRecord,
   iSnapshotFileSummary,
+  iRegionLines,
   iSnapshotRecord,
   iUnitRecord,
   iUnitRevisionUpdate,
@@ -14,6 +15,8 @@ export interface iSnapshotRepository {
   /** Stores the snapshot with its files, units and regions in one transaction. */
   create: (snapshot: iNewSnapshot, content: iSnapshotContent) => Promise<iSnapshotRecord>;
   listFiles: (snapshotId: string) => Promise<iSnapshotFileSummary[]>;
+  /** Where each region's changed lines are, in reading order. */
+  listRegions: (snapshotId: string) => Promise<iRegionLines[]>;
   findFile: (snapshotId: string, fileId: string) => Promise<iSnapshotFileRecord | undefined>;
   findPatch: (snapshotId: string, fileId: string) => Promise<{ patch?: string } | undefined>;
   /** The snapshot's units in reading order, with the reviewer's marks. */
