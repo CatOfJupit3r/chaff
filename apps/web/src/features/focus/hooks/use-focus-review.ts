@@ -6,6 +6,7 @@ import type { UnitMark } from '@chaff/common/enums/review.enums';
 import { showToast } from '@~/components/toast/toast-store';
 import { readyContent, orderByReading } from '@~/features/digests/digests.utils';
 import { useDigest } from '@~/features/digests/hooks/use-digest';
+import { isOnUnit } from '@~/features/findings/findings.utils';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
@@ -49,9 +50,7 @@ export function useFocusReview(snapshotId: string) {
 
   const index = resolveIndex(units, position.unit, position.queue);
   const unit: iUnit | undefined = units[index];
-  const unitFindings = unit
-    ? findingsInReview.filter((finding) => finding.anchors.some((anchor) => anchor.unitId === unit.id))
-    : [];
+  const unitFindings = unit ? findingsInReview.filter((finding) => isOnUnit(finding, snapshotId, unit.id)) : [];
 
   const goTo = (nextIndex: number) => {
     position.update({ unit: units[nextIndex]?.id ?? FOCUS_END, view: CARD_VIEWS.code });
@@ -114,6 +113,7 @@ export function useFocusReview(snapshotId: string) {
     repositoryName: workspace?.name ?? snapshot.branch,
     openInEditor,
     unitFindings,
+    findingsInReview,
     units,
     index,
     unit,

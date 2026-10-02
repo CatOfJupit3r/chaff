@@ -8,6 +8,7 @@ import { showToast } from '@~/components/toast/toast-store';
 import type { iDiscussion } from '@~/features/code-hosts/code-hosts.types';
 import { useDiscussions } from '@~/features/code-hosts/hooks/use-discussions';
 import { FINDING_KIND_LABELS } from '@~/features/findings/findings.enums';
+import { anchorIn } from '@~/features/findings/findings.utils';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
 import { useSetMark } from '@~/features/focus/hooks/use-set-mark';
@@ -18,16 +19,20 @@ import type { iDiffDraft, iDiffReview, iFindingPlacement } from '../diff-review.
 import { groupUnitsByFile } from '../review-coverage.utils';
 import type { iSnapshot } from '../reviews.types';
 
-/** Places each finding written on this snapshot beside the line it points at: a unit's first line, or a range's last. */
+/**
+ * Places each finding beside the line it points at in this snapshot, where it was written or found again:
+ * a unit's first line, or a range's last.
+ */
 function placeFindings(snapshotId: string, findings: ReturnType<typeof useFindings>) {
   const byFile = new Map<string, iFindingPlacement[]>();
   for (const finding of findings) {
     for (const anchor of finding.anchors) {
-      const line = anchor.unitId ? anchor.startLine : anchor.endLine;
-      if (anchor.snapshotId !== snapshotId || !anchor.fileId || line === undefined) continue;
-      const placements = byFile.get(anchor.fileId) ?? [];
-      placements.push({ finding, side: anchor.side, line });
-      byFile.set(anchor.fileId, placements);
+      const placed = anchorIn(anchor, snapshotId);
+      const line = placed?.unitId ? placed.startLine : placed?.endLine;
+      if (!placed?.fileId || line === undefined) continue;
+      const placements = byFile.get(placed.fileId) ?? [];
+      placements.push({ finding, side: anchor.side, line: Math.max(1, line) });
+      byFile.set(placed.fileId, placements);
     }
   }
   return byFile;

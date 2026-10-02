@@ -81,3 +81,27 @@ export const FINDING_FILTER_STATUSES = findingFiltersEnumwaii.derive<readonly Fi
   [FINDING_FILTERS.outdated]: [FINDING_STATUSES.UNMATCHED],
   [FINDING_FILTERS.withdrawn]: [FINDING_STATUSES.WITHDRAWN],
 });
+
+/** Button label for moving a finding by hand to each status. */
+export const FINDING_ACTION_LABELS = findingStatusesEnumwaii.derive({
+  [FINDING_STATUSES.OPEN]: 'Reopen',
+  [FINDING_STATUSES.FIX_PROPOSED]: 'Propose a fix',
+  [FINDING_STATUSES.VERIFIED]: 'Verify fix',
+  [FINDING_STATUSES.REOPENED]: 'Reopen',
+  [FINDING_STATUSES.ANSWERED]: 'Save answer',
+  [FINDING_STATUSES.CLOSED]: 'Close',
+  [FINDING_STATUSES.WITHDRAWN]: 'Withdraw',
+  [FINDING_STATUSES.UNMATCHED]: 'Mark outdated',
+});
+
+/** Keys on the Verify screen that move the selected finding, when that move is allowed. */
+export const FINDING_ACTION_KEYS = findingStatusesEnumwaii.derive<string | undefined>({
+  [FINDING_STATUSES.OPEN]: 'r',
+  [FINDING_STATUSES.FIX_PROPOSED]: undefined,
+  [FINDING_STATUSES.VERIFIED]: 'v',
+  [FINDING_STATUSES.REOPENED]: 'r',
+  [FINDING_STATUSES.ANSWERED]: undefined,
+  [FINDING_STATUSES.CLOSED]: 'x',
+  [FINDING_STATUSES.WITHDRAWN]: 'w',
+  [FINDING_STATUSES.UNMATCHED]: undefined,
+});

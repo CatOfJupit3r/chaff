@@ -6,9 +6,11 @@ import {
   UNIT_CHANGES,
   UNIT_KINDS,
   UNIT_MARKS,
+  UNIT_REVISIONS,
   unitChangesEnumwaii,
   unitKindsEnumwaii,
   unitMarksEnumwaii,
+  unitRevisionsEnumwaii,
 } from '@chaff/common/enums/review.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
@@ -27,12 +29,60 @@ export const CARD_VIEW_LABELS = cardViewsEnumwaii.derive({
   [CARD_VIEWS.tests]: 'Tests',
 });
 
-/** Which units Next walks through: the ones without a decision, or the ones put off with Later. */
-export const focusQueuesEnumwaii = new Enumwaii('FocusQueue', ['open', 'later']);
+/**
+ * Which units Next walks through: the ones without a decision, the ones put off with Later, or the ones
+ * whose kept mark should be rechecked because something they use changed.
+ */
+export const focusQueuesEnumwaii = new Enumwaii('FocusQueue', ['open', 'later', 'recheck']);
 
 export const FOCUS_QUEUES = focusQueuesEnumwaii.enum;
 export type FocusQueue = InferEnumwaii<typeof focusQueuesEnumwaii>;
 export const focusQueueValues = focusQueuesEnumwaii.values;
+
+/** Pill shown in the Focus header while walking a queue other than the open units. */
+export const FOCUS_QUEUE_PILLS = focusQueuesEnumwaii.derive({
+  [FOCUS_QUEUES.open]: undefined,
+  [FOCUS_QUEUES.later]: 'Later queue',
+  [FOCUS_QUEUES.recheck]: 'Recheck queue',
+});
+
+/** Short label on a card for how its unit compares with the previous snapshot. */
+export const UNIT_REVISION_LABELS = unitRevisionsEnumwaii.derive({
+  [UNIT_REVISIONS.UNCHANGED]: 'Unchanged',
+  [UNIT_REVISIONS.EDITED]: 'Edited',
+  [UNIT_REVISIONS.NEW]: 'New in this version',
+  [UNIT_REVISIONS.POSSIBLY_AFFECTED]: 'Possibly affected',
+});
+
+/** What a card says about a unit that changed, or did not, since the previous version of the review. */
+export const UNIT_REVISION_NOTES = unitRevisionsEnumwaii.derive<((version: number) => string) | undefined>({
+  [UNIT_REVISIONS.UNCHANGED]: undefined,
+  [UNIT_REVISIONS.EDITED]: (version) =>
+    `Edited in version ${version}. A decision on the earlier code no longer counts; the code shows what changed since you last decided.`,
+  [UNIT_REVISIONS.NEW]: (version) => `New in version ${version}.`,
+  [UNIT_REVISIONS.POSSIBLY_AFFECTED]: (version) =>
+    `Unchanged, but it uses code that changed in version ${version}. Best effort, by name: check your decision still holds.`,
+});
+
+/** `Pill` variant for each revision. */
+export const UNIT_REVISION_PILLS = unitRevisionsEnumwaii.derive({
+  [UNIT_REVISIONS.UNCHANGED]: 'neutral',
+  [UNIT_REVISIONS.EDITED]: 'fix',
+  [UNIT_REVISIONS.NEW]: 'fix',
+  [UNIT_REVISIONS.POSSIBLY_AFFECTED]: 'open',
+});
+
+/** What the code view of an edited unit compares: the code since the reviewer's decision, or the whole change. */
+export const codeScopesEnumwaii = new Enumwaii('CodeScope', ['since-review', 'whole']);
+
+export const CODE_SCOPES = codeScopesEnumwaii.enum;
+export type CodeScope = InferEnumwaii<typeof codeScopesEnumwaii>;
+export const codeScopeValues = codeScopesEnumwaii.values;
+
+export const CODE_SCOPE_LABELS = codeScopesEnumwaii.derive({
+  [CODE_SCOPES['since-review']]: 'Since your decision',
+  [CODE_SCOPES.whole]: 'Whole change',
+});
 
 /** Where a card leaves to after a decision. */
 export const cardExitsEnumwaii = new Enumwaii('CardExit', ['RIGHT', 'LEFT', 'DOWN']);

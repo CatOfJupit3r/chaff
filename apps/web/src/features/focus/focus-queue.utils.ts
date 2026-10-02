@@ -1,4 +1,4 @@
-import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import { UNIT_MARKS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iUnit } from '@~/features/reviews/reviews.types';
@@ -9,8 +9,15 @@ import type { FocusQueue } from './focus.enums';
 /** URL value of the card shown after the last unit. */
 export const FOCUS_END = 'end';
 
+/** A possibly affected unit still carrying the mark from before the change it may depend on. */
+export function needsRecheck(unit: iUnit) {
+  return unit.revision === UNIT_REVISIONS.POSSIBLY_AFFECTED && unit.isMarkCarried;
+}
+
 function isQueued(unit: iUnit, queue: FocusQueue) {
-  return queue === FOCUS_QUEUES.later ? unit.mark === UNIT_MARKS.LATER : unit.mark === undefined;
+  if (queue === FOCUS_QUEUES.later) return unit.mark === UNIT_MARKS.LATER;
+  if (queue === FOCUS_QUEUES.recheck) return needsRecheck(unit);
+  return unit.mark === undefined;
 }
 
 /**
@@ -34,7 +41,7 @@ export function resolveIndex(units: readonly iUnit[], unitParam: string | null, 
 }
 
 export function withMark(units: readonly iUnit[], unitId: string, mark: UnitMark | undefined) {
-  return units.map((unit) => (unit.id === unitId ? { ...unit, mark } : unit));
+  return units.map((unit) => (unit.id === unitId ? { ...unit, mark, isMarkCarried: false } : unit));
 }
 
 export interface iMarkTally {
@@ -43,6 +50,7 @@ export interface iMarkTally {
   questions: number;
   later: number;
   untouched: number;
+  recheck: number;
 }
 
 export function tallyMarks(units: readonly iUnit[]): iMarkTally {
@@ -53,5 +61,19 @@ export function tallyMarks(units: readonly iUnit[]): iMarkTally {
     questions: count(UNIT_MARKS.QUESTION),
     later: count(UNIT_MARKS.LATER),
     untouched: count(undefined),
+    recheck: units.filter(needsRecheck).length,
+  };
+}
+
+/** How many units of each revision the snapshot has, against the previous one. */
+export function tallyRevisions(units: readonly iUnit[]) {
+  const count = (revision: iUnit['revision']) => units.filter((unit) => unit.revision === revision).length;
+  return {
+    unchanged: count(UNIT_REVISIONS.UNCHANGED),
+    edited: count(UNIT_REVISIONS.EDITED),
+    added: count(UNIT_REVISIONS.NEW),
+    possiblyAffected: count(UNIT_REVISIONS.POSSIBLY_AFFECTED),
+    recheck: units.filter(needsRecheck).length,
+    kept: units.filter((unit) => unit.isMarkCarried).length,
   };
 }

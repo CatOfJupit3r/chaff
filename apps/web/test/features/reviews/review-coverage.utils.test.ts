@@ -1,26 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { UNIT_CHANGES, UNIT_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import { buildDecisionGutterCss, countCoveredLines, getFileDecision } from '@~/features/reviews/review-coverage.utils';
 import { FILE_DECISIONS } from '@~/features/reviews/reviews.enums';
 import type { iUnit } from '@~/features/reviews/reviews.types';
 
+import { unitFixture } from './review-fixtures';
+
 function unit(mark?: UnitMark, lines: Partial<iUnit> = {}): iUnit {
-  return {
-    id: crypto.randomUUID(),
-    fileId: 'file',
-    ordinal: 0,
-    kind: UNIT_KINDS.FUNCTION,
-    title: 'unit',
-    isExported: false,
-    change: UNIT_CHANGES.MODIFIED,
-    additions: 3,
-    deletions: 1,
-    mark,
-    ...lines,
-  };
+  return unitFixture(crypto.randomUUID(), mark, { title: 'unit', ...lines });
 }
 
 describe('file decision', () => {

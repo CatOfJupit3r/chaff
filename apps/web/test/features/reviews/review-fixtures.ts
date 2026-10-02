@@ -1,6 +1,13 @@
-import { FILE_KINDS, FILE_STATUSES, REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import {
+  FILE_KINDS,
+  FILE_STATUSES,
+  REVIEW_TARGET_KINDS,
+  UNIT_CHANGES,
+  UNIT_KINDS,
+} from '@chaff/common/enums/review.enums';
+import type { UnitMark } from '@chaff/common/enums/review.enums';
 
-import type { iReviewTarget, iSnapshotFile, iSnapshotSummary } from '@~/features/reviews/reviews.types';
+import type { iReviewTarget, iSnapshotFile, iSnapshotSummary, iUnit } from '@~/features/reviews/reviews.types';
 
 export function snapshotFile(path: string, overrides: Partial<iSnapshotFile> = {}): iSnapshotFile {
   return {
@@ -46,6 +53,23 @@ export function snapshotSummary(createdAt: string, overrides: Partial<iSnapshotS
     laterUnitCount: 0,
     markCounts: [],
     createdAt: new Date(createdAt),
+    ...overrides,
+  };
+}
+
+export function unitFixture(id: string, mark?: UnitMark, overrides: Partial<iUnit> = {}): iUnit {
+  return {
+    id,
+    fileId: 'file',
+    ordinal: 0,
+    kind: UNIT_KINDS.FUNCTION,
+    title: id,
+    isExported: false,
+    change: UNIT_CHANGES.MODIFIED,
+    additions: 3,
+    deletions: 1,
+    mark,
+    isMarkCarried: false,
     ...overrides,
   };
 }

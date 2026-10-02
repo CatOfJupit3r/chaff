@@ -17,7 +17,11 @@ export function useRefreshReview({ shouldStay = false }: { shouldStay?: boolean 
   return useMutation(
     tanstackRPC.reviews.refresh.mutationOptions({
       onSuccess: async ({ snapshotId, isNew }) => {
-        await queryClient.invalidateQueries({ queryKey: tanstackRPC.reviews.key() });
+        // A new snapshot moves findings on as well: their anchors are looked for again.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: tanstackRPC.reviews.key() }),
+          queryClient.invalidateQueries({ queryKey: tanstackRPC.findings.key() }),
+        ]);
         if (!isNew) showToast('Already up to date');
         if (shouldStay) return;
         // Unit ids belong to one snapshot, so Focus starts again at the first open unit of the new one.

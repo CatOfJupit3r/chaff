@@ -15,6 +15,7 @@ import { useUnitDetail } from '../hooks/use-unit-detail';
 import { useUnitUsages } from '../hooks/use-unit-usages';
 import { UnitCardTop } from './unit-card-top';
 import { UnitCodeView } from './unit-code-view';
+import { UnitRevisionNote } from './unit-revision-note';
 import { UnitUsagesView } from './unit-usages-view';
 import { UnitViewTabs } from './unit-view-tabs';
 
@@ -67,11 +68,14 @@ export function UnitCard({
       {digest && content ? (
         <UnitDigestNotes runner={digest.runner} note={note} group={findUnitGroup(content, unit.id)} />
       ) : null}
+      <UnitRevisionNote unit={unit} version={snapshot.version} />
       {unit.mark ? (
         <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-canvas px-[22px] py-[9px] text-[12.5px] text-muted">
           <Pill variant="neutral">{UNIT_MARK_LABELS(unit.mark)}</Pill>
           <span>
-            You decided this on {snapshot.headSha.slice(0, 7)}.
+            {unit.isMarkCarried
+              ? 'Kept from an earlier version, where you decided on the same code.'
+              : `You decided this on ${snapshot.headSha.slice(0, 7)}.`}
             {findings.length > 0 ? ' Its findings stay in Findings if you change your mind.' : ''} Pick another action
             to change it.
           </span>

@@ -31,6 +31,7 @@ export function FocusEndCard({ snapshot, tally, queue, onQueue }: iFocusEndCardP
   let heading = 'You reached the end of the cards';
   if (isComplete) heading = `Every unit in ${snapshot.branch} has a decision`;
   else if (queue === FOCUS_QUEUES.later) heading = 'You went through everything you put off';
+  else if (queue === FOCUS_QUEUES.recheck) heading = 'You rechecked every possibly affected unit';
   const detail = isComplete
     ? `Your decisions are pinned to snapshot ${snapshot.headSha.slice(0, 7)}.`
     : `${pluralize(tally.untouched, 'unit')} without a decision and ${tally.later} put off with Later. Skipping never counts as approval.`;
@@ -51,6 +52,11 @@ export function FocusEndCard({ snapshot, tally, queue, onQueue }: iFocusEndCardP
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {tally.untouched > 0 ? (
           <Button onClick={() => onQueue(FOCUS_QUEUES.open)}>Go through units without a decision</Button>
+        ) : null}
+        {tally.recheck > 0 ? (
+          <Button onClick={() => onQueue(FOCUS_QUEUES.recheck)}>
+            Recheck {pluralize(tally.recheck, 'possibly affected unit')}
+          </Button>
         ) : null}
         {tally.later > 0 ? (
           <Button variant="primary" onClick={() => onQueue(FOCUS_QUEUES.later)}>

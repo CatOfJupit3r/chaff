@@ -1,26 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { UNIT_CHANGES, UNIT_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
-import type { UnitMark } from '@chaff/common/enums/review.enums';
+import { UNIT_MARKS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
 
-import { FOCUS_END, findNextIndex, resolveIndex, tallyMarks, withMark } from '@~/features/focus/focus-queue.utils';
+import {
+  FOCUS_END,
+  findNextIndex,
+  resolveIndex,
+  tallyMarks,
+  tallyRevisions,
+  withMark,
+} from '@~/features/focus/focus-queue.utils';
 import { FOCUS_QUEUES } from '@~/features/focus/focus.enums';
-import type { iUnit } from '@~/features/reviews/reviews.types';
 
-function unit(id: string, mark?: UnitMark): iUnit {
-  return {
-    id,
-    fileId: 'file',
-    ordinal: 0,
-    kind: UNIT_KINDS.FUNCTION,
-    title: id,
-    isExported: false,
-    change: UNIT_CHANGES.MODIFIED,
-    additions: 1,
-    deletions: 1,
-    mark,
-  };
-}
+import { unitFixture as unit } from '../reviews/review-fixtures';
 
 const units = [
   unit('a', UNIT_MARKS.LOOKS_GOOD),
@@ -57,6 +49,28 @@ describe('focus queue', () => {
   });
 
   it('counts decisions and untouched units', () => {
-    expect(tallyMarks(units)).toEqual({ looksGood: 1, concerns: 1, questions: 0, later: 1, untouched: 2 });
+    expect(tallyMarks(units)).toEqual({ looksGood: 1, concerns: 1, questions: 0, later: 1, untouched: 2, recheck: 0 });
+  });
+
+  it('walks the possibly affected units whose mark was kept, until each is decided again', () => {
+    const updated = [
+      unit('a', UNIT_MARKS.LOOKS_GOOD, { revision: UNIT_REVISIONS.UNCHANGED, isMarkCarried: true }),
+      unit('b', UNIT_MARKS.LOOKS_GOOD, { revision: UNIT_REVISIONS.POSSIBLY_AFFECTED, isMarkCarried: true }),
+      unit('c', undefined, { revision: UNIT_REVISIONS.EDITED }),
+      unit('d', UNIT_MARKS.LOOKS_GOOD, { revision: UNIT_REVISIONS.POSSIBLY_AFFECTED, isMarkCarried: true }),
+    ];
+
+    expect(resolveIndex(updated, null, FOCUS_QUEUES.recheck)).toBe(1);
+    const decided = withMark(updated, 'b', UNIT_MARKS.LOOKS_GOOD);
+    expect(findNextIndex(decided, 1, FOCUS_QUEUES.recheck)).toBe(3);
+    expect(findNextIndex(withMark(decided, 'd', UNIT_MARKS.CONCERN), 3, FOCUS_QUEUES.recheck)).toBe(updated.length);
+    expect(tallyRevisions(updated)).toEqual({
+      unchanged: 1,
+      edited: 1,
+      added: 0,
+      possiblyAffected: 2,
+      recheck: 2,
+      kept: 3,
+    });
   });
 });

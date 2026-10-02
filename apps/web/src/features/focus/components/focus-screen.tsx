@@ -15,6 +15,7 @@ import { FocusContextPanel } from './focus-context-panel';
 import { FocusEndCard } from './focus-end-card';
 import { FocusHeader } from './focus-header';
 import { FocusHints } from './focus-hints';
+import { SecondPassBanner } from './second-pass-banner';
 import { UnitCard } from './unit-card';
 
 /** One unit at a time: read it, then decide with a key and move on. */
@@ -69,7 +70,13 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               onJump={jump}
               onUndo={focus.undo}
               onToggleContext={() => setIsContextOpen((isOpen) => !isOpen)}
-              onLeaveLaterQueue={() => focus.setQueue(FOCUS_QUEUES.open)}
+              onLeaveQueue={() => focus.setQueue(FOCUS_QUEUES.open)}
+            />
+            <SecondPassBanner
+              snapshot={snapshot}
+              units={focus.units}
+              findings={focus.findingsInReview}
+              onRecheck={() => focus.setQueue(FOCUS_QUEUES.recheck)}
             />
             <div className="relative w-full max-w-[920px]">
               <div className="absolute inset-x-[22px] top-[-7px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-55" />

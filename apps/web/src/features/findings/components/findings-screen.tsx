@@ -1,16 +1,34 @@
+import type { FindingStatus } from '@chaff/common/enums/review.enums';
+
 import { Screen } from '@~/components/layout/screen';
 import { TopBar } from '@~/components/layout/top-bar';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
 import { FINDING_FILTER_LABELS, FINDING_FILTERS, findingFilterValues } from '../findings.enums';
-import { countActive } from '../findings.utils';
 import { useFindingsScreen } from '../hooks/use-findings-screen';
+import { useSetFindingStatus } from '../hooks/use-set-finding-status';
+import { useVerifyKeyboard } from '../hooks/use-verify-keyboard';
 import { FindingDetail } from './finding-detail';
 import { FindingListItem } from './finding-list-item';
+import { VerifyHints } from './verify-hints';
+import { VerifyProgress } from './verify-progress';
 
-/** Everything flagged across reviews, with the selected finding's code and comment beside the list. */
+/**
+ * Everything flagged across reviews, and the place to verify it: the selected finding's code before and
+ * after the newest push beside the list, moved on with buttons or keys.
+ */
 export function FindingsScreen() {
   const { isLoading, findings, shown, selected, counts, filter, setFilter, select, workspaceFor } = useFindingsScreen();
+  const setStatus = useSetFindingStatus();
+  const selectedIndex = selected ? shown.indexOf(selected) : -1;
+  const move = (delta: number) => {
+    const next = shown[Math.min(shown.length - 1, Math.max(0, selectedIndex + delta))];
+    if (next) select(next.id);
+  };
+  const setSelectedStatus = (status: FindingStatus, answer?: string) => {
+    if (selected) setStatus.mutate({ findingId: selected.id, status, answer });
+  };
+  useVerifyKeyboard({ selected, onMove: move, onSetStatus: setSelectedStatus });
   const filterOptions = findingFilterValues.map((value) => ({
     value,
     label: (
@@ -36,9 +54,7 @@ export function FindingsScreen() {
                 Everything you flagged across your reviews. Nothing counts as resolved until you verify it.
               </p>
             </div>
-            <p className="m-0 text-[13px] text-muted">
-              {verifiedCount} of {findings.length} verified · {countActive(findings)} still open
-            </p>
+            <VerifyProgress findings={findings} verifiedCount={verifiedCount} />
           </div>
           <SegmentedControl label="Show findings" options={filterOptions} value={filter} onChange={setFilter} />
           {!isLoading && shown.length === 0 ? (
@@ -65,10 +81,13 @@ export function FindingsScreen() {
                   key={selected.id}
                   finding={selected}
                   repoPath={workspaceFor(selected.workspaceId)?.repoPath ?? ''}
+                  isPending={setStatus.isPending}
+                  onSetStatus={setSelectedStatus}
                 />
               ) : null}
             </div>
           ) : null}
+          {shown.length > 0 ? <VerifyHints /> : null}
         </div>
       </Screen>
     </>

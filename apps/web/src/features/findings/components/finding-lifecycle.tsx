@@ -1,23 +1,37 @@
-import { FINDING_STATUSES } from '@chaff/common/enums/review.enums';
-import type { FindingStatus } from '@chaff/common/enums/review.enums';
+import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import type { FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { cn } from '@~/lib/utils';
 
-const STEPS = [
+interface iLifecycleStep {
+  label: string;
+  isReached: (status: FindingStatus) => boolean;
+}
+
+const CONCERN_STEPS = [
   { label: 'Open', isReached: () => true },
   {
     label: 'Fix proposed',
-    isReached: (status: FindingStatus) =>
-      status === FINDING_STATUSES.FIX_PROPOSED || status === FINDING_STATUSES.VERIFIED,
+    isReached: (status) => status === FINDING_STATUSES.FIX_PROPOSED || status === FINDING_STATUSES.VERIFIED,
   },
-  { label: 'Verified', isReached: (status: FindingStatus) => status === FINDING_STATUSES.VERIFIED },
-] satisfies { label: string; isReached: (status: FindingStatus) => boolean }[];
+  { label: 'Verified', isReached: (status) => status === FINDING_STATUSES.VERIFIED },
+] satisfies iLifecycleStep[];
 
-/** Where a concern stands between being written and being verified by the reviewer. */
-export function FindingLifecycle({ status }: { status: FindingStatus }) {
+const QUESTION_STEPS = [
+  { label: 'Open', isReached: () => true },
+  {
+    label: 'Answered',
+    isReached: (status) => status === FINDING_STATUSES.ANSWERED || status === FINDING_STATUSES.CLOSED,
+  },
+  { label: 'Closed', isReached: (status) => status === FINDING_STATUSES.CLOSED },
+] satisfies iLifecycleStep[];
+
+/** Where a concern stands between written and verified, or a question between asked and closed. */
+export function FindingLifecycle({ kind, status }: { kind: FindingKind; status: FindingStatus }) {
+  const steps = kind === FINDING_KINDS.QUESTION ? QUESTION_STEPS : CONCERN_STEPS;
   return (
     <ol className="m-0 flex list-none items-center gap-2 p-0 text-[12.5px]" aria-label="Lifecycle">
-      {STEPS.map((step, index) => {
+      {steps.map((step, index) => {
         const isReached = step.isReached(status);
         return (
           <li key={step.label} className="flex items-center gap-2">

@@ -1,13 +1,20 @@
 import { Link } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { ExternalIcon, FileIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
+import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { DiffStat } from '@~/features/reviews/components/diff-stat';
 import { FileNote } from '@~/features/reviews/components/file-notes';
 import { PatchView } from '@~/features/reviews/components/patch-view';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
 import { DIFF_LAYOUTS, DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/reviews.types';
+
+import { CODE_SCOPE_LABELS, CODE_SCOPES, codeScopeValues } from '../focus.enums';
+import type { CodeScope } from '../focus.enums';
+import { useUnitInterdiff } from '../hooks/use-unit-interdiff';
+import { UnitInterdiffView } from './unit-interdiff-view';
 
 interface iUnitCodeViewProps {
   snapshotId: string;
@@ -23,9 +30,15 @@ function noteFor(file: iSnapshotFile) {
   return 'No lines changed in this file; the change is to its name or mode.';
 }
 
-/** The unit's file bar and its code, whole, with the changes marked. */
+/**
+ * The unit's file bar and its code, whole, with the changes marked. A unit edited since the reviewer
+ * decided on it shows only what changed since then, with the whole change a click away.
+ */
 export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }: iUnitCodeViewProps) {
   const line = unit.newStartLine ?? unit.oldStartLine ?? 1;
+  const interdiff = useUnitInterdiff(snapshotId, unit);
+  const [scope, setScope] = useState<CodeScope>(CODE_SCOPES['since-review']);
+  const isSinceReview = interdiff.reviewed !== undefined && scope === CODE_SCOPES['since-review'];
 
   return (
     <>
@@ -34,6 +47,14 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
         <span className="truncate font-mono text-fg">{file.path}</span>
         <DiffStat additions={file.additions} deletions={file.deletions} />
         <span className="flex-1" />
+        {interdiff.reviewed ? (
+          <SegmentedControl
+            label="Compare"
+            options={codeScopeValues.map((value) => ({ value, label: CODE_SCOPE_LABELS(value) }))}
+            value={scope}
+            onChange={setScope}
+          />
+        ) : null}
         <Button variant="ghost" size="sm" onClick={() => onOpenInEditor(file.path, line)}>
           <ExternalIcon />
           Open in editor
@@ -48,8 +69,9 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
         </Link>
       </div>
       <div className="max-h-[46vh] scrollbar-gutter-stable overflow-auto bg-canvas">
-        {detail === undefined ? <DiffSkeleton /> : null}
-        {detail?.patch ? (
+        {isSinceReview ? <UnitInterdiffView unit={unit} file={file} interdiff={interdiff} /> : null}
+        {!isSinceReview && detail === undefined ? <DiffSkeleton /> : null}
+        {!isSinceReview && detail?.patch ? (
           <PatchView
             snapshotId={snapshotId}
             file={file}
@@ -58,7 +80,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             isWrapped={false}
           />
         ) : null}
-        {detail && !detail.patch ? <FileNote>{noteFor(file)}</FileNote> : null}
+        {!isSinceReview && detail && !detail.patch ? <FileNote>{noteFor(file)}</FileNote> : null}
       </div>
     </>
   );
