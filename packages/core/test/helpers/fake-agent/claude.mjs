@@ -96,7 +96,7 @@ function fix() {
 
   const report = [...prompt.matchAll(/\*\*F-(\d+) · (Concern|Question)/g)].map(([, number, kind]) =>
     kind === 'Concern'
-      ? { id: `F-${number}`, status: 'fix_proposed', note: 'Back to doubling.' }
+      ? { id: `F-${number}`, status: 'fix_proposed', note: 'Back to doubling.', commits: [] }
       : { id: `F-${number}`, status: 'answered', note: 'Three retries are enough.' },
   );
   report.push({ id: 'F-999', status: 'fix_proposed' });

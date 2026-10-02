@@ -71,7 +71,7 @@ export class AgentReportService {
         {
           source: FINDING_EVENT_SOURCES.AGENT,
           note: item.note,
-          commits: item.commits ?? commits,
+          commits: item.commits?.length ? item.commits : commits,
           answer: outcome.status === FINDING_STATUSES.ANSWERED ? item.note : undefined,
         },
       );
