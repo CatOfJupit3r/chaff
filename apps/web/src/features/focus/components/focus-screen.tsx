@@ -1,9 +1,11 @@
 import { useState } from 'react';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
 
 import { ChangeUnitsDialog } from '@~/features/change-units/components/change-units-dialog';
 import { readyContent } from '@~/features/digests/digests.utils';
+import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import { ReviewTopBar } from '@~/features/reviews/components/review-top-bar';
 import { cn } from '@~/lib/utils';
 
@@ -42,6 +44,10 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
   };
   const swipe = (side: CardExit) =>
     side === CARD_EXITS.RIGHT ? focus.decide(UNIT_MARKS.LOOKS_GOOD) : setNoteMark(UNIT_MARKS.CONCERN);
+  const setContextOpen = (isOpen: boolean) => {
+    if (isOpen && !isContextOpen) reportGuideAction(ONBOARDING_ITEMS.CONTEXT);
+    setIsContextOpen(isOpen);
+  };
   const jump = (index: number) => {
     setNoteMark(undefined);
     focus.goTo(index);
@@ -57,7 +63,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
       focus.move(delta);
     },
     onUndo: focus.undo,
-    onToggleContext: () => setIsContextOpen((isOpen) => !isOpen),
+    onToggleContext: () => setContextOpen(!isContextOpen),
     onExpand: () => {
       focus.setView(CARD_VIEWS.code);
       expansion.toggle();
@@ -87,7 +93,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               onMove={focus.move}
               onJump={jump}
               onUndo={focus.undo}
-              onToggleContext={() => setIsContextOpen((isOpen) => !isOpen)}
+              onToggleContext={() => setContextOpen(!isContextOpen)}
               onLeaveQueue={() => focus.setQueue(FOCUS_QUEUES.open)}
               onProgression={focus.setProgression}
             />
@@ -97,8 +103,8 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               findings={focus.findingsInReview}
               onRecheck={() => focus.setQueue(FOCUS_QUEUES.recheck)}
             />
-            <StackFindingsBanner findings={focus.stackFindings} onShow={() => setIsContextOpen(true)} />
-            <div data-onboarding-card className="relative w-full max-w-[920px]">
+            <StackFindingsBanner findings={focus.stackFindings} onShow={() => setContextOpen(true)} />
+            <div className="relative w-full max-w-[920px]">
               <div className="absolute inset-x-[22px] top-[-7px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-55" />
               <div className="absolute inset-x-[44px] top-[-13px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-30" />
               {card?.change ? (
