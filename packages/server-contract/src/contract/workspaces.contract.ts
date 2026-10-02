@@ -72,4 +72,24 @@ export const workspacesContract = oc.router({
     })
     .input(workspaceIdInput)
     .output(z.array(branchSchema)),
+
+  branchStat: oc
+    .route({
+      summary: "Count a branch's changes",
+      description:
+        'Files, added lines and deleted lines between where the branch left its parent and its tip, read from disk before any snapshot exists.',
+    })
+    .input(
+      workspaceIdInput.extend({
+        branch: z.string().min(1).max(255),
+        parentBranch: z.string().min(1).max(255),
+      }),
+    )
+    .output(
+      z.object({
+        fileCount: z.number().int().nonnegative(),
+        additions: z.number().int().nonnegative(),
+        deletions: z.number().int().nonnegative(),
+      }),
+    ),
 });

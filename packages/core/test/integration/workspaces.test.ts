@@ -105,6 +105,24 @@ describe('workspaces', () => {
 });
 
 describe('workspace branches', () => {
+  it("counts a branch's own changes, leaving out what its parent gained since", async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feature/a');
+    repo.commit('a1', 'a.ts', 'one\ntwo\n');
+    repo.commit('a2', 'b.ts', 'three\n');
+    repo.git('checkout', '--quiet', 'main');
+    repo.commit('later on main', 'main.ts', 'main\n');
+    const workspace = await addWorkspace(repo);
+
+    const stat = await call(appRouter.workspaces.branchStat, {
+      workspaceId: workspace.id,
+      branch: 'feature/a',
+      parentBranch: 'main',
+    });
+
+    expect(stat).toEqual({ fileCount: 2, additions: 3, deletions: 0 });
+  });
+
   it('suggests the nearest branch below each branch of a stack', async () => {
     const repo = createTestGitRepo();
     repo.git('branch', 'release');

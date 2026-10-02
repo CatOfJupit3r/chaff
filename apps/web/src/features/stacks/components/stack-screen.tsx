@@ -46,6 +46,7 @@ export function StackScreen() {
           {stack && workspace && selected ? (
             <div className="grid grid-cols-[minmax(280px,420px)_minmax(0,1fr)] items-start gap-5">
               <StackChainList
+                workspaceId={stack.workspace.id}
                 links={links}
                 base={stack.base}
                 findings={findings}
