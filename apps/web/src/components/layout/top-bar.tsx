@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { AppearanceButton } from '@~/features/appearance/components/appearance-button';
 import { EditorButton } from '@~/features/editor/components/editor-button';
+import { JumpButton } from '@~/features/jump/components/jump-button';
 
 interface iTopBarProps {
   /** Breadcrumbs. */
@@ -17,6 +18,7 @@ export function TopBar({ children, end }: iTopBarProps) {
       <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-muted">{children}</div>
       <div className="ml-auto flex flex-none items-center gap-2.5">
         {end}
+        <JumpButton />
         <AppearanceButton />
         <EditorButton />
       </div>

@@ -15,6 +15,7 @@ import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/revi
 
 import { CODE_SCOPE_LABELS, CODE_SCOPES, codeScopeValues } from '../focus.enums';
 import type { CodeScope } from '../focus.enums';
+import { useCodeExpansion } from '../hooks/use-code-expansion';
 import { useUnitInterdiff } from '../hooks/use-unit-interdiff';
 import { UnitInterdiffView } from './unit-interdiff-view';
 
@@ -41,6 +42,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
   const interdiff = useUnitInterdiff(snapshotId, unit);
   const [scope, setScope] = useState<CodeScope>(CODE_SCOPES['since-review']);
   const isSinceReview = interdiff.reviewed !== undefined && scope === CODE_SCOPES['since-review'];
+  const expansion = useCodeExpansion([unit.id]);
 
   return (
     <>
@@ -56,6 +58,17 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             value={scope}
             onChange={setScope}
           />
+        ) : null}
+        {detail?.patch && !isSinceReview ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={expansion.isExpanded}
+            title="Show every line of the file around the change"
+            onClick={expansion.toggle}
+          >
+            Whole file
+          </Button>
         ) : null}
         <Button variant="ghost" size="sm" onClick={() => onOpenInEditor(file.path, line)}>
           <ExternalIcon />
@@ -80,6 +93,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             patch={detail.patch}
             layout={DIFF_LAYOUTS.unified}
             isWrapped={false}
+            isExpanded={expansion.isExpanded}
           />
         ) : null}
         {!isSinceReview && detail && !detail.patch ? <FileNote>{noteFor(file)}</FileNote> : null}

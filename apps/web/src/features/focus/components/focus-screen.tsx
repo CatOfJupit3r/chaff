@@ -9,8 +9,9 @@ import { cn } from '@~/lib/utils';
 
 import { cardMark } from '../focus-cards.utils';
 import { countRegions, tallyMarks } from '../focus-queue.utils';
-import { CARD_EXITS, FOCUS_QUEUES } from '../focus.enums';
+import { CARD_EXITS, CARD_VIEWS, FOCUS_QUEUES } from '../focus.enums';
 import type { CardExit } from '../focus.enums';
+import { useCodeExpansion } from '../hooks/use-code-expansion';
 import { useFocusKeyboard } from '../hooks/use-focus-keyboard';
 import { useFocusReview } from '../hooks/use-focus-review';
 import type { iNoteOptions, NoteMark } from '../hooks/use-focus-review';
@@ -32,6 +33,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
   const [isContextOpen, setIsContextOpen] = useState(focus.isContextPanelPinned);
   const [isEditingChanges, setIsEditingChanges] = useState(false);
   const [noteMark, setNoteMark] = useState<NoteMark>();
+  const expansion = useCodeExpansion(card?.units.map((member) => member.id) ?? []);
 
   const saveNote = async (mark: NoteMark, body: string, options: iNoteOptions) => {
     const isSaved = await focus.comment(mark, body, options);
@@ -56,6 +58,11 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
     },
     onUndo: focus.undo,
     onToggleContext: () => setIsContextOpen((isOpen) => !isOpen),
+    onExpand: () => {
+      focus.setView(CARD_VIEWS.code);
+      expansion.toggle();
+    },
+    onEscape: () => setIsContextOpen(false),
     onView: focus.setView,
   });
 
