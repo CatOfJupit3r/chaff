@@ -17,7 +17,7 @@ export interface iDraftLines {
 }
 
 /**
- * The last line of the range that the diff changed, so a host accepts a comment on it. Hosts only take
+ * The first line of the range that the diff changed, so a host accepts a comment on it. Hosts only take
  * comments on lines their diff shows; added and removed lines are always shown, unchanged ones may not be.
  */
 export function changedLine(regions: readonly iRegionLines[], lines: iDraftLines) {
@@ -31,8 +31,10 @@ export function changedLine(regions: readonly iRegionLines[], lines: iDraftLines
     const first = isNew ? region.newStartLine : region.oldStartLine;
     const count = isNew ? region.additions : region.deletions;
     if (first === null || count === 0) continue;
-    const overlapEnd = Math.min(last, first + count - 1);
-    if (overlapEnd >= Math.max(startLine, first) && (best === undefined || overlapEnd > best)) best = overlapEnd;
+    const overlapStart = Math.max(startLine, first);
+    if (overlapStart <= Math.min(last, first + count - 1) && (best === undefined || overlapStart < best)) {
+      best = overlapStart;
+    }
   }
   return best;
 }

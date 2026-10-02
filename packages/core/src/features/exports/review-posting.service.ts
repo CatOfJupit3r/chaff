@@ -11,7 +11,7 @@ import { ReviewsService } from '@~/features/reviews/reviews.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
 
-import { cliCommands, curlCommands, hostCli } from './host-commands.utils';
+import { cliCommands, curlCommands } from './host-commands.utils';
 import { changedLine, draftComment, draftLines } from './review-draft.utils';
 
 export interface iPostingInput {
@@ -54,7 +54,6 @@ export class ReviewPostingService {
           isPosted: finding.post !== undefined,
         };
       }),
-      cli: hostCli(host),
       cliCommand: cliCommands(host, access.baseUrl, writes),
       curlCommand: curlCommands(host, provider.apiUrl(access.baseUrl), writes),
     };

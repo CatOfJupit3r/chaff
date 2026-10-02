@@ -37,6 +37,8 @@ export const exportsContract = oc.router({
         agentPrompt: z.string(),
         findingCount: z.number().int().nonnegative(),
         reviewCount: z.number().int().nonnegative(),
+        /** Findings in scope at each status, whatever statuses were chosen. */
+        statusCounts: z.array(z.object({ status: findingStatusSchema, count: z.number().int().positive() })),
       }),
     ),
 
@@ -66,7 +68,6 @@ export const exportsContract = oc.router({
             postedUrl: z.string().optional(),
           }),
         ),
-        cli: z.string(),
         cliCommand: z.string(),
         curlCommand: z.string(),
       }),

@@ -11,15 +11,15 @@ const regions = [
 ];
 
 describe('changedLine', () => {
-  it('picks the last added line inside the range', () => {
-    expect(changedLine(regions, { fileId: 'f1', path: 'a.ts', side: DIFF_SIDES.NEW, startLine: 1, endLine: 12 })).toBe(
-      7,
+  it('picks the first added line inside the range', () => {
+    expect(changedLine(regions, { fileId: 'f1', path: 'a.ts', side: DIFF_SIDES.NEW, startLine: 6, endLine: 12 })).toBe(
+      6,
     );
   });
 
   it('picks a removed line on the old side', () => {
     expect(changedLine(regions, { fileId: 'f1', path: 'a.ts', side: DIFF_SIDES.OLD, startLine: 18, endLine: 30 })).toBe(
-      21,
+      20,
     );
   });
 

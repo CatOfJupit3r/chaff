@@ -98,6 +98,7 @@ export const findingStatusesEnumwaii = new Enumwaii('FindingStatus', [
 export const FINDING_STATUSES = findingStatusesEnumwaii.enum;
 export type FindingStatus = InferEnumwaii<typeof findingStatusesEnumwaii>;
 export const findingStatusSchema = findingStatusesEnumwaii.schema;
+export const findingStatusValues = findingStatusesEnumwaii.values;
 
 export const FINDING_KIND_LABELS = findingKindsEnumwaii.derive({
   [FINDING_KINDS.CONCERN]: 'Concern',

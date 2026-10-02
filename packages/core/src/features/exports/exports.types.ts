@@ -59,4 +59,6 @@ export interface iPacket {
   exportedAt: Date;
   reviews: iPacketReview[];
   findingCount: number;
+  /** Findings in scope at each status, whatever statuses were chosen. */
+  statusCounts: { status: FindingStatus; count: number }[];
 }

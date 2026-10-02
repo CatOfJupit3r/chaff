@@ -2,6 +2,7 @@ import { inject, singleton } from 'tsyringe';
 
 import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
 import { IS_INSPECTED_MARK } from '@chaff/common/enums/review.enums';
+import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { raisedLocation, raisedSnapshotId } from '@~/features/findings/finding-location.utils';
@@ -25,6 +26,12 @@ interface iReviewSource {
   paths: Map<string, string>;
 }
 
+function countStatuses(findings: readonly iFindingRecord[]) {
+  const counts = new Map<FindingStatus, number>();
+  for (const finding of findings) counts.set(finding.status, (counts.get(finding.status) ?? 0) + 1);
+  return [...counts].map(([status, count]) => ({ status, count }));
+}
+
 /** The review packet: findings with their code and history, for a person, a coding agent or another tool. */
 @singleton()
 export class ExportsService {
@@ -45,6 +52,7 @@ export class ExportsService {
       agentPrompt: agentPrompt(packet, markdown),
       findingCount: packet.findingCount,
       reviewCount: packet.reviews.length,
+      statusCounts: packet.statusCounts,
     };
   }
 
@@ -55,9 +63,11 @@ export class ExportsService {
     const targetIds = new Set(targets.map((candidate) => candidate.id));
     const statuses = new Set(options.statuses);
     const wanted = options.findingIds ? new Set(options.findingIds) : undefined;
-    const findings = (await this.findingRepository.list({ workspaceId: workspace.id }))
-      .filter((finding) => targetIds.has(finding.targetId) && statuses.has(finding.status))
-      .filter((finding) => !wanted || wanted.has(finding.id))
+    const inScope = (await this.findingRepository.list({ workspaceId: workspace.id })).filter((finding) =>
+      targetIds.has(finding.targetId),
+    );
+    const findings = inScope
+      .filter((finding) => statuses.has(finding.status) && (!wanted || wanted.has(finding.id)))
       .toSorted((left, right) => left.number - right.number);
     const anchors = findings.flatMap((finding) => finding.anchors);
     const [history, heads] = await Promise.all([
@@ -80,7 +90,13 @@ export class ExportsService {
         unreviewed,
       });
     }
-    return { repository: workspace.name, exportedAt: new Date(), reviews, findingCount: findings.length };
+    return {
+      repository: workspace.name,
+      exportedAt: new Date(),
+      reviews,
+      findingCount: findings.length,
+      statusCounts: countStatuses(inScope),
+    };
   }
 
   /** The reviews an export covers, bottom of the stack first. */

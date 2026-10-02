@@ -20,6 +20,12 @@ export const CODE_HOST_DEFAULT_URLS = codeHostsEnumwaii.derive({
   [CODE_HOSTS.GITHUB]: 'https://github.com',
 });
 
+/** Each host's own command-line tool. */
+export const CODE_HOST_CLIS = codeHostsEnumwaii.derive({
+  [CODE_HOSTS.GITLAB]: 'glab',
+  [CODE_HOSTS.GITHUB]: 'gh',
+});
+
 /** What a change is called on each host. */
 export const CHANGE_REQUEST_NOUNS = codeHostsEnumwaii.derive({
   [CODE_HOSTS.GITLAB]: 'merge request',
