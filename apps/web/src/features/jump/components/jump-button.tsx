@@ -27,6 +27,7 @@ export function JumpButton() {
     <>
       <button
         type="button"
+        data-onboarding-jump
         onClick={() => setIsOpen(true)}
         className="inline-flex h-[30px] items-center gap-2 rounded-sm border border-line pr-1.5 pl-2.5 text-[13px] text-faint hover:bg-hover hover:text-muted"
       >

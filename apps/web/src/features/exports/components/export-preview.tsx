@@ -42,6 +42,7 @@ export function ExportPreview({ snapshot, packet, statuses, tab, onTab }: iExpor
   return (
     <section
       aria-label="Export preview"
+      data-onboarding-output
       className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2.5">

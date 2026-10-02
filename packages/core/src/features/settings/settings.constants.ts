@@ -1,4 +1,5 @@
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
+import { INITIAL_ONBOARDING } from '@chaff/common/constants/onboarding.constants';
 import {
   ACCENTS,
   CODE_FONTS,
@@ -35,6 +36,7 @@ export const DEFAULT_SETTINGS = {
   digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
   agentCommands: [],
   shortcuts: [],
+  onboarding: INITIAL_ONBOARDING,
 } satisfies iSettingsResponse;
 
 /** Settings live in a single row with this id. */

@@ -32,7 +32,7 @@ export function StackScreen() {
         <b className="font-medium text-fg">Stack</b>
       </TopBar>
       <Screen>
-        <div className="mx-auto flex max-w-[1240px] flex-col gap-5">
+        <div data-onboarding-stack className="mx-auto flex max-w-[1240px] flex-col gap-5">
           <div>
             <h1 className="m-0 font-mono text-[20px] font-semibold tracking-[-0.015em] break-all">
               {stack?.tip.name ?? 'No stack'}

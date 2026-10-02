@@ -26,11 +26,19 @@ export function useUpdateSettings() {
         return { previous };
       },
       onError: (error, _changes, context) => {
-        if (context?.previous) queryClient.setQueryData(settingsQueryOptions.queryKey, context.previous);
+        const previous = context?.previous;
+        if (previous)
+          queryClient.setQueryData(settingsQueryOptions.queryKey, (current) => ({
+            ...previous,
+            onboarding: current?.onboarding ?? previous.onboarding,
+          }));
         showToast(getErrorMessage(error));
       },
       onSuccess: async (settings, changes) => {
-        queryClient.setQueryData(settingsQueryOptions.queryKey, settings);
+        queryClient.setQueryData(settingsQueryOptions.queryKey, (current) => ({
+          ...settings,
+          onboarding: current?.onboarding ?? settings.onboarding,
+        }));
         if (changes.agentCommands) await queryClient.invalidateQueries({ queryKey: tanstackRPC.digests.runners.key() });
       },
     }),

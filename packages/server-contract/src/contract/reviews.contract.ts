@@ -194,6 +194,23 @@ const unitInput = z.object({ snapshotId: idSchema, unitId: idSchema });
 const fileInput = z.object({ snapshotId: idSchema, fileId: idSchema });
 const MAX_CONTEXT_LINES = 50;
 
+export const setMarksInputSchema = snapshotIdInput.extend({
+  marks: z
+    .array(
+      z.object({
+        unitId: idSchema,
+        mark: unitMarkSchema.optional(),
+        skipReason: z.string().trim().min(1).max(200).optional(),
+      }),
+    )
+    .min(1)
+    .max(5000),
+});
+
+export const setMarksResultSchema = z.array(
+  z.object({ unitId: z.string(), mark: unitMarkSchema.optional(), skipReason: z.string().optional() }),
+);
+
 export const reviewsContract = oc.router({
   list: oc
     .route({
@@ -367,21 +384,6 @@ export const reviewsContract = oc.router({
       description:
         'Records a decision on each unit in this snapshot, or clears it when no mark is given. A Change unit is decided by marking all of its units at once. A Skipped mark carries the reason.',
     })
-    .input(
-      snapshotIdInput.extend({
-        marks: z
-          .array(
-            z.object({
-              unitId: idSchema,
-              mark: unitMarkSchema.optional(),
-              skipReason: z.string().trim().min(1).max(200).optional(),
-            }),
-          )
-          .min(1)
-          .max(5000),
-      }),
-    )
-    .output(
-      z.array(z.object({ unitId: z.string(), mark: unitMarkSchema.optional(), skipReason: z.string().optional() })),
-    ),
+    .input(setMarksInputSchema)
+    .output(setMarksResultSchema),
 });

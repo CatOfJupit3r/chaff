@@ -40,6 +40,7 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
     <DiffReviewContext value={review}>
       <ReviewTopBar snapshot={snapshot} repositoryName={repositoryName} />
       <div
+        data-onboarding-diff
         style={{ gridTemplateColumns: `${panel.isOpen ? panel.width : 0}px minmax(0, 1fr)` }}
         className={cn(
           'relative grid min-h-0 flex-1',

@@ -35,7 +35,7 @@ export function DiffLayoutSection() {
   const { mutate: updateSettings } = useUpdateSettings();
 
   return (
-    <section aria-label="Diffs and layout" className="flex flex-col gap-2.5">
+    <section data-onboarding-customization aria-label="Diffs and layout" className="flex flex-col gap-2.5">
       <SectionLabel>Diffs and layout</SectionLabel>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-8 gap-y-5 rounded-lg border border-line bg-surface p-5">
         <Field label="Full diff opens in">

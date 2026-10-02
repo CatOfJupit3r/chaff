@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useAtom } from 'jotai';
 
 import {
   SHORTCUT_ACTION_LABELS,
@@ -16,6 +16,8 @@ import { SectionLabel } from '@~/components/ui/section-label';
 import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
 import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
 import { useShortcutKeys } from '@~/hooks/use-shortcut-keys';
+
+import { isKeyListOpenAtom } from '../key-list.store';
 
 interface iKeyRow {
   keys: string[];
@@ -55,7 +57,7 @@ function KeyRows({ title, rows }: { title: string; rows: readonly iKeyRow[] }) {
 
 /** Every key Chaff answers to, as bound now; opened with ?. */
 export function KeyListDialog() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useAtom(isKeyListOpenAtom);
   const keys = useShortcutBindings();
   useShortcutKeys((key) => (key === '?' ? () => setIsOpen(true) : undefined));
   const screenRows = (screen: ShortcutScreen) =>
@@ -65,7 +67,7 @@ export function KeyListDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="w-[min(560px,100%)]">
+      <DialogContent data-onboarding-keys className="w-[min(560px,100%)]">
         <DialogHeader title="Keyboard" description="Focus and Verify keys can be changed in Settings." />
         <DialogBody className="gap-5">
           <KeyRows title="Everywhere" rows={EVERYWHERE} />

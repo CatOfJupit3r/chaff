@@ -50,7 +50,7 @@ interface iExportOptionsProps {
 /** Scope, the status groups to include, and what to attach to each finding. */
 export function ExportOptionsPanel({ options, reviewName, statusCounts, onUpdate, onToggle }: iExportOptionsProps) {
   return (
-    <div className="flex flex-col gap-5">
+    <div data-onboarding-export-options className="flex flex-col gap-5">
       <fieldset className="m-0 flex flex-col border-0 p-0">
         <SectionLabel className="mb-1.5">Scope</SectionLabel>
         {exportScopeValues.map((scope) => (

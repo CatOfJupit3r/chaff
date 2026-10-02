@@ -13,7 +13,11 @@ import { diffContextSchema, diffLayoutSchema, inlineDiffSchema } from '@chaff/co
 import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
-import { agentCommandsSchema, shortcutBindingsSchema } from '@chaff/server-contract/contract/settings.contract';
+import {
+  agentCommandsSchema,
+  shortcutBindingsSchema,
+  onboardingSchema,
+} from '@chaff/server-contract/contract/settings.contract';
 
 import type { settings } from '@~/db/schema/settings.schema';
 import { createRowResolver } from '@~/lib/row-resolver';
@@ -43,6 +47,7 @@ export class SettingsResolver {
       digestRunner: digestRunnerSchema.parse(row.digestRunner),
       agentCommands: agentCommandsSchema.parse(row.agentCommands),
       shortcuts: shortcutBindingsSchema.parse(row.shortcuts),
+      onboarding: onboardingSchema.parse(row.onboarding),
     }),
   });
 }

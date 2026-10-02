@@ -16,7 +16,9 @@ export function ReviewTopBar({ snapshot, repositoryName }: { snapshot: iSnapshot
     <TopBar
       end={
         <>
-          <DigestChip snapshotId={snapshot.id} />
+          <div data-onboarding-digest className="contents">
+            <DigestChip snapshotId={snapshot.id} />
+          </div>
           <SnapshotChip snapshot={snapshot} />
         </>
       }
