@@ -53,8 +53,8 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
   const snapshotId = snapshot.id;
   const units = useQuery(unitsQueryOptions(snapshotId)).data;
   const findings = useFindings(snapshot.targetId);
-  const { create } = useFindingMutations();
-  const setMarks = useSetMarks(snapshotId);
+  const { mutateAsync: createFinding, isPending: isSaving } = useFindingMutations().create;
+  const { mutate: setMarks } = useSetMarks(snapshotId);
   const [draft, setDraft] = useState<iDiffDraft>();
   const unitsByFile = useMemo(() => groupUnitsByFile(units ?? []), [units]);
   const placementsByFile = useMemo(() => placeFindings(snapshotId, findings), [snapshotId, findings]);
@@ -64,7 +64,7 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
   const saveDraft = async (kind: FindingKind, body: string) => {
     if (!draft) return false;
     try {
-      const finding = await create.mutateAsync({ snapshotId, kind, body, anchors: [draft] });
+      const finding = await createFinding({ snapshotId, kind, body, anchors: [draft] });
       showToast(`${FINDING_KIND_LABELS(kind)} F-${finding.number} saved`);
       setDraft(undefined);
       return true;
@@ -78,7 +78,7 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
     const mark = skipReason ? UNIT_MARKS.SKIPPED : UNIT_MARKS.LOOKS_GOOD;
     const undecided = (unitsByFile.get(fileId) ?? []).filter((unit) => unit.mark === undefined);
     if (undecided.length > 0) {
-      setMarks.mutate(
+      setMarks(
         { snapshotId, marks: undecided.map((unit) => ({ unitId: unit.id, mark, skipReason })) },
         { onError: (error) => showToast(getErrorMessage(error)) },
       );
@@ -93,7 +93,7 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
     placementsByFile,
     discussionsByFile,
     draft,
-    isSaving: create.isPending,
+    isSaving,
     startDraft: setDraft,
     cancelDraft: () => setDraft(undefined),
     saveDraft,

@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
+import type { iDiscussion } from '../code-hosts.types';
+
+const NO_DISCUSSIONS: iDiscussion[] = [];
+
 /** A merge request's threads from its host; empty for local reviews. */
 export function useDiscussions(snapshotId: string, isChangeRequest: boolean) {
   return (
@@ -11,6 +15,6 @@ export function useDiscussions(snapshotId: string, isChangeRequest: boolean) {
         enabled: isChangeRequest,
         staleTime: 60_000,
       }),
-    ).data ?? []
+    ).data ?? NO_DISCUSSIONS
   );
 }

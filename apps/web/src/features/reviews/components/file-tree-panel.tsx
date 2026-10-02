@@ -5,8 +5,8 @@ import { SectionLabel } from '@~/components/ui/section-label';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
 import { useDiffReview } from '../diff-review.context';
-import { buildFileTree, filterFiles } from '../file-tree.utils';
 import { MIN_DIFF_SEARCH_LENGTH, useDiffSearch } from '../hooks/use-diff-search';
+import { useFileTree } from '../hooks/use-file-tree';
 import { countCoveredLines } from '../review-coverage.utils';
 import { FILE_TREE_VIEWS, FILE_TREE_VIEW_LABELS, fileTreeViewValues } from '../reviews.enums';
 import type { FileTreeView } from '../reviews.enums';
@@ -31,7 +31,7 @@ export function FileTreePanel({ snapshotId, files, currentPath, onSelect, onOpen
   const [view, setView] = useState<FileTreeView>(FILE_TREE_VIEWS.tree);
   const searchedQuery = useDeferredValue(query.trim());
   const { data: search } = useDiffSearch(snapshotId, searchedQuery);
-  const matches = filterFiles(files, query);
+  const { matches, tree } = useFileTree(files, query);
   const hasCodeMatches = searchedQuery.length >= MIN_DIFF_SEARCH_LENGTH && (search?.files.length ?? 0) > 0;
   const rowProps = { currentPath, onSelect, onOpenInEditor };
   const coverage = countCoveredLines([...useDiffReview().unitsByFile.values()].flat());
@@ -62,7 +62,7 @@ export function FileTreePanel({ snapshotId, files, currentPath, onSelect, onOpen
         <p className="m-0 p-2 text-[12.5px] text-muted">No changed file or line matches.</p>
       ) : null}
       {matches.length > 0 && view === FILE_TREE_VIEWS.tree ? (
-        <FileTreeFolder folder={buildFileTree(matches)} isForcedOpen={query.trim() !== ''} {...rowProps} />
+        <FileTreeFolder folder={tree} isForcedOpen={query.trim() !== ''} {...rowProps} />
       ) : null}
       {matches.length > 0 && view === FILE_TREE_VIEWS.list
         ? matches

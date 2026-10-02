@@ -20,7 +20,15 @@ interface iAllFilesViewProps {
 }
 
 /** Every changed file in tree order, each loading its diff as it scrolls into view. */
-export function AllFilesView({ snapshotId, files, initialPath, scrollRoot, ...sectionProps }: iAllFilesViewProps) {
+export function AllFilesView({
+  snapshotId,
+  files,
+  initialPath,
+  scrollRoot,
+  layout,
+  isWrapped,
+  onOpenInEditor,
+}: iAllFilesViewProps) {
   const startPath = useRef(initialPath);
 
   useEffect(() => {
@@ -30,7 +38,15 @@ export function AllFilesView({ snapshotId, files, initialPath, scrollRoot, ...se
   return (
     <>
       {files.map((file) => (
-        <DiffFileSection key={file.id} snapshotId={snapshotId} file={file} scrollRoot={scrollRoot} {...sectionProps} />
+        <DiffFileSection
+          key={file.id}
+          snapshotId={snapshotId}
+          file={file}
+          scrollRoot={scrollRoot}
+          layout={layout}
+          isWrapped={isWrapped}
+          onOpenInEditor={onOpenInEditor}
+        />
       ))}
       <p className="m-0 px-4 pt-[18px] pb-7 text-center text-[12.5px] text-faint">
         End of the diff. {pluralize(files.length, 'file')}, loaded as you scrolled.

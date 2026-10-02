@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 
@@ -14,17 +14,18 @@ export function useFullDiff(snapshotId: string) {
   const snapshot = useSnapshot(snapshotId);
   const workspace = useWorkspaces().find((candidate) => candidate.id === snapshot.workspaceId);
   const view = useDiffViewState();
+  const { file: viewedPath, update: updateView, followScroll } = view;
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
   const openInEditor = useOpenInEditor(workspace?.repoPath ?? '');
 
-  const files = flattenFileTree(buildFileTree(snapshot.files));
-  const currentFile = files.find((file) => file.path === view.file) ?? files[0];
+  const files = useMemo(() => flattenFileTree(buildFileTree(snapshot.files)), [snapshot.files]);
+  const currentFile = files.find((file) => file.path === viewedPath) ?? files[0];
   const isAllFiles = view.mode === DIFF_MODES.all;
 
-  useScrollSpy(isAllFiles ? scrollRoot : null, view.followScroll);
+  useScrollSpy(isAllFiles ? scrollRoot : null, followScroll);
 
   const selectFile = (path: string) => {
-    view.update({ file: path });
+    updateView({ file: path });
     if (isAllFiles) scrollToFileSection(scrollRoot, path);
     else scrollToTop(scrollRoot);
   };

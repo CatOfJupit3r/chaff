@@ -1,7 +1,9 @@
 import type { iFileTreeFolder, iSnapshotFile } from './reviews.types';
 
+const NAME_COLLATOR = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+
 function compareNames(left: string, right: string) {
-  return left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true });
+  return NAME_COLLATOR.compare(left, right);
 }
 
 function fileName(path: string) {
