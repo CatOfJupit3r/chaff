@@ -73,7 +73,7 @@ Starting a review freezes a **snapshot** of one branch against its parent:
 2. It records three commits: the branch head, the parent head and their merge base. The diff is always merge base to branch head.
 3. It pins those commits under `refs/chaff/snapshots/<snapshot id>/{head,parent,base}` in the store, so rebasing, force-updating or deleting the branch in your repository never breaks a review, and git's garbage collection can't remove them.
 
-While you review, Chaff compares the snapshot with your repository and reports what moved: new commits on the branch, a rewritten branch (its old head is no longer in its history), a parent that moved, or a deleted branch. Nothing under the review changes until you press **Update**, which freezes a new snapshot of the same target. The [second pass](#the-second-pass) then compares the two snapshots.
+While you review, Chaff compares the snapshot with your repository and reports what moved: new commits on the branch, a rewritten branch (its old head is no longer in its history), a parent that moved, or a deleted branch. It watches the repository's refs (`refs/` and `packed-refs`, read only), so a commit, rebase or branch deletion shows up as it happens; uncommitted work is checked every 30 seconds and whenever the window gains focus. Nothing under the review changes until you press **Update**, which freezes a new snapshot of the same target. The [second pass](#the-second-pass) then compares the two snapshots.
 
 ## Regions and units
 
@@ -81,7 +81,7 @@ Each snapshot is broken down before you read it:
 
 - A **region** is one contiguous changed range in one file, with a content hash. Every changed line belongs to exactly one region. Changes without line content (binary files, renames, mode changes) get one file-level region, so they are counted too.
 - A **unit** is something you review. Chaff parses the old and new version of each file with tree-sitter and assigns each region to the declaration that encloses it: a function, method, class or other declaration becomes a **Function** unit, shown whole. Changes outside any declaration (imports, top-level statements, config, deleted, generated or unsupported files) become **Section** units. Nothing is dropped for being small or uninteresting.
-- Supported grammars: TypeScript, TSX, JavaScript, Python, Go, Rust, Java, C#, Ruby, PHP, C++, Bash and PowerShell.
+- Supported grammars: TypeScript, TSX, JavaScript, Python, Go, Rust, Java, Kotlin, C#, Ruby, PHP, C++, Bash and PowerShell.
 
 Units are numbered across the snapshot in reading order, and their count shows on the Reviews screen. Focus review walks them one at a time; a decision on a unit covers every region in it, so the Full diff can show line coverage. A **Change** unit groups Function and Section units into one behavior or design change, possibly across files. The AI digest proposes them (below) and you can make, split, merge, rename, reorder or ungroup them; a unit is in one Change unit at most, and units in none get a card of their own, so every region stays reachable. Deciding on a Change unit marks each of its units, so coverage is still counted over regions. A unit can also be **skipped** with a reason; a review is complete when every region belongs to a unit that is decided on or skipped, which is the count the Reviews and Stack screens show. When a review gets a new version, Change units follow their units to it.
 

@@ -7,6 +7,7 @@ import type { UnitMark } from '@chaff/common/enums/review.enums';
 import { SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
+import { isTestPath } from '../diff/file-kind.utils';
 import { parsePatch } from '../diff/patch.utils';
 import { buildUnitPatch } from '../diff/unit-patch.utils';
 import type { iUnitMarkRepository } from '../marks/unit-mark.repository';
@@ -120,6 +121,7 @@ export class UnitsService {
         firstLine,
         code: lines ? lines.slice(firstLine - 1, hit.line + USAGE_CONTEXT_LINES) : [hit.text],
         isInReview: changedPaths.has(hit.path),
+        isInTest: isTestPath(hit.path),
       };
     });
     return { symbol, usages, isTruncated: outside.length > shown.length };

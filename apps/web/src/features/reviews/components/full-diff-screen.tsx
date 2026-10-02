@@ -52,6 +52,7 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
         >
           <div style={{ width: panel.width }}>
             <FileTreePanel
+              snapshotId={snapshotId}
               files={snapshot.files}
               currentPath={currentFile?.path}
               onSelect={selectFile}

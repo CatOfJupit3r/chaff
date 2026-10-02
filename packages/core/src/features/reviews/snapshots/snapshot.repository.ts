@@ -19,6 +19,8 @@ export interface iSnapshotRepository {
   listRegions: (snapshotId: string) => Promise<iRegionLines[]>;
   findFile: (snapshotId: string, fileId: string) => Promise<iSnapshotFileRecord | undefined>;
   findPatch: (snapshotId: string, fileId: string) => Promise<{ patch?: string } | undefined>;
+  /** Every file's stored patch, in reading order; files too large to keep have none. */
+  listPatches: (snapshotId: string) => Promise<{ fileId: string; path: string; patch?: string }[]>;
   /** The snapshot's units in reading order, with the reviewer's marks. */
   listUnits: (snapshotId: string) => Promise<iUnitRecord[]>;
   findUnit: (snapshotId: string, unitId: string) => Promise<iUnitRecord | undefined>;

@@ -26,3 +26,5 @@ export type iUnitDetail = ORPCOutputs['reviews']['unitDetail'];
 export type iUnitUsages = ORPCOutputs['reviews']['unitUsages'];
 
 export type iUnitUsage = iUnitUsages['usages'][number];
+
+export type iDiffSearch = ORPCOutputs['reviews']['searchDiff'];
