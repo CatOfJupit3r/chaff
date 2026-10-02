@@ -18,6 +18,8 @@ interface iFocusKeyHandlers {
   onMove: (delta: number) => unknown;
   onUndo: () => unknown;
   onToggleContext: () => unknown;
+  onExpand: () => unknown;
+  onEscape: () => unknown;
   onView: (view: CardView) => unknown;
 }
 
@@ -45,17 +47,19 @@ function handlersByAction(handlers: iFocusKeyHandlers) {
     [SHORTCUT_ACTIONS.FOCUS_CONCERN, () => handlers.onComment(UNIT_MARKS.CONCERN)],
     [SHORTCUT_ACTIONS.FOCUS_QUESTION, () => handlers.onComment(UNIT_MARKS.QUESTION)],
     [SHORTCUT_ACTIONS.FOCUS_SKIP, () => handlers.onComment(UNIT_MARKS.SKIPPED)],
+    [SHORTCUT_ACTIONS.FOCUS_EXPAND, handlers.onExpand],
   ]);
 }
 
 function actionFor(key: string, handlers: iFocusKeyHandlers, keys: ReadonlyMap<ShortcutAction, string>) {
+  if (key === 'escape') return handlers.onEscape;
   const action = ARROW_ACTIONS.get(key) ?? findShortcutAction(keys, SHORTCUT_SCREENS.FOCUS, key);
   if (action) return handlersByAction(handlers).get(action);
   const view = handlers.hasCard ? VIEW_KEYS.get(key) : undefined;
   return view ? () => handlers.onView(view) : undefined;
 }
 
-/** Focus review keys from Settings (G, C, Q, L, S decide; J/K move; U undoes; I opens context), arrows and 1-4. */
+/** Focus review keys from Settings (G, C, Q, L, S decide; J/K move; U undoes; I opens context; E expands), arrows, 1-4 and Esc. */
 export function useFocusKeyboard(handlers: iFocusKeyHandlers) {
   const keys = useShortcutBindings();
   useShortcutKeys((key) => actionFor(key, handlers, keys));

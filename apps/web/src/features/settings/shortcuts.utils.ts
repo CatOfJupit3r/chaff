@@ -1,5 +1,6 @@
 import {
   DEFAULT_SHORTCUT_KEYS,
+  GLOBAL_SHORTCUT_KEYS,
   RESERVED_SHORTCUT_KEYS,
   SHORTCUT_ACTION_LABELS,
   SHORTCUT_ACTION_SCREENS,
@@ -42,6 +43,7 @@ export function describeShortcutConflict(
   key: string,
 ) {
   const screen = SHORTCUT_ACTION_SCREENS(action);
+  if (GLOBAL_SHORTCUT_KEYS.includes(key)) return `${shortcutKeyLabel(key)} is kept for Jump to and the key list`;
   if (RESERVED_SHORTCUT_KEYS(screen).includes(key)) return `${shortcutKeyLabel(key)} switches the card's views`;
   const taken = shortcutActionValues.find(
     (other) => other !== action && SHORTCUT_ACTION_SCREENS(other) === screen && keys.get(other) === key,

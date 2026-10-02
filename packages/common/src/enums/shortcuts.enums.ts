@@ -13,10 +13,13 @@ export const SHORTCUT_SCREEN_LABELS = shortcutScreensEnumwaii.derive({
   [SHORTCUT_SCREENS.VERIFY]: 'Verify',
 });
 
+/** Keys every screen uses: / opens Jump to, ? lists the keys. */
+export const GLOBAL_SHORTCUT_KEYS: readonly string[] = ['/', '?'];
+
 /** Keys a screen keeps for itself: Focus switches the card's views with 1 to 4. */
 export const RESERVED_SHORTCUT_KEYS = shortcutScreensEnumwaii.derive<readonly string[]>({
-  [SHORTCUT_SCREENS.FOCUS]: ['1', '2', '3', '4'],
-  [SHORTCUT_SCREENS.VERIFY]: [],
+  [SHORTCUT_SCREENS.FOCUS]: ['1', '2', '3', '4', ...GLOBAL_SHORTCUT_KEYS],
+  [SHORTCUT_SCREENS.VERIFY]: GLOBAL_SHORTCUT_KEYS,
 });
 
 /** Actions that can be given another key in Settings. */
@@ -30,6 +33,7 @@ export const shortcutActionsEnumwaii = new Enumwaii('ShortcutAction', [
   'FOCUS_SKIP',
   'FOCUS_UNDO',
   'FOCUS_CONTEXT',
+  'FOCUS_EXPAND',
   'VERIFY_NEXT',
   'VERIFY_PREVIOUS',
   'VERIFY_VERIFY',
@@ -53,6 +57,7 @@ export const SHORTCUT_ACTION_SCREENS = shortcutActionsEnumwaii.derive({
   [SHORTCUT_ACTIONS.FOCUS_SKIP]: SHORTCUT_SCREENS.FOCUS,
   [SHORTCUT_ACTIONS.FOCUS_UNDO]: SHORTCUT_SCREENS.FOCUS,
   [SHORTCUT_ACTIONS.FOCUS_CONTEXT]: SHORTCUT_SCREENS.FOCUS,
+  [SHORTCUT_ACTIONS.FOCUS_EXPAND]: SHORTCUT_SCREENS.FOCUS,
   [SHORTCUT_ACTIONS.VERIFY_NEXT]: SHORTCUT_SCREENS.VERIFY,
   [SHORTCUT_ACTIONS.VERIFY_PREVIOUS]: SHORTCUT_SCREENS.VERIFY,
   [SHORTCUT_ACTIONS.VERIFY_VERIFY]: SHORTCUT_SCREENS.VERIFY,
@@ -71,6 +76,7 @@ export const SHORTCUT_ACTION_LABELS = shortcutActionsEnumwaii.derive({
   [SHORTCUT_ACTIONS.FOCUS_SKIP]: 'Skip',
   [SHORTCUT_ACTIONS.FOCUS_UNDO]: 'Undo',
   [SHORTCUT_ACTIONS.FOCUS_CONTEXT]: 'Context panel',
+  [SHORTCUT_ACTIONS.FOCUS_EXPAND]: 'Whole file around the code',
   [SHORTCUT_ACTIONS.VERIFY_NEXT]: 'Next finding',
   [SHORTCUT_ACTIONS.VERIFY_PREVIOUS]: 'Previous finding',
   [SHORTCUT_ACTIONS.VERIFY_VERIFY]: 'Verify fix',
@@ -90,6 +96,7 @@ export const DEFAULT_SHORTCUT_KEYS = shortcutActionsEnumwaii.derive({
   [SHORTCUT_ACTIONS.FOCUS_SKIP]: 's',
   [SHORTCUT_ACTIONS.FOCUS_UNDO]: 'u',
   [SHORTCUT_ACTIONS.FOCUS_CONTEXT]: 'i',
+  [SHORTCUT_ACTIONS.FOCUS_EXPAND]: 'e',
   [SHORTCUT_ACTIONS.VERIFY_NEXT]: 'j',
   [SHORTCUT_ACTIONS.VERIFY_PREVIOUS]: 'k',
   [SHORTCUT_ACTIONS.VERIFY_VERIFY]: 'v',

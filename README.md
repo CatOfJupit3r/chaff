@@ -342,6 +342,13 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 Every Focus and Verify action can take another key: click it and press the new one. A key already used on that screen is refused with the action that has it, and **Reset** puts the default back. The hints under the card and on the buttons follow your keys.
 
+A few keys work everywhere: **/** or **Ctrl K** (**⌘K** on a Mac) opens **Jump to**, which finds any unit or file of the open review, another review, or a screen; **?** lists every key as currently bound; **Esc** closes a dialog or the context panel. In Focus, **E** shows the whole file around the card's code, and again folds it back.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/jump-to-dark.png" />
+  <img src="docs/screenshots/jump-to-light.png" alt="Jump to dialog searching for backoff, listing the computeBackoff unit, its file and the retry-backoff review" />
+</picture>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-keyboard-dark.png" />
   <img src="docs/screenshots/settings-keyboard-light.png" alt="Keyboard map in Settings with Later moved to B" />
@@ -426,6 +433,7 @@ The width you drag the Full diff's file list to is kept.
 | Finding severity; findings on several units, a whole branch or a whole stack; concerns shown on the branches above | Works |
 | Suggested task for a finding from your coding agent: accept, edit or discard; exported once accepted | Works |
 | Rebindable keys for Focus and Verify | Works |
+| Jump to (/ or Ctrl K), key list (?), Esc closes panels, E shows the whole file in Focus | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 
 ## Stack
