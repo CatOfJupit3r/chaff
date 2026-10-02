@@ -133,6 +133,14 @@ export class GitHubProvider implements iCodeHostProvider {
     return pull ? toChange(pull) : undefined;
   }
 
+  public async getIssue(access: iCodeHostAccess, project: string, issueNumber: number) {
+    const issue = await getJson(
+      this.request(access, `/repos/${project}/issues/${issueNumber}`),
+      z.object({ number: z.number(), title: z.string(), body: z.string().nullish() }),
+    );
+    return issue ? { number: issue.number, title: issue.title, description: issue.body ?? '' } : undefined;
+  }
+
   public async listChangeCommits(access: iCodeHostAccess, project: string, changeNumber: number) {
     const commits = await getAllPages(
       this.request(access, `/repos/${project}/pulls/${changeNumber}/commits?per_page=100`),

@@ -15,6 +15,12 @@ export interface iFakeChange {
   targetBranch: string;
   assignees?: string[];
   reviewers?: string[];
+  description?: string;
+}
+
+export interface iFakeIssue {
+  title: string;
+  description: string;
 }
 
 export interface iFakeComment {
@@ -40,6 +46,7 @@ export interface iFakePost {
 export class FakeCodeHost {
   public readonly changes: iFakeChange[] = [];
   public readonly comments = new Map<number, iFakeComment[]>();
+  public readonly issues = new Map<number, iFakeIssue>();
   public readonly requests: string[] = [];
   /** Bodies of every write, in order. */
   public readonly posts: iFakePost[] = [];
@@ -105,7 +112,7 @@ export class FakeCodeHost {
     return {
       iid: change.number,
       title: change.title,
-      description: `Description of ${change.title}`,
+      description: change.description ?? `Description of ${change.title}`,
       author: user(change.author),
       source_branch: change.sourceBranch,
       target_branch: change.targetBranch,
@@ -122,7 +129,7 @@ export class FakeCodeHost {
     return {
       number: change.number,
       title: change.title,
-      body: `Description of ${change.title}`,
+      body: change.description ?? `Description of ${change.title}`,
       user: user(change.author),
       head: { ref: change.sourceBranch, sha: this.head(change.number) },
       base: { ref: change.targetBranch },
@@ -159,6 +166,19 @@ export class FakeCodeHost {
       [
         /^\/api\/v4\/projects\/[^/]+\/merge_requests\/(\d+)\/discussions$/,
         (match) => this.gitlabDiscussions(Number(match[1])),
+      ],
+      [
+        /^\/api\/v4\/projects\/[^/]+\/issues\/(\d+)$/,
+        (match) => this.mapFound(this.issues.get(Number(match[1])), (issue) => ({ iid: Number(match[1]), ...issue })),
+      ],
+      [
+        /^\/api\/v3\/repos\/[^/]+\/[^/]+\/issues\/(\d+)$/,
+        (match) =>
+          this.mapFound(this.issues.get(Number(match[1])), (issue) => ({
+            number: Number(match[1]),
+            title: issue.title,
+            body: issue.description,
+          })),
       ],
       [/^\/api\/v3\/repos\/[^/]+\/[^/]+$/, () => ({ clone_url: this.repo.path })],
       [/^\/api\/v3\/repos\/[^/]+\/[^/]+\/pulls$/, () => this.changes.map((change) => this.githubChange(change))],

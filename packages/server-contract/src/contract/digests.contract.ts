@@ -48,6 +48,8 @@ export const digestDiagramSchema = z.object({
   /** Mermaid source. */
   mermaid: z.string(),
   unitIds: z.array(z.string()),
+  /** Nodes of the drawing that stand for a unit, by the id the node has in the Mermaid source. */
+  nodeUnits: z.array(z.object({ node: z.string(), unitId: z.string() })).default([]),
   /** A proposed alternative rather than the code as it is. */
   isSuggestion: z.boolean(),
 });
@@ -59,6 +61,18 @@ export const digestContentSchema = z.object({
   readingOrder: z.array(z.string()),
   units: z.array(digestUnitNoteSchema),
   diagrams: z.array(digestDiagramSchema),
+  /** Files too large to fit in the prompt; the agent was given where they changed and read them itself. */
+  outlinedPaths: z.array(z.string()).default([]),
+});
+
+/** What has arrived of a digest that is still being written. */
+export const digestPreviewSchema = z.object({
+  overview: z.string(),
+  groupTitles: z.array(z.string()),
+  /** Units the agent has written about so far, out of `unitCount`. */
+  noteCount: z.number().int(),
+  unitCount: z.number().int(),
+  diagramCount: z.number().int(),
 });
 
 export const digestSchema = z.object({
@@ -69,6 +83,8 @@ export const digestSchema = z.object({
   progress: z.string().optional(),
   error: z.string().optional(),
   content: digestContentSchema.optional(),
+  /** While running, with an agent that streams its answer. */
+  preview: digestPreviewSchema.optional(),
   startedAt: z.date(),
   finishedAt: z.date().optional(),
 });

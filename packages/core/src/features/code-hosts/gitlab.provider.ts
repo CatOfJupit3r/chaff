@@ -148,6 +148,14 @@ export class GitLabProvider implements iCodeHostProvider {
     return request ? toChange(request) : undefined;
   }
 
+  public async getIssue(access: iCodeHostAccess, project: string, issueNumber: number) {
+    const issue = await getJson(
+      this.request(access, `${this.projectPath(project)}/issues/${issueNumber}`),
+      z.object({ iid: z.number(), title: z.string(), description: z.string().nullish() }),
+    );
+    return issue ? { number: issue.iid, title: issue.title, description: issue.description ?? '' } : undefined;
+  }
+
   public async listChangeCommits(access: iCodeHostAccess, project: string, changeNumber: number) {
     const commits = await getAllPages(
       this.request(access, `${this.projectPath(project)}/merge_requests/${changeNumber}/commits?per_page=100`),

@@ -15,7 +15,7 @@ export const DIAGRAM_KIND_LABELS = diagramKindsEnumwaii.derive({
 });
 
 export const INTENT_SOURCE_LABELS = intentSourcesEnumwaii.derive({
-  [INTENT_SOURCES.DOCUMENTED]: 'from the commits',
+  [INTENT_SOURCES.DOCUMENTED]: 'from the commits or MR',
   [INTENT_SOURCES.INFERRED]: 'inferred',
 });
 

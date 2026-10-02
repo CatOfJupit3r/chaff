@@ -39,6 +39,13 @@ export interface iRemoteNote {
   createdAt: Date;
 }
 
+/** An issue a change links to. */
+export interface iRemoteIssue {
+  number: number;
+  title: string;
+  description: string;
+}
+
 /** A thread on a change. Threads without a path are about the change as a whole. */
 export interface iRemoteDiscussion {
   id: string;
@@ -93,6 +100,7 @@ export interface iCodeHostProvider {
   currentUser: (access: iCodeHostAccess) => Promise<{ username: string }>;
   listChanges: (access: iCodeHostAccess, project: string) => Promise<iRemoteChange[]>;
   getChange: (access: iCodeHostAccess, project: string, changeNumber: number) => Promise<iRemoteChange | undefined>;
+  getIssue: (access: iCodeHostAccess, project: string, issueNumber: number) => Promise<iRemoteIssue | undefined>;
   /** Commit shas of the change, newest first. */
   listChangeCommits: (access: iCodeHostAccess, project: string, changeNumber: number) => Promise<string[]>;
   branchHead: (access: iCodeHostAccess, project: string, branch: string) => Promise<string | undefined>;
