@@ -37,6 +37,10 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'NOT_A_CHANGE_REQUEST',
   'NOTHING_TO_POST',
   'INVALID_AGENT_REPORT',
+  'FIX_NOT_FOUND',
+  'FIX_ALREADY_RUNNING',
+  'FIX_STILL_RUNNING',
+  'NOTHING_TO_FIX',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -80,4 +84,8 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.NOT_A_CHANGE_REQUEST]: 'Only merge requests and pull requests can take comments',
   [errorCodes.NOTHING_TO_POST]: 'None of the selected findings can be posted; they were posted already',
   [errorCodes.INVALID_AGENT_REPORT]: 'The report is not JSON Chaff understands',
+  [errorCodes.FIX_NOT_FOUND]: 'Fix not found',
+  [errorCodes.FIX_ALREADY_RUNNING]: 'An agent is already working on fixes for this review',
+  [errorCodes.FIX_STILL_RUNNING]: 'Stop the agent before discarding its fix',
+  [errorCodes.NOTHING_TO_FIX]: 'None of the selected findings is open for the agent to work on',
 });

@@ -1,31 +1,14 @@
-import path from 'node:path';
 import { singleton } from 'tsyringe';
 
-import { AgentProcessError, runAgentProcess } from './agent-process';
+import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
+import { describeClaudeProgress, parseClaudeStreamEvent } from '@~/features/agents/claude-code-events.utils';
+
 import { AGENT_DIGEST_JSON_SCHEMA } from './digest-output.schema';
 import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
 
 /** Only these tools exist in the session, so the agent can read and search but never edit or run commands. */
 const READ_ONLY_TOOLS = 'Read,Grep,Glob';
 const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch';
-
-interface iStreamEvent {
-  type?: string;
-  is_error?: boolean;
-  result?: unknown;
-  structured_output?: unknown;
-  message?: { content?: { type?: string; name?: string; input?: Record<string, unknown> }[] };
-}
-
-function describeToolUse(name: string | undefined, input: Record<string, unknown> | undefined, cwd: string) {
-  const target = input?.file_path ?? input?.pattern ?? input?.path;
-  const shown = typeof target === 'string' ? path.relative(cwd, path.resolve(cwd, target)) || target : '';
-  if (name === 'Read') return `Reading ${shown}`;
-  if (name === 'Grep') return `Searching for ${shown}`;
-  if (name === 'Glob') return `Listing ${shown}`;
-  if (name === 'StructuredOutput') return 'Writing the digest';
-  return undefined;
-}
 
 /**
  * Claude Code in headless mode with a JSON schema for its answer. Project settings and MCP servers in
@@ -62,18 +45,11 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         '--no-session-persistence',
       ],
       onLine: (line) => {
-        let event: iStreamEvent;
-        try {
-          event = JSON.parse(line) as iStreamEvent;
-        } catch {
-          return;
-        }
-        if (event.type === 'assistant') {
-          for (const part of event.message?.content ?? []) {
-            const progress = part.type === 'tool_use' ? describeToolUse(part.name, part.input, cwd) : undefined;
-            if (progress) onProgress(progress);
-          }
-        } else if (event.type === 'result') {
+        const event = parseClaudeStreamEvent(line);
+        if (!event) return;
+        const progress = describeClaudeProgress(event, cwd);
+        if (progress) onProgress(progress);
+        if (event.type === 'result') {
           if (event.is_error) failure = typeof event.result === 'string' ? event.result : 'Claude Code failed';
           else answer = event.structured_output;
         }

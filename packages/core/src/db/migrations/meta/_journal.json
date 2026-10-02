@@ -57,6 +57,13 @@
       "when": 1790905006796,
       "tag": "0007_omniscient_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790907293417,
+      "tag": "0008_petite_namorita",
+      "breakpoints": true
     }
   ]
 }

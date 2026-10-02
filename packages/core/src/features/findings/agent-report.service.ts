@@ -11,6 +11,7 @@ import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
 
 import { parseAgentReport, reportedNumber, reportedStatus } from './agent-report.utils';
+import type { iReportItem } from './agent-report.utils';
 import type { iFindingRepository } from './finding.repository';
 
 interface iReportedFinding {
@@ -36,7 +37,11 @@ export class AgentReportService {
     await this.workspacesService.getRecord(workspaceId);
     const items = parseAgentReport(report);
     if (!items) throw ORPCBadRequestError(errorCodes.INVALID_AGENT_REPORT);
+    return this.apply(workspaceId, items);
+  }
 
+  /** Applies parsed report items; `commits` stands in for items that name none, such as a fix Chaff committed. */
+  public async apply(workspaceId: string, items: iReportItem[], commits?: string[]) {
     const findings = new Map(
       (await this.findingRepository.list({ workspaceId })).map((finding) => [finding.number, finding]),
     );
@@ -66,7 +71,7 @@ export class AgentReportService {
         {
           source: FINDING_EVENT_SOURCES.AGENT,
           note: item.note,
-          commits: item.commits,
+          commits: item.commits ?? commits,
           answer: outcome.status === FINDING_STATUSES.ANSWERED ? item.note : undefined,
         },
       );

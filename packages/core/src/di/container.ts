@@ -7,6 +7,8 @@ import type { iDigestRepository } from '@~/features/digests/digest.repository';
 import { DrizzleDigestRepository } from '@~/features/digests/drizzle-digest.repository';
 import { DrizzleFindingRepository } from '@~/features/findings/drizzle-finding.repository';
 import type { iFindingRepository } from '@~/features/findings/finding.repository';
+import { DrizzleFixRepository } from '@~/features/fixes/drizzle-fix.repository';
+import type { iFixRepository } from '@~/features/fixes/fix.repository';
 import { DrizzleUnitMarkRepository } from '@~/features/reviews/marks/drizzle-unit-mark.repository';
 import type { iUnitMarkRepository } from '@~/features/reviews/marks/unit-mark.repository';
 import { DrizzleReviewTargetRepository } from '@~/features/reviews/review-targets/drizzle-review-target.repository';
@@ -21,6 +23,7 @@ import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repo
 import {
   CONNECTION_REPOSITORY_TOKEN,
   DIGEST_REPOSITORY_TOKEN,
+  FIX_REPOSITORY_TOKEN,
   FINDING_REPOSITORY_TOKEN,
   REVIEW_TARGET_REPOSITORY_TOKEN,
   SETTINGS_REPOSITORY_TOKEN,
@@ -38,5 +41,6 @@ export function registerServices() {
   container.registerSingleton<iUnitMarkRepository>(UNIT_MARK_REPOSITORY_TOKEN, DrizzleUnitMarkRepository);
   container.registerSingleton<iFindingRepository>(FINDING_REPOSITORY_TOKEN, DrizzleFindingRepository);
   container.registerSingleton<iDigestRepository>(DIGEST_REPOSITORY_TOKEN, DrizzleDigestRepository);
+  container.registerSingleton<iFixRepository>(FIX_REPOSITORY_TOKEN, DrizzleFixRepository);
   container.registerSingleton<iConnectionRepository>(CONNECTION_REPOSITORY_TOKEN, DrizzleConnectionRepository);
 }

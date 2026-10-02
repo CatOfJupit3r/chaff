@@ -13,4 +13,5 @@ export const SNAPSHOT_REPOSITORY_TOKEN = Symbol.for('SnapshotRepository');
 export const UNIT_MARK_REPOSITORY_TOKEN = Symbol.for('UnitMarkRepository');
 export const FINDING_REPOSITORY_TOKEN = Symbol.for('FindingRepository');
 export const DIGEST_REPOSITORY_TOKEN = Symbol.for('DigestRepository');
+export const FIX_REPOSITORY_TOKEN = Symbol.for('FixRepository');
 export const CONNECTION_REPOSITORY_TOKEN = Symbol.for('ConnectionRepository');

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// Stands in for `claude -p` in tests. FAKE_AGENT_MODE picks the behaviour: unset answers, `fail` exits
-// with an error, `hang` never answers.
-import { existsSync } from 'node:fs';
+// Stands in for `claude -p` in tests. With the read-only tool list it writes a digest; with the editing
+// tool list and acceptEdits it fixes the findings in its prompt. FAKE_AGENT_MODE picks the behaviour:
+// unset answers, `fail` exits with an error, `hang` never answers.
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const READ_ONLY_TOOLS = ['--tools', 'Read,Grep,Glob'];
+const FIX_TOOLS = 'Read,Grep,Glob,Edit,Write';
 
 function emit(event) {
   process.stdout.write(`${JSON.stringify(event)}\n`);
@@ -18,8 +20,10 @@ process.stdin.on('data', (chunk) => {
 process.stdin.on('end', () => {
   const args = process.argv.slice(2);
   const toolsAt = args.indexOf(READ_ONLY_TOOLS[0]);
-  if (toolsAt === -1 || args[toolsAt + 1] !== READ_ONLY_TOOLS[1]) {
-    process.stderr.write('expected a read-only tool list\n');
+  const tools = toolsAt === -1 ? undefined : args[toolsAt + 1];
+  const isFix = tools === FIX_TOOLS && args.includes('acceptEdits');
+  if (tools !== READ_ONLY_TOOLS[1] && !isFix) {
+    process.stderr.write('expected a read-only or editing tool list\n');
     process.exit(3);
   }
 
@@ -30,6 +34,11 @@ process.stdin.on('end', () => {
   }
   if (mode === 'hang') {
     setInterval(() => undefined, 1000);
+    return;
+  }
+
+  if (isFix) {
+    fix();
     return;
   }
 
@@ -78,3 +87,22 @@ process.stdin.on('end', () => {
     },
   });
 });
+
+/** Changes the scheduler back to doubling and reports on every finding in the prompt, plus an unknown one. */
+function fix() {
+  const file = path.join(process.cwd(), 'src/scheduler.ts');
+  writeFileSync(file, readFileSync(file, 'utf8').replace('attempt * 3', 'attempt * 2'));
+  emit({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Edit', input: { file_path: file } }] } });
+
+  const report = [...prompt.matchAll(/\*\*F-(\d+) · (Concern|Question)/g)].map(([, number, kind]) =>
+    kind === 'Concern'
+      ? { id: `F-${number}`, status: 'fix_proposed', note: 'Back to doubling.' }
+      : { id: `F-${number}`, status: 'answered', note: 'Three retries are enough.' },
+  );
+  report.push({ id: 'F-999', status: 'fix_proposed' });
+  emit({
+    type: 'result',
+    is_error: false,
+    result: `Changed the scheduler.\n\n\`\`\`json\n${JSON.stringify(report, null, 2)}\n\`\`\``,
+  });
+}

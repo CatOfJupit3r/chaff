@@ -57,6 +57,13 @@ const reportedFindingSchema = z.object({
   number: z.number().int().positive(),
 });
 
+/** What an agent report changed: findings moved, findings left as they were, and ids that matched nothing. */
+export const reportResultSchema = z.object({
+  applied: z.array(reportedFindingSchema.extend({ status: findingStatusSchema })),
+  skipped: z.array(reportedFindingSchema.extend({ reason: reportSkipReasonSchema })),
+  unknown: z.array(z.string()),
+});
+
 /** An anchor's code in one snapshot. */
 export const anchorTextSchema = anchorLocationSchema.omit({ id: true }).extend({ text: z.string() });
 
@@ -188,13 +195,7 @@ export const findingsContract = oc.router({
         'Reads a JSON report of findings an agent addressed. Concerns move to Fix proposed and questions to Answered, with the agent note; ids that match no finding in the repository are listed, never guessed.',
     })
     .input(z.object({ workspaceId: idSchema, report: z.string().min(1).max(MAX_REPORT_LENGTH) }))
-    .output(
-      z.object({
-        applied: z.array(reportedFindingSchema.extend({ status: findingStatusSchema })),
-        skipped: z.array(reportedFindingSchema.extend({ reason: reportSkipReasonSchema })),
-        unknown: z.array(z.string()),
-      }),
-    ),
+    .output(reportResultSchema),
 
   remove: oc
     .route({

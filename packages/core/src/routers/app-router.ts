@@ -5,6 +5,7 @@ import { codeHostsRouter } from './code-hosts.router';
 import { digestsRouter } from './digests.router';
 import { exportsRouter } from './exports.router';
 import { findingsRouter } from './findings.router';
+import { fixesRouter } from './fixes.router';
 import { hostRouter } from './host.router';
 import { reviewsRouter } from './reviews.router';
 import { settingsRouter } from './settings.router';
@@ -16,6 +17,7 @@ export const appRouter = base.router({
   digests: digestsRouter,
   exports: exportsRouter,
   findings: findingsRouter,
+  fixes: fixesRouter,
   host: hostRouter,
   reviews: reviewsRouter,
   settings: settingsRouter,

@@ -12,6 +12,7 @@ import { KeyedMutex } from '@~/lib/concurrency';
 import { pathExists } from '@~/lib/file-system';
 import { ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
 
+import { parseNumstat } from './numstat.utils';
 import type { iSnapshotHeads, iSnapshotShas } from './snapshots.types';
 
 const STORES_DIRECTORY = 'stores';
@@ -343,6 +344,52 @@ export class SnapshotStoreService {
       await this.gitService.run(storePath, ['worktree', 'remove', '--force', folder], { allowFailure: true });
       await rm(folder, { recursive: true, force: true });
       await this.gitService.run(storePath, ['worktree', 'prune'], { allowFailure: true });
+    });
+  }
+
+  /**
+   * Checks a commit out on a new branch of the store, for an agent that may edit it. The branch and the
+   * checkout belong to the store; the user's repository is not touched.
+   */
+  public async addBranchWorktree(workspaceId: string, branch: string, sha: string, folder: string) {
+    await this.mutex.run(workspaceId, async () => {
+      await this.gitService.run(this.storePath(workspaceId), ['worktree', 'add', '-b', branch, folder, sha]);
+    });
+  }
+
+  /** Commits everything changed in a store checkout as Chaff, and returns the checkout's head. */
+  public async commitAll(folder: string, message: string) {
+    await this.gitService.run(folder, ['add', '--all', '--', '.']);
+    const staged = await this.gitService.run(folder, ['diff', '--cached', '--quiet'], { allowFailure: true });
+    if (staged.exitCode !== 0) {
+      await this.gitService.run(
+        folder,
+        ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '--no-verify', '-m', message],
+        { env: CHAFF_AUTHOR_ENV },
+      );
+    }
+    return this.gitService.output(folder, ['rev-parse', 'HEAD']);
+  }
+
+  /** Lines added and deleted per file between two commits in the store. */
+  public async diffStat(workspaceId: string, baseSha: string, headSha: string) {
+    const { stdout } = await this.gitService.run(this.storePath(workspaceId), [
+      '-c',
+      'core.quotePath=false',
+      'diff',
+      '--numstat',
+      '-z',
+      ...DIFF_OPTIONS,
+      baseSha,
+      headSha,
+    ]);
+    return parseNumstat(stdout);
+  }
+
+  /** Deletes a branch of the store, such as a discarded fix. */
+  public async deleteBranch(workspaceId: string, branch: string) {
+    await this.mutex.run(workspaceId, async () => {
+      await this.gitService.run(this.storePath(workspaceId), ['branch', '-D', branch], { allowFailure: true });
     });
   }
 

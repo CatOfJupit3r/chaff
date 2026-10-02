@@ -2,25 +2,20 @@ import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { inject, singleton } from 'tsyringe';
 
-import {
-  DIGEST_RUNNER_LABELS,
-  DIGEST_RUNNERS,
-  DIGEST_STATUSES,
-  digestRunnerValues,
-} from '@chaff/common/enums/digest.enums';
+import { DIGEST_RUNNER_LABELS, DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 
 import type { iCoreOptions } from '@~/core.types';
 import { CORE_OPTIONS_TOKEN, DIGEST_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { AgentCommandsService } from '@~/features/agents/agent-commands.service';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import type { iSnapshotRecord } from '@~/features/reviews/snapshots/snapshots.types';
-import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
+import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
-import { resolveExecutable } from './agent-process';
 import { ClaudeCodeAdapter } from './claude-code.adapter';
 import { CodexAdapter } from './codex.adapter';
 import { checkDigest } from './digest-check.utils';
@@ -37,11 +32,6 @@ const MAX_COMMIT_MESSAGES = 50;
 const DIGEST_TIMEOUT_MS = 20 * 60 * 1000;
 /** Progress is written at most this often, so a chatty agent doesn't hammer the database. */
 const PROGRESS_INTERVAL_MS = 400;
-
-const DEFAULT_COMMANDS = {
-  [DIGEST_RUNNERS.CLAUDE_CODE]: 'claude',
-  [DIGEST_RUNNERS.CODEX]: 'codex',
-} satisfies Record<DigestRunner, string>;
 
 const lineRange = (start?: number, end?: number) =>
   start === undefined || end === undefined ? undefined : `${start}-${end}`;
@@ -65,6 +55,7 @@ export class DigestsService {
     private readonly snapshotStoreService: SnapshotStoreService,
     private readonly claudeCodeAdapter: ClaudeCodeAdapter,
     private readonly codexAdapter: CodexAdapter,
+    private readonly agentCommandsService: AgentCommandsService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('digests');
@@ -76,12 +67,7 @@ export class DigestsService {
   }
 
   public async runners() {
-    return Promise.all(
-      digestRunnerValues.map(async (runner) => {
-        const found = await resolveExecutable(this.commandFor(runner));
-        return { runner, isAvailable: found !== undefined, path: found };
-      }),
-    );
+    return this.agentCommandsService.runners();
   }
 
   public async start(snapshotId: string, runner: DigestRunner) {
@@ -90,12 +76,7 @@ export class DigestsService {
     if (latest?.status === DIGEST_STATUSES.RUNNING && this.running.has(latest.id)) {
       throw ORPCBadRequestError(errorCodes.DIGEST_ALREADY_RUNNING);
     }
-    const command = await resolveExecutable(this.commandFor(runner));
-    if (!command) {
-      throw ORPCUnprocessableContentError(errorCodes.DIGEST_RUNNER_UNAVAILABLE, {
-        runner: DIGEST_RUNNER_LABELS(runner),
-      });
-    }
+    const command = await this.agentCommandsService.resolve(runner);
 
     const digest = await this.digestRepository.create(snapshotId, runner);
     const controller = new AbortController();
@@ -134,10 +115,6 @@ export class DigestsService {
   /** Stops every running agent; used when the app quits. */
   public stopAll() {
     for (const controller of this.running.values()) controller.abort(new Error('Chaff is closing'));
-  }
-
-  private commandFor(runner: DigestRunner) {
-    return this.options.agentCommands?.get(runner) ?? DEFAULT_COMMANDS[runner];
   }
 
   private adapterFor(runner: DigestRunner): iDigestRunnerAdapter {

@@ -3,6 +3,7 @@ import { codeHostsContract } from './contract/code-hosts.contract';
 import { digestsContract } from './contract/digests.contract';
 import { exportsContract } from './contract/exports.contract';
 import { findingsContract } from './contract/findings.contract';
+import { fixesContract } from './contract/fixes.contract';
 import { hostContract } from './contract/host.contract';
 import { reviewsContract } from './contract/reviews.contract';
 import { settingsContract } from './contract/settings.contract';
@@ -14,6 +15,7 @@ export const CONTRACT = {
   digests: digestsContract,
   exports: exportsContract,
   findings: findingsContract,
+  fixes: fixesContract,
   host: hostContract,
   reviews: reviewsContract,
   settings: settingsContract,
