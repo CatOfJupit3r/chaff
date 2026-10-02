@@ -4,6 +4,8 @@ import {
   ANCHOR_MATCHES,
   FINDING_EVENT_SOURCES,
   FINDING_KIND_LABELS,
+  FINDING_SCOPES,
+  FINDING_SEVERITY_LABELS,
   FINDING_STATUS_LABELS,
   IS_ACTIVE_FINDING_STATUS,
   REVIEW_TARGET_KINDS,
@@ -71,13 +73,24 @@ function agentEvent(finding: iFindingRecord) {
   return finding.events.findLast((event) => event.source === FINDING_EVENT_SOURCES.AGENT);
 }
 
+/** "F-3 · Concern · Major · Open", the severity only when the reviewer gave one. */
+function findingHeading(finding: iFindingRecord) {
+  return [
+    findingId(finding),
+    FINDING_KIND_LABELS.get(finding.kind),
+    finding.severity ? FINDING_SEVERITY_LABELS.get(finding.severity) : undefined,
+    FINDING_STATUS_LABELS.get(finding.status),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 function findingMarkdown({ finding, anchors }: iPacketFinding, shouldQuoteCode: boolean) {
   const isDone = !IS_ACTIVE_FINDING_STATUS.get(finding.status);
-  const lines = [
-    `- [${isDone ? 'x' : ' '}] **${findingId(finding)} · ${FINDING_KIND_LABELS.get(finding.kind)} · ${FINDING_STATUS_LABELS.get(finding.status)}**`,
-  ];
+  const lines = [`- [${isDone ? 'x' : ' '}] **${findingHeading(finding)}**`];
   for (const anchor of anchors) lines.push(`  ${anchorLocation(anchor)}`);
-  if (anchors.length === 0) lines.push('  On the whole branch');
+  if (finding.scope === FINDING_SCOPES.STACK) lines.push('  On the whole stack');
+  else if (anchors.length === 0) lines.push('  On the whole branch');
   lines.push('', indent(finding.body, '  > '));
   if (shouldQuoteCode) {
     for (const anchor of anchors.filter((candidate) => candidate.original.quote !== '')) {
@@ -190,6 +203,8 @@ export function packetJson(packet: iPacket) {
       findings: findings.map(({ finding, anchors }) => ({
         id: findingId(finding),
         kind: finding.kind.toLowerCase(),
+        severity: finding.severity?.toLowerCase() ?? null,
+        scope: finding.scope.toLowerCase(),
         status: finding.status.toLowerCase(),
         comment: finding.body,
         answer: finding.answer ?? null,

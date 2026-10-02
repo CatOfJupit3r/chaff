@@ -1,4 +1,9 @@
-import { ANCHOR_MATCHES, DIFF_SIDES, FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
+import {
+  ANCHOR_MATCHES,
+  DIFF_SIDES,
+  FINDING_KIND_LABELS,
+  FINDING_SEVERITY_LABELS,
+} from '@chaff/common/enums/review.enums';
 import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import type { iDraftComment } from '@~/features/code-hosts/code-hosts.types';
@@ -63,6 +68,7 @@ export function draftComment(
   files: readonly iSnapshotFileSummary[],
 ): iDraftComment {
   const label = [findingId(finding), FINDING_KIND_LABELS.get(finding.kind)];
+  if (finding.severity) label.push(FINDING_SEVERITY_LABELS.get(finding.severity));
   if (lines && line === undefined) label.push(rangeText(lines));
   const file = lines?.fileId ? files.find((candidate) => candidate.id === lines.fileId) : undefined;
   return {

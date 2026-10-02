@@ -1,10 +1,11 @@
-import { FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
+import { FINDING_KIND_LABELS, FINDING_SCOPE_LABELS } from '@chaff/common/enums/review.enums';
 
 import { cn } from '@~/lib/utils';
 
 import { FINDING_STATUS_DOTS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
 import { findingTitle, formatAnchorLocation } from '../findings.utils';
+import { SeverityPill } from './finding-badges';
 
 interface iFindingListItemProps {
   finding: iFinding;
@@ -27,12 +28,15 @@ export function FindingListItem({ finding, isSelected, onSelect }: iFindingListI
       <span className="min-w-0">
         <span className="line-clamp-2 text-[13.5px] text-fg">{findingTitle(finding)}</span>
         <span className="mt-1 block truncate font-mono text-[11.5px] text-faint">
-          {finding.branch} · {anchor ? formatAnchorLocation(anchor) : 'whole branch'}
+          {finding.branch} · {anchor ? formatAnchorLocation(anchor) : FINDING_SCOPE_LABELS(finding.scope).toLowerCase()}
           {otherCount > 0 ? ` +${otherCount}` : ''}
         </span>
       </span>
-      <span className="rounded-full border border-line px-2 text-[11px] text-muted">
-        {FINDING_KIND_LABELS(finding.kind)}
+      <span className="flex flex-col items-end gap-1">
+        <span className="rounded-full border border-line px-2 text-[11px] text-muted">
+          {FINDING_KIND_LABELS(finding.kind)}
+        </span>
+        <SeverityPill finding={finding} />
       </span>
     </button>
   );

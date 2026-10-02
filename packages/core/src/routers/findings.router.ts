@@ -13,6 +13,14 @@ export const findingsRouter = base.findings.router({
     container.resolve(FindingsService).setStatus(input.findingId, input.status, input.answer),
   ),
 
+  setSeverity: procedure.findings.setSeverity.handler(async ({ input }) =>
+    container.resolve(FindingsService).setSeverity(input.findingId, input.severity ?? undefined),
+  ),
+
+  fromStack: procedure.findings.fromStack.handler(async ({ input }) =>
+    container.resolve(FindingsService).fromStack(input.snapshotId),
+  ),
+
   convertToConcern: procedure.findings.convertToConcern.handler(async ({ input }) =>
     container.resolve(FindingsService).convertToConcern(input.findingId),
   ),

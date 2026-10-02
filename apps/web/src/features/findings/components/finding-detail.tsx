@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 
-import { ANCHOR_MATCHES } from '@chaff/common/enums/review.enums';
+import { ANCHOR_MATCHES, FINDING_KINDS, IS_ACTIVE_FINDING_STATUS } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { ExternalIcon } from '@~/components/icons/icons';
@@ -14,12 +14,14 @@ import { formatRelativeTime } from '@~/utils/relative-time';
 import type { iAnchorComparison, iFinding, iFindingAnchor } from '../findings.types';
 import { findingTitle, formatAnchorLocation } from '../findings.utils';
 import { useFindingComparison } from '../hooks/use-finding-comparison';
+import { useSetFindingSeverity } from '../hooks/use-set-finding-severity';
 import { FindingActions } from './finding-actions';
 import { FindingAgentNote } from './finding-agent-note';
 import { FindingAnchorChange } from './finding-anchor-change';
 import { FindingBadges } from './finding-badges';
 import { FindingLifecycle } from './finding-lifecycle';
 import { FindingQuote } from './finding-quote';
+import { SeverityPicker } from './severity-picker';
 
 const LINK_CLASS =
   'inline-flex h-[26px] items-center rounded-sm border border-line-strong bg-surface px-[9px] text-[12px] text-fg hover:bg-hover';
@@ -94,6 +96,8 @@ function AnchorSection({ anchor, comparison, onOpenInEditor }: iAnchorSectionPro
 export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFindingDetailProps) {
   const openInEditor = useOpenInEditor(repoPath);
   const comparisons = useFindingComparison(finding);
+  const setSeverity = useSetFindingSeverity();
+  const canSetSeverity = finding.kind === FINDING_KINDS.CONCERN && IS_ACTIVE_FINDING_STATUS(finding.status);
 
   return (
     <article className="flex min-w-0 flex-col rounded-lg border border-line bg-surface">
@@ -105,6 +109,12 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
           </span>
         </div>
         <h2 className="m-0 text-[17px] font-semibold tracking-[-0.01em] text-balance">{findingTitle(finding)}</h2>
+        {canSetSeverity ? (
+          <SeverityPicker
+            severity={finding.severity}
+            onChange={(severity) => setSeverity.mutate({ findingId: finding.id, severity: severity ?? null })}
+          />
+        ) : null}
         <div className="flex items-center justify-between gap-2">
           <p className="m-0 font-mono text-[12px] text-muted">
             {finding.branch} onto {finding.parentBranch}

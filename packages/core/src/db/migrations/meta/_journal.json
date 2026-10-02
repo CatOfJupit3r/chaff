@@ -99,6 +99,13 @@
       "when": 1790937474472,
       "tag": "0013_flowery_william_stryker",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790938434082,
+      "tag": "0014_open_satana",
+      "breakpoints": true
     }
   ]
 }

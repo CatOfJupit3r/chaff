@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ANCHOR_MATCHES, DIFF_SIDES, FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { ANCHOR_MATCHES, DIFF_SIDES, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { FINDING_FILTERS } from '@~/features/findings/findings.enums';
@@ -15,6 +15,8 @@ import {
   formatAnchorLocation,
   summarizeRelocations,
 } from '@~/features/findings/findings.utils';
+
+import { findingFixture } from './finding-fixtures';
 
 const ANCHOR: iFindingAnchor = {
   id: 'a',
@@ -50,23 +52,7 @@ function finding(
   body = 'Why does this helper exist?\nIt only reads one field.',
   overrides: Partial<iFinding> = {},
 ): iFinding {
-  return {
-    id: crypto.randomUUID(),
-    number: 1,
-    kind: FINDING_KINDS.CONCERN,
-    status,
-    body,
-    workspaceId: 'w',
-    targetId: 't',
-    branch: 'feature',
-    parentBranch: 'main',
-    snapshotId: 's',
-    anchors: [],
-    events: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  };
+  return findingFixture({ status, body, ...overrides });
 }
 
 describe('findings', () => {

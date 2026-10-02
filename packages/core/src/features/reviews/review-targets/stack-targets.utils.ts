@@ -8,18 +8,36 @@ type iStackTarget = Pick<iReviewTargetRecord, 'id' | 'kind' | 'branch' | 'parent
 const isStackLink = (target: iStackTarget) =>
   target.kind === REVIEW_TARGET_KINDS.BRANCH || target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST;
 
+const parentsOf = (all: readonly iStackTarget[]) =>
+  new Map(all.filter(isStackLink).map((candidate) => [candidate.branch, candidate.parentBranch]));
+
+/** The branches `branch` builds on, nearest first, as far down as Chaff has reviews of them; stops at a cycle. */
+function branchesBelow(parentOf: ReadonlyMap<string, string>, branch: string, parent: string) {
+  const below: string[] = [];
+  for (let current = parent; parentOf.has(current) && current !== branch && !below.includes(current);) {
+    below.push(current);
+    current = parentOf.get(current) ?? '';
+  }
+  return below;
+}
+
+/** Reviews of the branches `target` builds on, nearest first. Their findings may affect `target`. */
+export function lowerTargets<T extends iStackTarget>(all: readonly T[], target: T) {
+  const parentOf = parentsOf(all);
+  const below = branchesBelow(parentOf, target.branch, parentOf.get(target.branch) ?? target.parentBranch);
+  return all
+    .filter((candidate) => below.includes(candidate.branch))
+    .toSorted((left, right) => below.indexOf(left.branch) - below.indexOf(right.branch));
+}
+
 /**
  * Reviews in the same stack as `target`: the branches it builds on, the ones that build on it, and every
  * review of those branches (merge requests, working changes). Bottom of the stack first.
  */
 export function stackTargets<T extends iStackTarget>(all: readonly T[], target: T) {
   const links = all.filter(isStackLink);
-  const parentOf = new Map(links.map((candidate) => [candidate.branch, candidate.parentBranch]));
-  const branches = new Set([target.branch]);
-  for (let parent = target.parentBranch; parentOf.has(parent) && !branches.has(parent);) {
-    branches.add(parent);
-    parent = parentOf.get(parent) ?? '';
-  }
+  const parentOf = parentsOf(all);
+  const branches = new Set([target.branch, ...branchesBelow(parentOf, target.branch, target.parentBranch)]);
   for (let isGrowing = true; isGrowing;) {
     isGrowing = false;
     for (const candidate of links) {

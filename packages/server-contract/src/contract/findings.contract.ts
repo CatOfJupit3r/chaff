@@ -8,6 +8,8 @@ import {
   diffSideSchema,
   findingEventSourceSchema,
   findingKindSchema,
+  findingScopeSchema,
+  findingSeveritySchema,
   findingStatusSchema,
 } from '@chaff/common/enums/review.enums';
 
@@ -91,6 +93,10 @@ export const findingSchema = z.object({
   number: z.number().int().positive(),
   kind: findingKindSchema,
   status: findingStatusSchema,
+  /** Only concerns have one, and only when the reviewer gave it. */
+  severity: findingSeveritySchema.optional(),
+  /** Code it is anchored to, the whole branch, or the whole stack. */
+  scope: findingScopeSchema,
   /** The reviewer's comment, verbatim. */
   body: z.string(),
   /** The answer recorded for a question. */
@@ -133,12 +139,14 @@ export const findingsContract = oc.router({
     .route({
       summary: 'Write a finding',
       description:
-        'Stores a concern, question or note on units or line ranges of a snapshot, quoting the code so the finding can be found again. With no anchors it applies to the whole branch.',
+        'Stores a concern, question or note on units or line ranges of a snapshot, quoting the code so the finding can be found again. With no anchors it applies to the whole branch, or to the whole stack when that scope is given.',
     })
     .input(
       z.object({
         snapshotId: idSchema,
         kind: findingKindSchema,
+        severity: findingSeveritySchema.optional(),
+        scope: findingScopeSchema.optional(),
         body: z.string().trim().min(1).max(MAX_BODY_LENGTH),
         anchors: z.array(anchorInputSchema).max(MAX_ANCHORS),
       }),
@@ -159,6 +167,23 @@ export const findingsContract = oc.router({
       }),
     )
     .output(findingSchema),
+
+  setSeverity: oc
+    .route({
+      summary: "Set a concern's severity",
+      description: 'Sets how much a concern matters, or clears it with null.',
+    })
+    .input(z.object({ findingId: idSchema, severity: findingSeveritySchema.nullable() }))
+    .output(findingSchema),
+
+  fromStack: oc
+    .route({
+      summary: 'List findings from the rest of the stack',
+      description:
+        'Active concerns on the branches this review builds on, and findings about the whole stack written on its other branches. Newest first.',
+    })
+    .input(z.object({ snapshotId: idSchema }))
+    .output(z.array(findingSchema)),
 
   convertToConcern: oc
     .route({

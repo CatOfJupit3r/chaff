@@ -15,24 +15,30 @@ import { cn } from '@~/lib/utils';
 import { cardMark } from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
 import { REVIEW_PROGRESSION_LABELS, UNIT_MARK_SEGMENT_CLASSES } from '../focus.enums';
+import { ContextFindings } from './context-findings';
 
 interface iFocusContextPanelProps {
   cards: readonly iFocusCard[];
   index: number;
   progression: ReviewProgression;
   findings: readonly iFinding[];
+  /** Findings about the whole branch or stack written in this review. */
+  branchFindings: readonly iFinding[];
+  stackFindings: readonly iFinding[];
   digest: iDigest | undefined;
   onJump: (index: number) => void;
   onEditChanges: () => void;
   onClose: () => void;
 }
 
-/** Opened on demand: the digest's overview, the notes on this card, and every card to jump between. */
+/** Opened on demand: the digest's overview, notes on this card, this branch and the rest of the stack, and every card to jump between. */
 export function FocusContextPanel({
   cards,
   index,
   progression,
   findings,
+  branchFindings,
+  stackFindings,
   digest,
   onJump,
   onEditChanges,
@@ -54,16 +60,9 @@ export function FocusContextPanel({
         </Button>
       </div>
       {digest && content ? <DigestOverview runner={digest.runner} content={content} /> : null}
-      <section className="flex flex-col gap-2">
-        <SectionLabel>Notes on this card</SectionLabel>
-        {findings.length === 0 ? <p className="m-0 text-[12.5px] text-muted">None yet.</p> : null}
-        {findings.map((finding) => (
-          <div key={finding.id} className="rounded-md border border-line px-3 py-2 text-[12.5px]">
-            <span className="font-mono text-muted">F-{finding.number}</span>
-            <p className="m-0 mt-1 whitespace-pre-wrap text-fg-soft">{finding.body}</p>
-          </div>
-        ))}
-      </section>
+      <ContextFindings title="Notes on this card" findings={findings} empty="None yet." />
+      <ContextFindings title="Notes on this branch" findings={branchFindings} />
+      <ContextFindings title="From the rest of the stack" findings={stackFindings} shouldShowBranch />
       <section className="flex min-h-0 flex-col gap-2">
         <div className="flex items-center justify-between">
           <SectionLabel>{REVIEW_PROGRESSION_LABELS(progression)}</SectionLabel>

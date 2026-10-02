@@ -1,12 +1,14 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
-import { FINDING_EVENT_SOURCES } from '@chaff/common/enums/review.enums';
+import { FINDING_EVENT_SOURCES, FINDING_SCOPES } from '@chaff/common/enums/review.enums';
 import type {
   AnchorMatch,
   DiffSide,
   FindingEventSource,
   FindingKind,
+  FindingScope,
+  FindingSeverity,
   FindingStatus,
 } from '@chaff/common/enums/review.enums';
 
@@ -35,6 +37,9 @@ export const findings = sqliteTable(
       .references(() => snapshots.id, { onDelete: 'cascade' }),
     kind: text('kind').$type<FindingKind>().notNull(),
     status: text('status').$type<FindingStatus>().notNull(),
+    /** Set only on concerns, and only when the reviewer gave one. */
+    severity: text('severity').$type<FindingSeverity>(),
+    scope: text('scope').$type<FindingScope>().notNull().default(FINDING_SCOPES.CODE),
     body: text('body').notNull(),
     /** The answer the reviewer recorded for a question. */
     answer: text('answer'),

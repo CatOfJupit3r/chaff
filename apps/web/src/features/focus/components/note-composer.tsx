@@ -9,14 +9,19 @@ import { Kbd } from '@~/components/ui/kbd';
 import { Pill } from '@~/components/ui/pill';
 import { cn } from '@~/lib/utils';
 
-import type { NoteMark } from '../hooks/use-focus-review';
+import { NOTE_SCOPE_FOOTERS, NOTE_SCOPES } from '../focus.enums';
+import { CARD_NOTE } from '../hooks/use-focus-review';
+import type { iNoteOptions, NoteMark } from '../hooks/use-focus-review';
+import { NoteOptions } from './note-options';
+import type { iNoteUnitSource } from './note-options';
 
 interface iNoteComposerProps {
   mark?: NoteMark;
   headSha: string;
   isSaving: boolean;
+  source: iNoteUnitSource;
   onCancel: () => void;
-  onSave: (mark: NoteMark, body: string) => Promise<boolean>;
+  onSave: (mark: NoteMark, body: string, options: iNoteOptions) => Promise<boolean>;
 }
 
 interface iNoteStyle {
@@ -74,11 +79,18 @@ const QUESTION_STYLE: iNoteStyle = {
 };
 
 /** Floats above the decision dock: Enter saves and moves on, Shift+Enter adds a line, Escape cancels. */
-export function NoteComposer({ mark, headSha, isSaving, onCancel, onSave }: iNoteComposerProps) {
+export function NoteComposer({ mark, headSha, isSaving, source, onCancel, onSave }: iNoteComposerProps) {
   const [body, setBody] = useState('');
   const [isEmptyWarning, setIsEmptyWarning] = useState(false);
+  const [options, setOptions] = useState(CARD_NOTE);
   const textArea = useRef<HTMLTextAreaElement>(null);
   const style = NOTE_STYLES.get(mark) ?? QUESTION_STYLE;
+  const isSkip = mark === UNIT_MARKS.SKIPPED;
+  const scopeFooter = isSkip ? undefined : NOTE_SCOPE_FOOTERS(options.scope);
+  const isCardCovered =
+    isSkip ||
+    options.scope === NOTE_SCOPES.CARD ||
+    (options.scope === NOTE_SCOPES.UNITS && source.cardUnitIds.every((unitId) => options.unitIds.includes(unitId)));
 
   useEffect(() => {
     if (mark) textArea.current?.focus();
@@ -90,7 +102,14 @@ export function NoteComposer({ mark, headSha, isSaving, onCancel, onSave }: iNot
       setIsEmptyWarning(true);
       return;
     }
-    if (await onSave(mark, body)) setBody('');
+    if (await onSave(mark, body, options)) {
+      setBody('');
+      setOptions(CARD_NOTE);
+    }
+  };
+  const cancel = () => {
+    setOptions(CARD_NOTE);
+    onCancel();
   };
 
   return (
@@ -125,7 +144,7 @@ export function NoteComposer({ mark, headSha, isSaving, onCancel, onSave }: iNot
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             event.preventDefault();
-            onCancel();
+            cancel();
           } else if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             save().catch(() => undefined);
@@ -133,9 +152,12 @@ export function NoteComposer({ mark, headSha, isSaving, onCancel, onSave }: iNot
         }}
         className="h-[76px] w-full resize-none rounded-sm border border-line-strong bg-canvas px-3 py-2.5 text-[13.5px] leading-normal text-fg"
       />
+      {mark && !isSkip ? (
+        <NoteOptions mark={mark} options={options} source={source} isEnabled={!isSaving} onChange={setOptions} />
+      ) : null}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="mr-auto text-[12px] text-faint">{style.footer(headSha)}</span>
-        <Button variant="ghost" size="sm" tabIndex={mark ? 0 : -1} onClick={onCancel}>
+        <span className="mr-auto text-[12px] text-faint">{scopeFooter ?? style.footer(headSha)}</span>
+        <Button variant="ghost" size="sm" tabIndex={mark ? 0 : -1} onClick={cancel}>
           Cancel <Kbd>Esc</Kbd>
         </Button>
         <Button
@@ -145,7 +167,7 @@ export function NoteComposer({ mark, headSha, isSaving, onCancel, onSave }: iNot
           disabled={isSaving}
           onClick={async () => save().catch(() => undefined)}
         >
-          {style.save} <Kbd className="border-current/30 bg-transparent text-inherit">↵</Kbd>
+          {isCardCovered ? style.save : 'Save'} <Kbd className="border-current/30 bg-transparent text-inherit">↵</Kbd>
         </Button>
       </div>
     </div>

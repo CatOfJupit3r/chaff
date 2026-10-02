@@ -2,7 +2,7 @@ import { and, asc, desc, eq, getTableColumns, inArray, max, sql } from 'drizzle-
 import { singleton } from 'tsyringe';
 
 import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
-import type { FindingStatus } from '@chaff/common/enums/review.enums';
+import type { FindingSeverity, FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { DatabaseService } from '@~/db/database.service';
 import {
@@ -86,7 +86,7 @@ export class DrizzleFindingRepository implements iFindingRepository {
           targetId ? eq(findings.targetId, targetId) : undefined,
         ),
       )
-      .orderBy(desc(findings.number))
+      .orderBy(desc(findings.createdAt), desc(findings.number))
       .all();
     return this.withAnchors(rows);
   }
@@ -101,6 +101,16 @@ export class DrizzleFindingRepository implements iFindingRepository {
         .run();
       transaction.insert(findingEvents).values({ findingId, snapshotId, status, source, note, commits }).run();
     });
+    return this.findById(findingId);
+  }
+
+  public async setSeverity(findingId: string, severity: FindingSeverity | undefined) {
+    this.databaseService
+      .getDb()
+      .update(findings)
+      .set({ severity: severity ?? null })
+      .where(eq(findings.id, findingId))
+      .run();
     return this.findById(findingId);
   }
 

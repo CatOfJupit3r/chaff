@@ -13,7 +13,7 @@ import { CARD_EXITS, FOCUS_QUEUES } from '../focus.enums';
 import type { CardExit } from '../focus.enums';
 import { useFocusKeyboard } from '../hooks/use-focus-keyboard';
 import { useFocusReview } from '../hooks/use-focus-review';
-import type { NoteMark } from '../hooks/use-focus-review';
+import type { iNoteOptions, NoteMark } from '../hooks/use-focus-review';
 import { ChangeCard } from './change-card';
 import { DecisionDock } from './decision-dock';
 import { FocusContextPanel } from './focus-context-panel';
@@ -21,6 +21,7 @@ import { FocusEndCard } from './focus-end-card';
 import { FocusHeader } from './focus-header';
 import { FocusHints } from './focus-hints';
 import { SecondPassBanner } from './second-pass-banner';
+import { StackFindingsBanner } from './stack-findings-banner';
 import { UnitCard } from './unit-card';
 
 /** One card at a time, a change or a unit: read it, then decide with a key and move on. */
@@ -32,8 +33,8 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
   const [isEditingChanges, setIsEditingChanges] = useState(false);
   const [noteMark, setNoteMark] = useState<NoteMark>();
 
-  const saveNote = async (mark: NoteMark, body: string) => {
-    const isSaved = await focus.comment(mark, body);
+  const saveNote = async (mark: NoteMark, body: string, options: iNoteOptions) => {
+    const isSaved = await focus.comment(mark, body, options);
     if (isSaved) setNoteMark(undefined);
     return isSaved;
   };
@@ -89,6 +90,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               findings={focus.findingsInReview}
               onRecheck={() => focus.setQueue(FOCUS_QUEUES.recheck)}
             />
+            <StackFindingsBanner findings={focus.stackFindings} onShow={() => setIsContextOpen(true)} />
             <div className="relative w-full max-w-[920px]">
               <div className="absolute inset-x-[22px] top-[-7px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-55" />
               <div className="absolute inset-x-[44px] top-[-13px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-30" />
@@ -139,6 +141,11 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               noteMark={noteMark}
               headSha={snapshot.headSha}
               isSaving={focus.isSaving}
+              noteSource={{
+                units: focus.units,
+                files: snapshot.files,
+                cardUnitIds: card.units.map((member) => member.id),
+              }}
               onComment={setNoteMark}
               onCancelNote={() => setNoteMark(undefined)}
               onSaveNote={saveNote}
@@ -157,6 +164,8 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               index={focus.index}
               progression={focus.progression}
               findings={focus.cardFindings}
+              branchFindings={focus.branchFindings}
+              stackFindings={focus.stackFindings}
               digest={focus.digest}
               onJump={jump}
               onEditChanges={() => setIsEditingChanges(true)}

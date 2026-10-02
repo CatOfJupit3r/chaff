@@ -2,12 +2,19 @@ import {
   ANCHOR_MATCHES,
   FINDING_KINDS,
   FINDING_STATUSES,
+  findingSeveritySchema,
   IS_ACTIVE_FINDING_STATUS,
 } from '@chaff/common/enums/review.enums';
-import type { FindingStatus } from '@chaff/common/enums/review.enums';
+import type { FindingSeverity, FindingStatus } from '@chaff/common/enums/review.enums';
 
-import { FINDING_ACTION_LABELS, FINDING_FILTER_STATUSES, findingFilterValues } from './findings.enums';
-import type { FindingFilter } from './findings.enums';
+import {
+  FINDING_ACTION_LABELS,
+  FINDING_FILTER_STATUSES,
+  findingFilterValues,
+  SEVERITY_CHOICES,
+  severityChoicesEnumwaii,
+} from './findings.enums';
+import type { FindingFilter, SeverityChoice } from './findings.enums';
 import type { iFinding, iFindingAnchor } from './findings.types';
 
 /** The comment's first line, used as the finding's title. */
@@ -92,4 +99,12 @@ export function findingActionLabel(from: FindingStatus, to: FindingStatus) {
   if (to === FINDING_STATUSES.REOPENED && from === FINDING_STATUSES.FIX_PROPOSED) return 'Still wrong';
   if (to === FINDING_STATUSES.CLOSED && from !== FINDING_STATUSES.ANSWERED) return 'Close without an answer';
   return FINDING_ACTION_LABELS(to);
+}
+
+export function severityFromChoice(choice: SeverityChoice): FindingSeverity | undefined {
+  return choice === SEVERITY_CHOICES.NONE ? undefined : findingSeveritySchema.parse(choice);
+}
+
+export function choiceFromSeverity(severity: FindingSeverity | undefined): SeverityChoice {
+  return severity === undefined ? SEVERITY_CHOICES.NONE : severityChoicesEnumwaii.schema.parse(severity);
 }

@@ -1,4 +1,9 @@
-import { FINDING_STATUSES, findingStatusesEnumwaii } from '@chaff/common/enums/review.enums';
+import {
+  FINDING_SEVERITIES,
+  FINDING_STATUSES,
+  findingSeveritiesEnumwaii,
+  findingStatusesEnumwaii,
+} from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
 import type { ShortcutAction } from '@chaff/common/enums/shortcuts.enums';
@@ -15,6 +20,27 @@ export const FINDING_STATUS_PILLS = findingStatusesEnumwaii.derive({
   [FINDING_STATUSES.CLOSED]: 'out',
   [FINDING_STATUSES.WITHDRAWN]: 'out',
   [FINDING_STATUSES.UNMATCHED]: 'out',
+});
+
+/** `Pill` variant for each severity. */
+export const FINDING_SEVERITY_PILLS = findingSeveritiesEnumwaii.derive({
+  [FINDING_SEVERITIES.MINOR]: 'out',
+  [FINDING_SEVERITIES.MAJOR]: 'open',
+  [FINDING_SEVERITIES.BLOCKING]: 'bad',
+});
+
+/** A concern's severity as picked in the composer or on the finding; None leaves it unset. */
+export const severityChoicesEnumwaii = new Enumwaii('SeverityChoice', ['NONE', 'MINOR', 'MAJOR', 'BLOCKING']);
+
+export const SEVERITY_CHOICES = severityChoicesEnumwaii.enum;
+export type SeverityChoice = InferEnumwaii<typeof severityChoicesEnumwaii>;
+export const severityChoiceValues = severityChoicesEnumwaii.values;
+
+export const SEVERITY_CHOICE_LABELS = severityChoicesEnumwaii.derive({
+  [SEVERITY_CHOICES.NONE]: 'No severity',
+  [SEVERITY_CHOICES.MINOR]: 'Minor',
+  [SEVERITY_CHOICES.MAJOR]: 'Major',
+  [SEVERITY_CHOICES.BLOCKING]: 'Blocking',
 });
 
 /** Dot color in finding lists. */

@@ -53,6 +53,8 @@ Branches that chain this way form a stack, shown on the Reviews screen as `featu
 
 A **cumulative** review reads a branch against the stack's base instead of its parent, so the whole stack up to that branch is one review. It is its own review target, so its marks and findings never mix with the branch's own review.
 
+A finding lives on the branch it was written on. A finding has a scope: code (it has anchors), the whole branch (none) or the whole stack (none, by choice). A review shows the active concerns on the branches below it (following the stored parents through the reviewed branches) and active whole-stack findings from any other branch of its stack, without copying them.
+
 ## Working changes
 
 `git worktree list` tells Chaff which branches are checked out and where. For a checked-out branch with uncommitted changes, **Review working changes** builds a commit in the snapshot store without touching your repository:

@@ -12,6 +12,7 @@ const pillVariants = cva(
         open: 'bg-warn-soft text-warn',
         fix: 'bg-accent-soft text-accent',
         ok: 'bg-good-soft text-good',
+        bad: 'bg-bad-soft text-bad',
         out: 'border-line-strong text-muted',
         question: 'border-accent-line text-accent',
         neutral: 'bg-raised text-muted',

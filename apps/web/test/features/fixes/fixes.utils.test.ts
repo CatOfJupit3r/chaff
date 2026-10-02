@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { FINDING_KINDS, FINDING_SCOPES, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 
 import { fixableFindings, splitPatch } from '@~/features/fixes/fixes.utils';
 

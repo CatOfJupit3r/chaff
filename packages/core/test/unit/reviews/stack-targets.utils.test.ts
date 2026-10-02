@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
 
-import { stackTargets } from '@~/features/exports/stack-targets.utils';
+import { lowerTargets, stackTargets } from '@~/features/reviews/review-targets/stack-targets.utils';
 
 const target = (branch: string, parentBranch: string, kind: ReviewTargetKind = REVIEW_TARGET_KINDS.BRANCH) => ({
   id: `${kind}:${branch}`,
@@ -43,5 +43,27 @@ describe('stackTargets', () => {
         .map((candidate) => candidate.branch)
         .toSorted(),
     ).toEqual(['a', 'b']);
+  });
+
+  it('finds the reviews below a branch, nearest first, also for a cumulative review of it', () => {
+    const all = [
+      target('ui', 'api'),
+      target('api', 'db'),
+      target('db', 'main'),
+      target('db', 'main', REVIEW_TARGET_KINDS.CHANGE_REQUEST),
+      target('ui', 'main', REVIEW_TARGET_KINDS.CUMULATIVE),
+    ];
+    const [ui, , db, , cumulative] = all;
+    if (!ui || !db || !cumulative) throw new Error('missing targets');
+
+    expect(lowerTargets(all, ui).map((candidate) => candidate.id)).toEqual([
+      'BRANCH:api',
+      'BRANCH:db',
+      'CHANGE_REQUEST:db',
+    ]);
+    expect(lowerTargets(all, cumulative).map((candidate) => candidate.id)).toEqual(
+      lowerTargets(all, ui).map((candidate) => candidate.id),
+    );
+    expect(lowerTargets(all, db)).toEqual([]);
   });
 });

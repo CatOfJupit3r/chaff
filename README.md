@@ -182,6 +182,25 @@ Everything you flagged, across every review. Each finding keeps your comment ver
   <img src="docs/screenshots/findings-light.png" alt="Findings screen with the list on the left and the quoted code and comment on the right" />
 </picture>
 
+A concern can carry a severity (Minor, Major or Blocking), picked while you write it or later on the Findings screen; exports and posted drafts include it. A concern or question written in Focus is about the card by default, and the row under the note can point it at **units you pick** from anywhere in the review (one note for the same mistake made in three places), the **whole branch**, or the **whole stack** for architectural feedback.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-note-severity-dark.png" />
+  <img src="docs/screenshots/focus-note-severity-light.png" alt="Writing a concern in Focus with the This card, Pick units, Whole branch and Whole stack choices and the severity set to Blocking" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/findings-severity-dark.png" />
+  <img src="docs/screenshots/findings-severity-light.png" alt="Findings screen showing a Major concern about the whole stack with its severity picker" />
+</picture>
+
+A finding stays on the branch where you wrote it, and the branches above it hear about it: reviewing a branch shows open concerns from the branches it builds on and notes about the whole stack in a banner over the card (and under **Context**), and the Stack overview marks each affected branch.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-stack-finding-dark.png" />
+  <img src="docs/screenshots/focus-stack-finding-light.png" alt="Focus review of feat/flags with a banner: a Major concern on the whole stack, from feat/base-cli" />
+</picture>
+
 ### New changes while you review
 
 The chip in the top bar shows the frozen commit you are reading. When the agent commits again, it turns amber and says what moved; **Update** takes a new snapshot when you are ready.
@@ -349,6 +368,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Swipe decisions in Focus with a finger or pen | Works |
 | Change units: digest groups as Focus cards; make, split, merge, rename, reorder; Changes, Functions or Sections progression | Works |
 | Skip with a reason; a review is complete once every region is decided on or skipped | Works |
+| Finding severity; findings on several units, a whole branch or a whole stack; concerns shown on the branches above | Works |
 | Rebindable keys for Focus and Verify | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 

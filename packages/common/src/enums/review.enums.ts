@@ -95,6 +95,36 @@ export const FINDING_KINDS = findingKindsEnumwaii.enum;
 export type FindingKind = InferEnumwaii<typeof findingKindsEnumwaii>;
 export const findingKindSchema = findingKindsEnumwaii.schema;
 
+/** How much a concern matters; optional, and only concerns carry one. */
+export const findingSeveritiesEnumwaii = new Enumwaii('FindingSeverity', ['MINOR', 'MAJOR', 'BLOCKING']);
+
+export const FINDING_SEVERITIES = findingSeveritiesEnumwaii.enum;
+export type FindingSeverity = InferEnumwaii<typeof findingSeveritiesEnumwaii>;
+export const findingSeveritySchema = findingSeveritiesEnumwaii.schema;
+export const findingSeverityValues = findingSeveritiesEnumwaii.values;
+
+export const FINDING_SEVERITY_LABELS = findingSeveritiesEnumwaii.derive({
+  [FINDING_SEVERITIES.MINOR]: 'Minor',
+  [FINDING_SEVERITIES.MAJOR]: 'Major',
+  [FINDING_SEVERITIES.BLOCKING]: 'Blocking',
+});
+
+/**
+ * What a finding is about: code it is anchored to, the whole branch, or the whole stack the branch is in
+ * (architectural feedback such as "these three branches solve the same problem three ways").
+ */
+export const findingScopesEnumwaii = new Enumwaii('FindingScope', ['CODE', 'BRANCH', 'STACK']);
+
+export const FINDING_SCOPES = findingScopesEnumwaii.enum;
+export type FindingScope = InferEnumwaii<typeof findingScopesEnumwaii>;
+export const findingScopeSchema = findingScopesEnumwaii.schema;
+
+export const FINDING_SCOPE_LABELS = findingScopesEnumwaii.derive({
+  [FINDING_SCOPES.CODE]: 'Code',
+  [FINDING_SCOPES.BRANCH]: 'Whole branch',
+  [FINDING_SCOPES.STACK]: 'Whole stack',
+});
+
 /**
  * Concerns go Open, Fix proposed, Verified (or Reopened); questions go Open, Answered, Closed.
  * Withdrawn is the reviewer changing their mind; Unmatched means the anchor was lost in a newer snapshot.

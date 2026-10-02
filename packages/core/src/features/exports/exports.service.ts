@@ -11,6 +11,7 @@ import type { iAnchorLocationRecord, iFindingRecord } from '@~/features/findings
 import { PreferencesService } from '@~/features/preferences/preferences.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
+import { stackTargets } from '@~/features/reviews/review-targets/stack-targets.utils';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import type { iSnapshotRecord, iUnitRecord } from '@~/features/reviews/snapshots/snapshots.types';
@@ -18,7 +19,6 @@ import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 
 import type { iPacket, iPacketAnchor, iPacketFinding, iPacketOptions, iPacketReview } from './exports.types';
 import { agentPrompt, packetJson, packetMarkdown } from './packet-format.utils';
-import { stackTargets } from './stack-targets.utils';
 
 interface iReviewSource {
   target: iReviewTargetRecord;

@@ -9,6 +9,7 @@ import type { iStackLink } from '@~/features/reviews/stack-review.utils';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
 
+import { findingsFromStack } from '../stack.utils';
 import { MarkBar } from './mark-bar';
 
 function dotClass(summary: iSnapshotSummary | undefined) {
@@ -16,14 +17,21 @@ function dotClass(summary: iSnapshotSummary | undefined) {
   return isReviewComplete(summary) ? 'border-good bg-good' : 'border-fg';
 }
 
+function fromStackLabel(fromStack: readonly iFinding[]) {
+  const [only] = fromStack;
+  if (fromStack.length === 1 && only) return `affected by F-${only.number} on ${only.branch}`;
+  return `affected by ${pluralize(fromStack.length, 'finding')} in the stack`;
+}
+
 interface iStackChainItemProps {
   link: iStackLink;
   findings: readonly iFinding[];
+  fromStack: readonly iFinding[];
   isSelected: boolean;
   onSelect: () => void;
 }
 
-function StackChainItem({ link, findings, isSelected, onSelect }: iStackChainItemProps) {
+function StackChainItem({ link, findings, fromStack, isSelected, onSelect }: iStackChainItemProps) {
   const summary = link.target?.latestSnapshot;
   const findingCount = countActive(findings.filter((finding) => finding.targetId === link.target?.id));
 
@@ -53,6 +61,14 @@ function StackChainItem({ link, findings, isSelected, onSelect }: iStackChainIte
               title={`${link.branch.parent} has commits this branch doesn't have yet; rebase to bring them in.`}
             >
               parent moved
+            </Pill>
+          ) : null}
+          {fromStack.length > 0 ? (
+            <Pill
+              variant="open"
+              title={fromStack.map((finding) => `F-${finding.number} on ${finding.branch}: ${finding.body}`).join('\n')}
+            >
+              {fromStackLabel(fromStack)}
             </Pill>
           ) : null}
         </span>
@@ -90,11 +106,12 @@ export function StackChainList({ links, base, findings, selectedBranch, onSelect
   return (
     <div className="min-w-0">
       <ol className="m-0 list-none p-0">
-        {links.toReversed().map((link) => (
+        {links.toReversed().map((link, reversedIndex) => (
           <StackChainItem
             key={link.branch.name}
             link={link}
             findings={findings}
+            fromStack={findingsFromStack(links, links.length - 1 - reversedIndex, findings)}
             isSelected={link.branch.name === selectedBranch}
             onSelect={() => onSelect(link.branch.name)}
           />

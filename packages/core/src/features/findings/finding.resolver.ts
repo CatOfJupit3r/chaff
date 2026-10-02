@@ -6,6 +6,8 @@ import {
   diffSideSchema,
   findingEventSourceSchema,
   findingKindSchema,
+  findingScopeSchema,
+  findingSeveritySchema,
   findingStatusSchema,
 } from '@chaff/common/enums/review.enums';
 
@@ -67,7 +69,12 @@ export class FindingResolver {
   public toFindingRecord = createRowResolver<FindingWithBranchRow, Omit<iFindingRecord, 'anchors' | 'events' | 'post'>>(
     {
       optional: ['answer'],
-      overrides: (row) => ({ kind: findingKindSchema.parse(row.kind), status: findingStatusSchema.parse(row.status) }),
+      overrides: (row) => ({
+        kind: findingKindSchema.parse(row.kind),
+        status: findingStatusSchema.parse(row.status),
+        severity: row.severity === null ? undefined : findingSeveritySchema.parse(row.severity),
+        scope: findingScopeSchema.parse(row.scope),
+      }),
     },
   );
 }

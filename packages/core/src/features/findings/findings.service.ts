@@ -5,13 +5,16 @@ import {
   ANCHOR_MATCHES,
   DIFF_SIDES,
   FINDING_KINDS,
+  FINDING_SCOPES,
   FINDING_STATUSES,
   IS_ACTIVE_FINDING_STATUS,
 } from '@chaff/common/enums/review.enums';
-import type { DiffSide, FindingStatus } from '@chaff/common/enums/review.enums';
+import type { DiffSide, FindingScope, FindingSeverity, FindingStatus } from '@chaff/common/enums/review.enums';
 import { canSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
 
-import { FINDING_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
+import { lowerTargets, stackTargets } from '@~/features/reviews/review-targets/stack-targets.utils';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
@@ -48,6 +51,7 @@ export class FindingsService {
   constructor(
     @inject(FINDING_REPOSITORY_TOKEN) private readonly findingRepository: iFindingRepository,
     @inject(SNAPSHOT_REPOSITORY_TOKEN) private readonly snapshotRepository: iSnapshotRepository,
+    @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
     private readonly reviewsService: ReviewsService,
     private readonly snapshotStoreService: SnapshotStoreService,
   ) {}
@@ -56,7 +60,28 @@ export class FindingsService {
     return this.findingRepository.list(input);
   }
 
+  /**
+   * Active findings from elsewhere in the review's stack that bear on it: concerns on the branches it builds
+   * on, and findings about the whole stack written on any other branch of it. Newest first.
+   */
+  public async fromStack(snapshotId: string) {
+    const { target } = await this.reviewsService.getContext(snapshotId);
+    const all = await this.reviewTargetRepository.list(target.workspaceId);
+    const lowerIds = new Set(lowerTargets(all, target).map((candidate) => candidate.id));
+    const stackIds = new Set(stackTargets(all, target).map((candidate) => candidate.id));
+    const findings = await this.findingRepository.list({ workspaceId: target.workspaceId });
+    return findings.filter(
+      (finding) =>
+        IS_ACTIVE_FINDING_STATUS(finding.status) &&
+        finding.branch !== target.branch &&
+        ((finding.kind === FINDING_KINDS.CONCERN && lowerIds.has(finding.targetId)) ||
+          (finding.scope === FINDING_SCOPES.STACK && stackIds.has(finding.targetId))),
+    );
+  }
+
   public async create(input: iCreateFindingInput) {
+    const scope = this.scopeOf(input);
+    this.checkSeverity(input.kind, input.severity);
     const { snapshot, target } = await this.reviewsService.getContext(input.snapshotId);
     const drafts = await Promise.all(input.anchors.map(async (anchor) => this.draftAnchor(input.snapshotId, anchor)));
     const anchors = await this.quoteAnchors(target.workspaceId, input.snapshotId, drafts);
@@ -65,9 +90,19 @@ export class FindingsService {
       targetId: target.id,
       snapshotId: snapshot.id,
       kind: input.kind,
+      severity: input.severity,
+      scope,
       body: input.body,
       anchors,
     });
+  }
+
+  public async setSeverity(findingId: string, severity: FindingSeverity | undefined) {
+    const finding = await this.getFinding(findingId);
+    this.checkSeverity(finding.kind, severity);
+    const updated = await this.findingRepository.setSeverity(findingId, severity);
+    if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
+    return updated;
   }
 
   /**
@@ -121,6 +156,19 @@ export class FindingsService {
   public async remove(findingId: string) {
     await this.getFinding(findingId);
     await this.findingRepository.remove(findingId);
+  }
+
+  private scopeOf({ scope, anchors }: Pick<iCreateFindingInput, 'scope' | 'anchors'>): FindingScope {
+    const isOnCode = anchors.length > 0;
+    if (scope === undefined) return isOnCode ? FINDING_SCOPES.CODE : FINDING_SCOPES.BRANCH;
+    if (isOnCode !== (scope === FINDING_SCOPES.CODE)) throw ORPCBadRequestError(errorCodes.INVALID_FINDING_SCOPE);
+    return scope;
+  }
+
+  private checkSeverity(kind: iFindingRecord['kind'], severity: FindingSeverity | undefined) {
+    if (severity !== undefined && kind !== FINDING_KINDS.CONCERN) {
+      throw ORPCBadRequestError(errorCodes.INVALID_FINDING_SEVERITY);
+    }
   }
 
   private async latestSnapshotId(finding: iFindingRecord) {

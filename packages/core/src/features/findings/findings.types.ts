@@ -4,6 +4,8 @@ import type {
   DiffSide,
   FindingEventSource,
   FindingKind,
+  FindingScope,
+  FindingSeverity,
   FindingStatus,
 } from '@chaff/common/enums/review.enums';
 
@@ -78,9 +80,11 @@ export type iFindingAnchorRecord = Omit<
   locations: iAnchorLocationSummary[];
 };
 
-export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer'> & {
+export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer' | 'severity' | 'scope'> & {
   kind: FindingKind;
   status: FindingStatus;
+  severity?: FindingSeverity;
+  scope: FindingScope;
   answer?: string;
   /** Every status the finding went through, oldest first. */
   events: iFindingEventRecord[];
@@ -99,6 +103,8 @@ export interface iNewFinding {
   targetId: string;
   snapshotId: string;
   kind: FindingKind;
+  severity?: FindingSeverity;
+  scope: FindingScope;
   body: string;
   anchors: iNewFindingAnchor[];
 }
@@ -110,6 +116,9 @@ export type iFindingAnchorInput =
 export interface iCreateFindingInput {
   snapshotId: string;
   kind: FindingKind;
+  severity?: FindingSeverity;
+  /** Code when there are anchors, else the whole branch unless the whole stack is asked for. */
+  scope?: FindingScope;
   body: string;
   anchors: iFindingAnchorInput[];
 }

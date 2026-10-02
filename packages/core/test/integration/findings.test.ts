@@ -2,7 +2,14 @@ import { call } from '@orpc/server';
 import { describe, expect, it } from 'vitest';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { DIFF_SIDES, FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
+import {
+  DIFF_SIDES,
+  FINDING_KINDS,
+  FINDING_SCOPES,
+  FINDING_SEVERITIES,
+  FINDING_STATUSES,
+} from '@chaff/common/enums/review.enums';
 
 import { appRouter } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
@@ -172,5 +179,110 @@ describe('findings', () => {
     await expectORPCError(call(appRouter.findings.remove, { findingId: finding.id }), {
       code: errorCodes.FINDING_NOT_FOUND,
     });
+  });
+
+  it('gives concerns a severity, and writes findings about the whole branch or stack', async () => {
+    const { snapshotId, unitTitled } = await featureReview();
+    const concern = await call(appRouter.findings.create, {
+      snapshotId,
+      kind: FINDING_KINDS.CONCERN,
+      severity: FINDING_SEVERITIES.MAJOR,
+      body: 'Why 3?',
+      anchors: [{ unitId: unitTitled('Scheduler.next').id }],
+    });
+    const branchWide = await call(appRouter.findings.create, {
+      snapshotId,
+      kind: FINDING_KINDS.NOTE,
+      body: 'Retries belong in config',
+      anchors: [],
+    });
+    const stackWide = await call(appRouter.findings.create, {
+      snapshotId,
+      kind: FINDING_KINDS.CONCERN,
+      scope: FINDING_SCOPES.STACK,
+      body: 'Three branches add three retry helpers',
+      anchors: [],
+    });
+
+    expect(concern).toMatchObject({ severity: FINDING_SEVERITIES.MAJOR, scope: FINDING_SCOPES.CODE });
+    expect(branchWide.scope).toBe(FINDING_SCOPES.BRANCH);
+    expect(stackWide).toMatchObject({ scope: FINDING_SCOPES.STACK, anchors: [] });
+    expect(stackWide.severity).toBeUndefined();
+
+    const blocking = await call(appRouter.findings.setSeverity, {
+      findingId: stackWide.id,
+      severity: FINDING_SEVERITIES.BLOCKING,
+    });
+    expect(blocking.severity).toBe(FINDING_SEVERITIES.BLOCKING);
+    expect((await call(appRouter.findings.setSeverity, { findingId: concern.id, severity: null })).severity).toBe(
+      undefined,
+    );
+
+    const packet = await call(appRouter.exports.packet, {
+      snapshotId,
+      scope: EXPORT_SCOPES.review,
+      statuses: [FINDING_STATUSES.OPEN],
+      shouldQuoteCode: false,
+      shouldListUnreviewed: false,
+    });
+    expect(packet.markdown).toContain(`**F-${stackWide.number} · Concern · Blocking · Open**\n  On the whole stack`);
+    expect(packet.markdown).toContain(`**F-${branchWide.number} · Note · Open**\n  On the whole branch`);
+
+    await expectORPCError(
+      call(appRouter.findings.setSeverity, { findingId: branchWide.id, severity: FINDING_SEVERITIES.MINOR }),
+      {
+        code: errorCodes.INVALID_FINDING_SEVERITY,
+      },
+    );
+    await expectORPCError(
+      call(appRouter.findings.create, {
+        snapshotId,
+        kind: FINDING_KINDS.CONCERN,
+        scope: FINDING_SCOPES.STACK,
+        body: 'Anchored and stack-wide',
+        anchors: [{ unitId: unitTitled('backoff').id }],
+      }),
+      { code: errorCodes.INVALID_FINDING_SCOPE },
+    );
+  });
+
+  it('shows concerns from lower branches and findings about the whole stack on the branches above', async () => {
+    const { snapshotId, repo, workspace, unitTitled } = await featureReview();
+    const concern = await call(appRouter.findings.create, {
+      snapshotId,
+      kind: FINDING_KINDS.CONCERN,
+      body: 'Why 3?',
+      anchors: [{ unitId: unitTitled('Scheduler.next').id }],
+    });
+    await call(appRouter.findings.create, {
+      snapshotId,
+      kind: FINDING_KINDS.QUESTION,
+      body: 'Is 3 enough?',
+      anchors: [{ unitId: unitTitled('Scheduler.next').id }],
+    });
+    repo.branch('feature-ui');
+    repo.commitFiles('ui', { 'src/ui.ts': 'export const label = "Retry";\n' });
+    const upper = await call(appRouter.reviews.start, {
+      workspaceId: workspace.id,
+      branch: 'feature-ui',
+      parentBranch: 'feature',
+    });
+    const stackWide = await call(appRouter.findings.create, {
+      snapshotId: upper.snapshotId,
+      kind: FINDING_KINDS.NOTE,
+      scope: FINDING_SCOPES.STACK,
+      body: 'Name retry options the same way across the stack',
+      anchors: [],
+    });
+
+    const fromBelow = await call(appRouter.findings.fromStack, { snapshotId: upper.snapshotId });
+    expect(fromBelow.map((finding) => finding.id)).toEqual([concern.id]);
+    expect(fromBelow[0]).toMatchObject({ branch: 'feature' });
+
+    const fromAbove = await call(appRouter.findings.fromStack, { snapshotId });
+    expect(fromAbove.map((finding) => finding.id)).toEqual([stackWide.id]);
+
+    await call(appRouter.findings.setStatus, { findingId: concern.id, status: FINDING_STATUSES.WITHDRAWN });
+    expect(await call(appRouter.findings.fromStack, { snapshotId: upper.snapshotId })).toEqual([]);
   });
 });

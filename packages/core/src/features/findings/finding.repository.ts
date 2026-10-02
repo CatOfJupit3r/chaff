@@ -1,4 +1,4 @@
-import type { FindingStatus } from '@chaff/common/enums/review.enums';
+import type { FindingSeverity, FindingStatus } from '@chaff/common/enums/review.enums';
 
 import type {
   iAnchorLocationRecord,
@@ -22,6 +22,8 @@ export interface iFindingRepository {
     status: FindingStatus,
     change?: iStatusChange,
   ) => Promise<iFindingRecord | undefined>;
+  /** Sets or clears a concern's severity. */
+  setSeverity: (findingId: string, severity: FindingSeverity | undefined) => Promise<iFindingRecord | undefined>;
   /** Turns a question into an open concern. */
   convertToConcern: (findingId: string, snapshotId: string) => Promise<iFindingRecord | undefined>;
   /** Where the anchors were found in later snapshots, oldest snapshot first. */

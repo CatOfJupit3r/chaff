@@ -11,17 +11,19 @@ import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bin
 import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
 import { cn } from '@~/lib/utils';
 
-import type { NoteMark } from '../hooks/use-focus-review';
+import type { iNoteOptions, NoteMark } from '../hooks/use-focus-review';
 import { NoteComposer } from './note-composer';
+import type { iNoteUnitSource } from './note-options';
 
 interface iDecisionDockProps {
   mark?: UnitMark;
   noteMark?: NoteMark;
   headSha: string;
   isSaving: boolean;
+  noteSource: iNoteUnitSource;
   onComment: (mark: NoteMark) => void;
   onCancelNote: () => void;
-  onSaveNote: (mark: NoteMark, body: string) => Promise<boolean>;
+  onSaveNote: (mark: NoteMark, body: string, options: iNoteOptions) => Promise<boolean>;
   onLooksGood: () => void;
   onLater: () => void;
 }
@@ -59,6 +61,7 @@ export function DecisionDock({
   noteMark,
   headSha,
   isSaving,
+  noteSource,
   onComment,
   onCancelNote,
   onSaveNote,
@@ -92,6 +95,7 @@ export function DecisionDock({
           mark={noteMark}
           headSha={headSha}
           isSaving={isSaving}
+          source={noteSource}
           onCancel={onCancelNote}
           onSave={onSaveNote}
         />

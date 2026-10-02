@@ -164,3 +164,28 @@ export const REVIEW_PROGRESSION_LABELS = reviewProgressionsEnumwaii.derive({
   [REVIEW_PROGRESSIONS.functions]: 'Functions',
   [REVIEW_PROGRESSIONS.sections]: 'Sections',
 });
+
+/**
+ * What a concern or question written in Focus is about: the card's units, units picked by hand (from any
+ * card), the whole branch, or the whole stack.
+ */
+export const noteScopesEnumwaii = new Enumwaii('NoteScope', ['CARD', 'UNITS', 'BRANCH', 'STACK']);
+
+export const NOTE_SCOPES = noteScopesEnumwaii.enum;
+export type NoteScope = InferEnumwaii<typeof noteScopesEnumwaii>;
+export const noteScopeValues = noteScopesEnumwaii.values;
+
+export const NOTE_SCOPE_LABELS = noteScopesEnumwaii.derive({
+  [NOTE_SCOPES.CARD]: 'This card',
+  [NOTE_SCOPES.UNITS]: 'Pick units…',
+  [NOTE_SCOPES.BRANCH]: 'Whole branch',
+  [NOTE_SCOPES.STACK]: 'Whole stack',
+});
+
+/** The composer's footer for a note that is not pinned to lines. */
+export const NOTE_SCOPE_FOOTERS = noteScopesEnumwaii.derive<string | undefined>({
+  [NOTE_SCOPES.CARD]: undefined,
+  [NOTE_SCOPES.UNITS]: undefined,
+  [NOTE_SCOPES.BRANCH]: "About the whole branch, so it isn't pinned to lines. The card stays up.",
+  [NOTE_SCOPES.STACK]: 'About the whole stack: the other branches in it show it too. The card stays up.',
+});
