@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 
 import type { DiffSide, FindingKind } from '@chaff/common/enums/review.enums';
 
+import type { iDiscussion } from '@~/features/code-hosts/code-hosts.types';
 import type { iFinding } from '@~/features/findings/findings.types';
 
 import type { iUnit } from './reviews.types';
@@ -25,6 +26,8 @@ export interface iDiffReview {
   headSha: string;
   unitsByFile: ReadonlyMap<string, iUnit[]>;
   placementsByFile: ReadonlyMap<string, iFindingPlacement[]>;
+  /** Merge request threads written against this snapshot's head, by file id. */
+  discussionsByFile: ReadonlyMap<string, iDiscussion[]>;
   draft?: iDiffDraft;
   isSaving: boolean;
   startDraft: (draft: iDiffDraft) => void;

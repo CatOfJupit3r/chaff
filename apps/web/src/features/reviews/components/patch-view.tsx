@@ -3,6 +3,7 @@ import { PatchDiff } from '@pierre/diffs/react';
 import { useMemo } from 'react';
 
 import { useIsDarkMode } from '@~/features/appearance/hooks/use-is-dark-mode';
+import { DiscussionThread } from '@~/features/code-hosts/components/discussion-thread';
 
 import { buildNoteAnnotations, draftFromSelection } from '../diff-annotations.utils';
 import type { iDiffNote } from '../diff-annotations.utils';
@@ -25,8 +26,8 @@ interface iPatchViewProps {
 
 /**
  * A file's patch with syntax highlighting; hidden context can be expanded from the snapshot. In the Full
- * diff, lines show the decision on their unit, findings sit under the lines they point at, and the + beside
- * a line, or a picked range, opens a note.
+ * diff, lines show the decision on their unit, findings and merge request threads sit under the lines they
+ * point at, and the + beside a line, or a picked range, opens a note.
  */
 export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatchViewProps) {
   const isDark = useIsDarkMode();
@@ -34,12 +35,13 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatch
   const review = useOptionalDiffReview();
   const units = review?.unitsByFile.get(file.id);
   const placements = review?.placementsByFile.get(file.id);
+  const discussions = review?.discussionsByFile.get(file.id);
   const draft = review?.draft;
   const startDraft = review?.startDraft;
   const gutterCss = useMemo(() => (units ? buildDecisionGutterCss(units) : undefined), [units]);
   const annotations = useMemo(
-    () => buildNoteAnnotations(file.id, placements ?? [], draft),
-    [file.id, placements, draft],
+    () => buildNoteAnnotations(file.id, placements ?? [], draft, discussions),
+    [file.id, placements, draft, discussions],
   );
 
   const options = useMemo(
@@ -65,9 +67,13 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatch
       patch={patch}
       disableWorkerPool
       lineAnnotations={annotations}
-      renderAnnotation={({ metadata }) =>
-        metadata.finding ? <DiffFindingNote finding={metadata.finding} /> : <DiffNoteComposer />
-      }
+      renderAnnotation={({ metadata }) => {
+        if (metadata.finding) return <DiffFindingNote finding={metadata.finding} />;
+        if (metadata.discussion) {
+          return <DiscussionThread discussion={metadata.discussion} className="mx-4 my-2 max-w-[640px]" />;
+        }
+        return <DiffNoteComposer />;
+      }}
       options={options}
     />
   );

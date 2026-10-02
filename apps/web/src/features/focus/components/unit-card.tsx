@@ -1,4 +1,5 @@
 import { Pill } from '@~/components/ui/pill';
+import { UnitDiscussions } from '@~/features/code-hosts/components/unit-discussions';
 import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
 import { UnitDigestNotes } from '@~/features/digests/components/unit-digest-notes';
 import { UnitTestsView } from '@~/features/digests/components/unit-tests-view';
@@ -85,6 +86,7 @@ export function UnitCard({
           <span className="min-w-0 flex-1 whitespace-pre-wrap text-fg-soft">{finding.body}</span>
         </div>
       ))}
+      <UnitDiscussions snapshot={snapshot} unit={unit} path={file?.path} />
       <UnitViewTabs view={view} counts={counts} onChange={onViewChange} />
       {view === CARD_VIEWS.code && file ? (
         <UnitCodeView

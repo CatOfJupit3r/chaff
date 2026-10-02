@@ -1,5 +1,6 @@
 import { Screen } from '@~/components/layout/screen';
 import { TopBar } from '@~/components/layout/top-bar';
+import { ChangeRequestsGroup } from '@~/features/code-hosts/components/change-requests-group';
 import { pluralize } from '@~/utils/pluralize';
 
 import { useAddWorkspace } from '../hooks/use-add-workspace';
@@ -31,6 +32,7 @@ export function ReviewsScreen() {
             <NoRepositories onAdd={addFromPicker} isAdding={isAdding} />
           ) : (
             <>
+              <ChangeRequestsGroup workspaces={workspaces} />
               <LocalStacksGroup workspaces={workspaces} />
               <RepositoriesGroup workspaces={workspaces} onAdd={addFromPicker} isAdding={isAdding} />
             </>

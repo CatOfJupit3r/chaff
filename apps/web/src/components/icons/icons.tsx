@@ -146,3 +146,19 @@ export const SparkIcon = createIcon(
   </>,
 );
 export const StopIcon = createIcon('StopIcon', <rect x="6.5" y="6.5" width="11" height="11" rx="2" />);
+export const SettingsIcon = createIcon(
+  'SettingsIcon',
+  <>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
+  </>,
+);
+export const MergeIcon = createIcon(
+  'MergeIcon',
+  <>
+    <circle cx="6" cy="6" r="2" />
+    <circle cx="6" cy="18" r="2" />
+    <circle cx="18" cy="18" r="2" />
+    <path d="M6 8v8M18 16V11a4 4 0 0 0-4-4H9" />
+  </>,
+);

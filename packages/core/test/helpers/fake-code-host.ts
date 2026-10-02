@@ -45,10 +45,10 @@ export class FakeCodeHost {
     return `http://127.0.0.1:${address?.port ?? 0}`;
   }
 
-  public async start() {
+  public async start(port = 0) {
     this.server = createServer((request, response) => this.handle(request, response));
     await new Promise((resolve: (value?: undefined) => unknown) =>
-      this.server?.listen(0, '127.0.0.1', () => resolve()),
+      this.server?.listen(port, '127.0.0.1', () => resolve()),
     );
   }
 

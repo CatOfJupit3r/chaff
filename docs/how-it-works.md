@@ -111,7 +111,16 @@ The digest is optional and read-only. Chaff runs the Claude Code (`claude -p`) o
 4. Chaff checks the answer before keeping it. Unknown ids are dropped, a unit belongs to one group at most, units no group explains go to a visible "Other changes, not yet explained" group, the reading order is completed so it covers every unit once, and a test claimed to have passed is downgraded to "read", because nothing ran.
 5. The worktree is deleted. A digest that runs longer than 20 minutes, or that you stop, leaves nothing behind.
 
-## Planned: GitLab and GitHub
+## GitLab and GitHub
 
-- **GitLab merge requests** are the primary target: load an MR or a stack of MRs into the snapshot store, use MR diff versions as snapshots, and post findings back as draft notes you publish yourself.
-- **GitHub pull requests** follow the same provider interface: import PRs and stacks, and export findings as a pending review that is never submitted automatically.
+GitLab merge requests and GitHub pull requests are read through one provider interface in the core, so both work the same way.
+
+- **Connections.** Settings takes the host's address and a token. Chaff calls the host's `/user` endpoint to check it, then hands the token to the main process's secret store, which encrypts it with Electron `safeStorage` (the OS keychain) into `secrets.json` next to `chaff.db`. Nothing is stored when the OS has no keychain. Tokens go only over https, or plain http to this computer for a local instance, and are never sent to the renderer.
+- **Projects.** A repository's project is the one picked in Settings, or else the first remote (origin first) whose host matches a connection.
+- **Inbox.** For each repository with a project, Chaff lists the open changes and filters them: assigned to you or awaiting your review, opened by you, or all. A change whose target branch is another change's source branch is shown stacked on it.
+- **Snapshots.** Starting a review fetches `refs/merge-requests/<n>/head` (GitLab) or `refs/pull/<n>/head` (GitHub) and the target branch into the snapshot store. The token travels in an `http.extraHeader` set through `GIT_CONFIG_*` environment variables, so it never appears in a process list or a config file. The target branch is copied from your local repository first when it has it, so only missing objects come over the network. Your repository is not touched.
+- **New versions.** The snapshot chip asks the host for the change's head and the target branch's tip (at most every 30 seconds) and counts new commits from the change's commit list. **Update** freezes a new snapshot as with local branches.
+- **Discussions** are read from the host and shown read-only on the lines and units they are about. Threads written against another commit are marked as such and stay out of the Full diff.
+- **Linking.** A local branch's review can be moved onto the merge request it was pushed as. The review keeps its snapshots, decisions and findings; its next update reads from the host.
+
+Posting findings back, as GitLab draft notes or a pending GitHub review that you submit yourself, is **planned** with export.

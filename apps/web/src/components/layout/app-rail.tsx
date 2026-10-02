@@ -4,7 +4,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 
 import type { IconComponent } from '@~/components/icons/create-icon';
-import { DiffIcon, FlagIcon, FocusIcon, InboxIcon, StackIcon } from '@~/components/icons/icons';
+import { DiffIcon, FlagIcon, FocusIcon, InboxIcon, SettingsIcon, StackIcon } from '@~/components/icons/icons';
 import { Logo } from '@~/components/ui/logo';
 import { countActive } from '@~/features/findings/findings.utils';
 import { useAllFindings } from '@~/features/findings/hooks/use-findings';
@@ -44,7 +44,7 @@ function RailLink({ to, params, search, icon: Icon, label, badge }: iRailLinkPro
   );
 }
 
-/** Screens: the review list, the stack overview, Focus and Full diff for the review open now or most recently, and findings. */
+/** Screens: reviews, the stack, Focus and Full diff for the latest review, findings and settings. */
 export function AppRail() {
   const { snapshotId } = useParams({ strict: false });
   const [lastSnapshotId, setLastSnapshotId] = useAtom(lastSnapshotIdAtom);
@@ -78,6 +78,9 @@ export function AppRail() {
         </>
       ) : null}
       <RailLink to="/findings" icon={FlagIcon} label="Findings" badge={openFindingCount} />
+      <div className="mt-auto">
+        <RailLink to="/settings" icon={SettingsIcon} label="Settings" />
+      </div>
     </nav>
   );
 }

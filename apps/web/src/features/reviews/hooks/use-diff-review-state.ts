@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
-import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import { REVIEW_TARGET_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { FindingKind } from '@chaff/common/enums/review.enums';
 
 import { showToast } from '@~/components/toast/toast-store';
+import type { iDiscussion } from '@~/features/code-hosts/code-hosts.types';
+import { useDiscussions } from '@~/features/code-hosts/hooks/use-discussions';
 import { FINDING_KIND_LABELS } from '@~/features/findings/findings.enums';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
@@ -31,6 +33,18 @@ function placeFindings(snapshotId: string, findings: ReturnType<typeof useFindin
   return byFile;
 }
 
+/** Threads written against the snapshot's head, keyed by the id of the file they are on. */
+function placeDiscussions(snapshot: iSnapshot, discussions: readonly iDiscussion[]) {
+  const fileIds = new Map(snapshot.files.map((file) => [file.path, file.id]));
+  const byFile = new Map<string, iDiscussion[]>();
+  for (const discussion of discussions) {
+    const fileId = discussion.path ? fileIds.get(discussion.path) : undefined;
+    if (!fileId || !discussion.isOnSnapshot) continue;
+    byFile.set(fileId, [...(byFile.get(fileId) ?? []), discussion]);
+  }
+  return byFile;
+}
+
 export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
   const snapshotId = snapshot.id;
   const units = useQuery(unitsQueryOptions(snapshotId)).data;
@@ -40,6 +54,8 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
   const [draft, setDraft] = useState<iDiffDraft>();
   const unitsByFile = useMemo(() => groupUnitsByFile(units ?? []), [units]);
   const placementsByFile = useMemo(() => placeFindings(snapshotId, findings), [snapshotId, findings]);
+  const discussions = useDiscussions(snapshotId, snapshot.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST);
+  const discussionsByFile = useMemo(() => placeDiscussions(snapshot, discussions), [snapshot, discussions]);
 
   const saveDraft = async (kind: FindingKind, body: string) => {
     if (!draft) return false;
@@ -69,6 +85,7 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
     headSha: snapshot.headSha,
     unitsByFile,
     placementsByFile,
+    discussionsByFile,
     draft,
     isSaving: create.isPending,
     startDraft: setDraft,

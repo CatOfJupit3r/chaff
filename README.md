@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, frozen snapshots, Focus review with the AI digest, the Full diff and findings work today. GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff and findings work today. The second pass and export are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -159,6 +159,34 @@ The chip in the top bar shows the frozen commit you are reading. When the agent 
   <img src="docs/screenshots/new-commits-light.png" alt="Snapshot chip showing one new commit and an Update button" />
 </picture>
 
+### Merge requests and pull requests
+
+Connect GitLab (gitlab.com or self-managed) or GitHub in **Settings** with a read-only token, which is checked once and kept in your system keychain. Each repository's project is detected from its remotes, or picked by hand.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png" />
+  <img src="docs/screenshots/settings-light.png" alt="Settings with a GitLab connection and the project detected for each repository" />
+</picture>
+
+Open merge requests appear on the Reviews screen, stacked when one targets another's branch. **Start** copies the merge request into Chaff's store and opens it in Focus like any branch. A local branch you already reviewed can be **linked** to the merge request it was pushed as, keeping its decisions and findings.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/inbox-dark.png" />
+  <img src="docs/screenshots/inbox-light.png" alt="Reviews screen with two stacked GitLab merge requests above the local stacks" />
+</picture>
+
+The merge request's discussions show read-only on the unit they are about, in Focus and in the Full diff. Replies happen on the host.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-mr-dark.png" />
+  <img src="docs/screenshots/focus-mr-light.png" alt="Focus card of a merge request with the digest notes and a GitLab discussion above the code" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/mr-discussion-dark.png" />
+  <img src="docs/screenshots/mr-discussion-light.png" alt="Full diff with a GitLab discussion under the line it is about" />
+</picture>
+
 ### Open in your editor
 
 File names and line numbers link into VS Code, VS Code Insiders or Cursor, at the path of your local checkout.
@@ -192,8 +220,10 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
 | Stack overview with parent editing and cumulative view | Works |
-| GitLab merge requests and stacked MRs | Planned |
-| GitHub pull requests, exported as a pending review | Planned |
+| GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
+| GitHub pull requests, the same way | Works |
+| Linking a local branch's review to the merge request it became | Works |
+| Findings posted as GitLab draft notes or a pending GitHub review | Planned |
 | Working changes (uncommitted work) as a review target | Works |
 | Second pass: interdiffs, re-anchored findings, Verify screen | Planned |
 | Export: Markdown and JSON packets, GitLab draft notes, agent report import | Planned |
