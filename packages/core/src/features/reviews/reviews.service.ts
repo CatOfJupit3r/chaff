@@ -5,6 +5,7 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { IS_INSPECTED_MARK, REVIEW_TARGET_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 
 import { REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { RemoteChangesService } from '@~/features/code-hosts/remote-changes.service';
 import { GitService } from '@~/features/git/git.service';
 import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
@@ -15,6 +16,7 @@ import type { iUnitMarkRepository } from './marks/unit-mark.repository';
 import type { iReviewTargetRepository } from './review-targets/review-target.repository';
 import type { iReviewTargetRecord } from './review-targets/review-targets.types';
 import type {
+  iChangeRequestInfo,
   iReviewTargetResponse,
   iSnapshotLiveStatus,
   iSnapshotResponse,
@@ -29,6 +31,12 @@ import type { iSnapshotHeads, iSnapshotRecord } from './snapshots/snapshots.type
 
 /** Larger files are not sent to the renderer for context expansion. */
 const MAX_CONTENT_BYTES = 5_000_000;
+
+function changeInfo(target: iReviewTargetRecord): iChangeRequestInfo | undefined {
+  const { codeHost, remoteProject, changeNumber, title, webUrl } = target;
+  if (!codeHost || !remoteProject || changeNumber === null) return undefined;
+  return { host: codeHost, project: remoteProject, number: changeNumber, title: title ?? '', webUrl: webUrl ?? '' };
+}
 
 /**
  * Review targets and their snapshots. Starting a review freezes the branch as a snapshot; later
@@ -46,19 +54,21 @@ export class ReviewsService {
     private readonly snapshotBuilderService: SnapshotBuilderService,
     private readonly gitService: GitService,
     @inject(UNIT_MARK_REPOSITORY_TOKEN) private readonly unitMarkRepository: iUnitMarkRepository,
+    private readonly remoteChangesService: RemoteChangesService,
   ) {}
 
   public async list(workspaceId?: string): Promise<iReviewTargetResponse[]> {
     const targets = await this.reviewTargetRepository.list(workspaceId);
     return Promise.all(
-      targets.map(async ({ id, workspaceId: targetWorkspaceId, branch, kind, parentBranch }) => {
-        const latest = await this.snapshotRepository.findLatest(id);
+      targets.map(async (target) => {
+        const latest = await this.snapshotRepository.findLatest(target.id);
         return {
-          id,
-          workspaceId: targetWorkspaceId,
-          branch,
-          kind,
-          parentBranch,
+          id: target.id,
+          workspaceId: target.workspaceId,
+          branch: target.branch,
+          kind: target.kind,
+          parentBranch: target.parentBranch,
+          change: changeInfo(target),
           latestSnapshot: latest ? await this.toSummary(latest) : undefined,
         };
       }),
@@ -67,6 +77,9 @@ export class ReviewsService {
 
   /** Opens the branch's newest snapshot, freezing the first one when the review is new. */
   public async start(request: iStartReviewInput) {
+    if (request.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST) {
+      throw ORPCBadRequestError(errorCodes.CHANGE_REQUEST_NOT_FOUND);
+    }
     const isWorkingChanges = request.kind === REVIEW_TARGET_KINDS.WORKING_CHANGES;
     // Working changes are compared with the branch they sit on.
     const input = isWorkingChanges ? { ...request, parentBranch: request.branch } : request;
@@ -87,6 +100,18 @@ export class ReviewsService {
       target ??= await this.reviewTargetRepository.create(input);
       if (!target) throw ORPCNotFoundError(errorCodes.REVIEW_TARGET_NOT_FOUND);
 
+      const snapshot = await this.capture(workspace, target);
+      return { targetId: target.id, snapshotId: snapshot.id };
+    });
+  }
+
+  /** Opens a target's newest snapshot, freezing the first one when there is none. */
+  public async open(targetId: string) {
+    const target = await this.getTarget(targetId);
+    const workspace = await this.workspacesService.getRecord(target.workspaceId);
+    return this.captureMutex.run(this.captureKey(workspace.id, target.branch), async () => {
+      const latest = await this.snapshotRepository.findLatest(target.id);
+      if (latest) return { targetId: target.id, snapshotId: latest.id };
       const snapshot = await this.capture(workspace, target);
       return { targetId: target.id, snapshotId: snapshot.id };
     });
@@ -166,6 +191,7 @@ export class ReviewsService {
       parentHeadSha: snapshot.parentHeadSha,
       baseSha: snapshot.baseSha,
       latestVersion: latest?.version ?? snapshot.version,
+      change: changeInfo(target),
       files,
     };
   }
@@ -174,6 +200,9 @@ export class ReviewsService {
   public async getLiveStatus(snapshotId: string): Promise<iSnapshotLiveStatus> {
     const snapshot = await this.getSnapshotRecord(snapshotId);
     const target = await this.getTarget(snapshot.targetId);
+    if (target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST) {
+      return this.remoteChangesService.liveStatus(target, snapshot);
+    }
     const { repoPath } = await this.workspacesService.getRecord(target.workspaceId);
     const isWorkingChanges = target.kind === REVIEW_TARGET_KINDS.WORKING_CHANGES;
     // The commit a working-changes snapshot sits on is its parent head; its own head exists only in the store.
@@ -202,6 +231,12 @@ export class ReviewsService {
     if (ancestry.exitCode !== 0) return { ...unchanged, isBranchRewritten: true };
     const newCommits = await this.gitService.output(repoPath, ['rev-list', '--count', `${committedSha}..${branchSha}`]);
     return { ...unchanged, newCommitCount: Number(newCommits) };
+  }
+
+  /** The review target and the workspace it belongs to. */
+  public async getTargetContext(targetId: string) {
+    const target = await this.getTarget(targetId);
+    return { target, workspace: await this.workspacesService.getRecord(target.workspaceId) };
   }
 
   /** The snapshot and the review it belongs to. */
@@ -266,6 +301,9 @@ export class ReviewsService {
     workspace: iWorkspaceRecord,
     target: iReviewTargetRecord,
   ): Promise<{ heads: iSnapshotHeads; workingFingerprint: string | null }> {
+    if (target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST) {
+      return { heads: await this.remoteChangesService.fetchHeads(workspace, target), workingFingerprint: null };
+    }
     if (target.kind !== REVIEW_TARGET_KINDS.WORKING_CHANGES) {
       const heads = await this.snapshotStoreService.fetchHeads(workspace, target.branch, target.parentBranch);
       return { heads, workingFingerprint: null };
@@ -280,6 +318,8 @@ export class ReviewsService {
 
   private async isUnchanged(workspace: iWorkspaceRecord, target: iReviewTargetRecord, latest: iSnapshotRecord) {
     if (latest.parentBranch !== target.parentBranch) return false;
+    if (target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST)
+      return this.remoteChangesService.isUnchanged(target, latest);
     if (target.kind === REVIEW_TARGET_KINDS.WORKING_CHANGES) {
       const branchSha = await this.snapshotStoreService.resolveBranch(workspace.repoPath, target.branch);
       return (

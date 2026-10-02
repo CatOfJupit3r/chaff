@@ -1,3 +1,4 @@
+import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import type { ReviewTargetKind, UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iNewReviewTarget } from './review-targets/review-targets.types';
@@ -18,12 +19,22 @@ export type iSnapshotSummary = Pick<
   markCounts: { mark: UnitMark; count: number }[];
 };
 
+/** The merge or pull request a target reviews. */
+export interface iChangeRequestInfo {
+  host: CodeHost;
+  project: string;
+  number: number;
+  title: string;
+  webUrl: string;
+}
+
 export interface iReviewTargetResponse {
   id: string;
   workspaceId: string;
   branch: string;
   kind: ReviewTargetKind;
   parentBranch: string;
+  change?: iChangeRequestInfo;
   latestSnapshot?: iSnapshotSummary;
 }
 
@@ -35,6 +46,7 @@ export type iSnapshotResponse = iSnapshotSummary &
     /** The branch's current parent, which differs from `parentBranch` after the reviewer changed it. */
     targetParentBranch: string;
     latestVersion: number;
+    change?: iChangeRequestInfo;
     files: iSnapshotFileSummary[];
   };
 

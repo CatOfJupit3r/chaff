@@ -42,7 +42,7 @@ async function start() {
     treeSitterDir: APP_PATHS.treeSitter,
     logFilePath: path.join(app.getPath('logs'), 'chaff.log'),
     appVersion: app.getVersion(),
-    host: new ElectronCoreHost(() => mainWindow),
+    host: new ElectronCoreHost(() => mainWindow, path.join(app.getPath('userData'), 'secrets.json')),
   });
   serveCoreOverIpc(core.router, isTrustedUrl);
 

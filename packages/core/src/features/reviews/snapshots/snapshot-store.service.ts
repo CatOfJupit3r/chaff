@@ -104,6 +104,51 @@ export class SnapshotStoreService {
     });
   }
 
+  /**
+   * Copies a merge or pull request and its target branch from the code host into the store. The token
+   * travels in an environment-configured header, so it never appears in a process list or a git config
+   * file. The target branch is first copied from the local repository when it has it, so only the
+   * missing objects come over the network.
+   */
+  public async fetchRemoteHeads(
+    workspace: { id: string; repoPath: string },
+    remote: { url: string; authorization: string; headRef: string; parentBranch: string },
+  ): Promise<iSnapshotHeads> {
+    return this.mutex.run(workspace.id, async () => {
+      const storePath = await this.ensureStore(workspace);
+      const fetchOptions = ['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', '--no-recurse-submodules'];
+      await this.gitService.run(
+        storePath,
+        [...fetchOptions, workspace.repoPath, `+refs/heads/${remote.parentBranch}:${FETCH_REF_PREFIX}/local`],
+        { allowFailure: true },
+      );
+      await this.gitService.run(
+        storePath,
+        [
+          ...fetchOptions,
+          remote.url,
+          `+${remote.headRef}:${FETCH_REF_PREFIX}/head`,
+          `+refs/heads/${remote.parentBranch}:${FETCH_REF_PREFIX}/parent`,
+        ],
+        {
+          env: {
+            GIT_TERMINAL_PROMPT: '0',
+            GIT_CONFIG_COUNT: '1',
+            GIT_CONFIG_KEY_0: 'http.extraHeader',
+            GIT_CONFIG_VALUE_0: `Authorization: ${remote.authorization}`,
+          },
+        },
+      );
+      const output = await this.gitService.output(storePath, [
+        'rev-parse',
+        `${FETCH_REF_PREFIX}/head`,
+        `${FETCH_REF_PREFIX}/parent`,
+      ]);
+      const [headSha = '', parentHeadSha = ''] = output.split('\n');
+      return { headSha, parentHeadSha };
+    });
+  }
+
   /** Local branches checked out in one of the repository's worktrees, with the worktree's folder. */
   public async listWorktrees(repoPath: string) {
     const { stdout } = await this.gitService.run(repoPath, ['worktree', 'list', '--porcelain', '-z'], {

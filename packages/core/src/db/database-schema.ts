@@ -1,3 +1,4 @@
+import { connections } from './schema/connections.schema';
 import { digests } from './schema/digests.schema';
 import { findingAnchors, findingEvents, findings } from './schema/findings.schema';
 import { reviewTargets } from './schema/review-targets.schema';
@@ -9,6 +10,7 @@ import { workspaces } from './schema/workspaces.schema';
 export const schema = {
   settings,
   workspaces,
+  connections,
   reviewTargets,
   snapshots,
   snapshotFiles,

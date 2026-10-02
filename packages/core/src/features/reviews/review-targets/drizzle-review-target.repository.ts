@@ -7,7 +7,7 @@ import { DatabaseService } from '@~/db/database.service';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
 
 import type { iReviewTargetRepository } from './review-target.repository';
-import type { iNewReviewTarget } from './review-targets.types';
+import type { iChangeRequestFields, iNewReviewTarget } from './review-targets.types';
 
 @singleton()
 export class DrizzleReviewTargetRepository implements iReviewTargetRepository {
@@ -38,8 +38,27 @@ export class DrizzleReviewTargetRepository implements iReviewTargetRepository {
       .get();
   }
 
-  public async create(input: iNewReviewTarget) {
+  public async findByChange(workspaceId: string, changeNumber: number) {
+    return this.databaseService
+      .getDb()
+      .select()
+      .from(reviewTargets)
+      .where(and(eq(reviewTargets.workspaceId, workspaceId), eq(reviewTargets.changeNumber, changeNumber)))
+      .get();
+  }
+
+  public async create(input: iNewReviewTarget & Partial<iChangeRequestFields>) {
     return this.databaseService.getDb().insert(reviewTargets).values(input).returning().get();
+  }
+
+  public async updateChange(targetId: string, fields: iChangeRequestFields) {
+    return this.databaseService
+      .getDb()
+      .update(reviewTargets)
+      .set(fields)
+      .where(eq(reviewTargets.id, targetId))
+      .returning()
+      .get();
   }
 
   public async updateParent(targetId: string, parentBranch: string) {

@@ -118,9 +118,15 @@ export const diffSideSchema = diffSidesEnumwaii.schema;
 
 /**
  * What a review compares: a branch against its parent, the uncommitted work on top of a checked-out
- * branch, or a branch against the bottom of its stack (everything the stack adds).
+ * branch, a branch against the bottom of its stack (everything the stack adds), or a GitLab merge
+ * request or GitHub pull request against its target branch.
  */
-export const reviewTargetKindsEnumwaii = new Enumwaii('ReviewTargetKind', ['BRANCH', 'WORKING_CHANGES', 'CUMULATIVE']);
+export const reviewTargetKindsEnumwaii = new Enumwaii('ReviewTargetKind', [
+  'BRANCH',
+  'WORKING_CHANGES',
+  'CUMULATIVE',
+  'CHANGE_REQUEST',
+]);
 
 export const REVIEW_TARGET_KINDS = reviewTargetKindsEnumwaii.enum;
 export type ReviewTargetKind = InferEnumwaii<typeof reviewTargetKindsEnumwaii>;

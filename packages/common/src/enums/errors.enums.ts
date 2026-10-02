@@ -24,6 +24,14 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'DIGEST_RUNNER_UNAVAILABLE',
   'PARENT_CYCLE',
   'BRANCH_NOT_CHECKED_OUT',
+  'CONNECTION_NOT_FOUND',
+  'CONNECTION_REJECTED',
+  'CODE_HOST_UNREACHABLE',
+  'CODE_HOST_ERROR',
+  'REMOTE_PROJECT_NOT_FOUND',
+  'CHANGE_REQUEST_NOT_FOUND',
+  'CHANGE_REQUEST_ALREADY_LINKED',
+  'SECRETS_UNAVAILABLE',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -52,4 +60,12 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.DIGEST_RUNNER_UNAVAILABLE]: 'The coding agent could not be found on this computer',
   [errorCodes.PARENT_CYCLE]: 'That parent already builds on this branch',
   [errorCodes.BRANCH_NOT_CHECKED_OUT]: 'The branch is not checked out, so it has no working changes',
+  [errorCodes.CONNECTION_NOT_FOUND]: 'Connection not found',
+  [errorCodes.CONNECTION_REJECTED]: 'The token was rejected. Check that it is valid and has read access',
+  [errorCodes.CODE_HOST_UNREACHABLE]: 'Could not reach the server. Check the address and your network',
+  [errorCodes.CODE_HOST_ERROR]: 'The server returned an error',
+  [errorCodes.REMOTE_PROJECT_NOT_FOUND]: 'This repository has no GitLab or GitHub project linked',
+  [errorCodes.CHANGE_REQUEST_NOT_FOUND]: 'Merge request not found',
+  [errorCodes.CHANGE_REQUEST_ALREADY_LINKED]: 'That merge request already has its own review',
+  [errorCodes.SECRETS_UNAVAILABLE]: 'This computer has no secure storage for tokens',
 });

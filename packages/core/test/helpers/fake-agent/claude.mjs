@@ -40,7 +40,9 @@ process.stdin.on('end', () => {
 
   emit({
     type: 'assistant',
-    message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: path.join(process.cwd(), 'src/backoff.ts') } }] },
+    message: {
+      content: [{ type: 'tool_use', name: 'Read', input: { file_path: path.join(process.cwd(), 'src/backoff.ts') } }],
+    },
   });
   emit({
     type: 'result',
@@ -64,7 +66,9 @@ process.stdin.on('end', () => {
           unit: first,
           summary: 'Multiplies by three.',
           worthChecking: ['one', 'two', 'three', 'four', 'five', 'six'],
-          tests: [{ path: path.join(process.cwd(), 'src/backoff.test.ts'), line: 1, tier: 'PASSED', note: 'Covers growth.' }],
+          tests: [
+            { path: path.join(process.cwd(), 'src/backoff.test.ts'), line: 1, tier: 'PASSED', note: 'Covers growth.' },
+          ],
         },
       ],
       diagrams: [

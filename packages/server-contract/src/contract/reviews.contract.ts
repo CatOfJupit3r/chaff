@@ -1,6 +1,7 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
+import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
 import {
   fileKindSchema,
   fileStatusSchema,
@@ -32,6 +33,15 @@ export const snapshotSummarySchema = z.object({
   createdAt: z.date(),
 });
 
+/** The GitLab merge request or GitHub pull request a review reads. */
+export const changeRequestInfoSchema = z.object({
+  host: codeHostSchema,
+  project: z.string(),
+  number: z.number().int().positive(),
+  title: z.string(),
+  webUrl: z.string(),
+});
+
 export const reviewTargetSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
@@ -39,6 +49,7 @@ export const reviewTargetSchema = z.object({
   kind: reviewTargetKindSchema,
   /** The branch it is compared with; the branch itself for working changes. */
   parentBranch: z.string(),
+  change: changeRequestInfoSchema.optional(),
   /** Missing until a review is started; a branch target with only a confirmed parent has none. */
   latestSnapshot: snapshotSummarySchema.optional(),
 });
@@ -75,6 +86,7 @@ export const snapshotSchema = snapshotSummarySchema.extend({
   baseSha: z.string(),
   /** Version of the newest snapshot of the same review. */
   latestVersion: z.number().int().positive(),
+  change: changeRequestInfoSchema.optional(),
   files: z.array(snapshotFileSchema),
 });
 
@@ -188,7 +200,8 @@ export const reviewsContract = oc.router({
   liveStatus: oc
     .route({
       summary: 'Compare a snapshot with the repository',
-      description: 'Reads the branch and its parent from disk and reports what changed since the snapshot.',
+      description:
+        'Reads the branch and its parent from disk, or a merge request from its host, and reports what changed since the snapshot.',
     })
     .input(snapshotIdInput)
     .output(snapshotLiveStatusSchema),
