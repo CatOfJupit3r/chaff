@@ -14,6 +14,7 @@ export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt' | 'knownPare
 
 export interface iBranchResponse {
   name: string;
+  isRemote: boolean;
   headSha: string;
   subject: string;
   authorName: string;

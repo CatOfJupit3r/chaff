@@ -1,13 +1,20 @@
 import { singleton } from 'tsyringe';
 
+import {
+  branchNameOfRef,
+  LOCAL_BRANCH_REFS,
+  localNameOfRemote,
+  REMOTE_BRANCH_REFS,
+} from '@~/features/git/branch-refs.utils';
 import { GitService } from '@~/features/git/git.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 
+import { REMOTE_BRANCH_LIMIT, REMOTE_BRANCH_MAX_AGE_MS } from './branches.constants';
 import type { iGitBranch } from './workspaces.types';
 
 const FIELD_SEPARATOR = '\u0000';
 const BRANCH_FORMAT = [
-  '%(refname:short)',
+  '%(refname)',
   '%(objectname)',
   '%(upstream:short)',
   '%(committerdate:unix)',
@@ -22,6 +29,9 @@ const GIT_CONCURRENCY = 8;
 
 interface iRawBranch {
   name: string;
+  /** Full ref in the user's repository, `refs/heads/...` or `refs/remotes/...`. */
+  ref: string;
+  isRemote: boolean;
   headSha: string;
   upstream?: string;
   committedAt: Date;
@@ -38,23 +48,51 @@ function parseBranches(output: string): iRawBranch[] {
   return output
     .split('\n')
     .filter((line) => line.length > 0)
-    .map((line) => {
-      const [name = '', headSha = '', upstream = '', committedAt = '0', authorName = '', subject = ''] =
+    .flatMap((line) => {
+      const [ref = '', headSha = '', upstream = '', committedAt = '0', authorName = '', subject = ''] =
         line.split(FIELD_SEPARATOR);
-      return {
-        name,
-        headSha,
-        upstream: upstream || undefined,
-        committedAt: new Date(Number(committedAt) * 1000),
-        authorName,
-        subject,
-      };
+      const name = branchNameOfRef(ref);
+      if (!name) return [];
+      return [
+        {
+          name,
+          ref,
+          isRemote: ref.startsWith(`${REMOTE_BRANCH_REFS}/`),
+          headSha,
+          upstream: upstream || undefined,
+          committedAt: new Date(Number(committedAt) * 1000),
+          authorName,
+          subject,
+        },
+      ];
     });
+}
+
+/**
+ * Local branches, plus remote-tracking branches nobody checked out: a stack pushed by someone else, or by an
+ * agent, shows whole. Only recent remote branches count, newest first and up to a limit, so a repository
+ * with thousands of old remote branches stays quick to list.
+ */
+function selectBranches(branches: readonly iRawBranch[], now: number) {
+  const local = branches.filter((branch) => !branch.isRemote);
+  const localNames = new Set(local.map((branch) => branch.name));
+  const remote = branches
+    .filter(
+      (branch) =>
+        branch.isRemote &&
+        !localNames.has(localNameOfRemote(branch.name)) &&
+        now - branch.committedAt.getTime() <= REMOTE_BRANCH_MAX_AGE_MS,
+    )
+    .sort((left, right) => right.committedAt.getTime() - left.committedAt.getTime())
+    .slice(0, REMOTE_BRANCH_LIMIT);
+  return [...local, ...remote];
 }
 
 interface iSuggestionContext {
   /** Branch names by the commit at their tip. */
   tips: ReadonlyMap<string, string[]>;
+  /** Full refs of the listed branches, by name. */
+  refs: ReadonlyMap<string, string>;
   defaultBranch: string | undefined;
   knownParent: string | undefined;
 }
@@ -63,7 +101,7 @@ function upstreamMatches(branch: iRawBranch, candidate: string) {
   return branch.upstream === candidate || branch.upstream?.endsWith(`/${candidate}`) === true;
 }
 
-/** Reads local branches straight from the user's repository and suggests a parent for each. */
+/** Reads local and remote-tracking branches straight from the user's repository and suggests a parent for each. */
 @singleton()
 export class BranchesService {
   constructor(private readonly gitService: GitService) {}
@@ -74,8 +112,14 @@ export class BranchesService {
     defaultBranch: string | undefined,
     knownParents: ReadonlyMap<string, string> = new Map(),
   ): Promise<iGitBranch[]> {
-    const output = await this.gitService.output(repoPath, ['for-each-ref', `--format=${BRANCH_FORMAT}`, 'refs/heads']);
-    const branches = parseBranches(output);
+    const output = await this.gitService.output(repoPath, [
+      'for-each-ref',
+      `--format=${BRANCH_FORMAT}`,
+      LOCAL_BRANCH_REFS,
+      REMOTE_BRANCH_REFS,
+    ]);
+    const branches = selectBranches(parseBranches(output), Date.now());
+    const refs = new Map(branches.map((branch) => [branch.name, branch.ref]));
 
     const tips = new Map<string, string[]>();
     for (const branch of branches) {
@@ -88,11 +132,16 @@ export class BranchesService {
       async (branch): Promise<iParentSuggestion> =>
         branch.name === defaultBranch
           ? { commitsAhead: 0 }
-          : this.suggestParent(repoPath, branch, { tips, defaultBranch, knownParent: knownParents.get(branch.name) }),
+          : this.suggestParent(repoPath, branch, {
+              tips,
+              refs,
+              defaultBranch,
+              knownParent: knownParents.get(branch.name),
+            }),
     );
 
     return branches
-      .map((branch, index) => ({
+      .map(({ ref: _ref, ...branch }, index) => ({
         ...branch,
         isDefault: branch.name === defaultBranch,
         suggestedParent: suggestions[index]?.parent,
@@ -117,7 +166,7 @@ export class BranchesService {
   private async suggestParent(
     repoPath: string,
     branch: iRawBranch,
-    { tips, defaultBranch, knownParent }: iSuggestionContext,
+    { tips, refs, defaultBranch, knownParent }: iSuggestionContext,
   ): Promise<iParentSuggestion> {
     const history = await this.gitService.output(repoPath, [
       'rev-list',
@@ -140,7 +189,7 @@ export class BranchesService {
       ranked.push({ name, commitsAhead: await this.countCommits(repoPath, sha, branch.headSha) });
     }
     const moved = knownParent && !candidates.some(({ name }) => name === knownParent);
-    const movedParent = moved ? await this.movedParent(repoPath, branch, knownParent, defaultBranch) : undefined;
+    const movedParent = moved ? await this.movedParent(repoPath, branch, knownParent, refs, defaultBranch) : undefined;
     if (movedParent) ranked.push(movedParent);
     if (ranked.length > 0) {
       const [parent] = ranked.sort(
@@ -168,20 +217,21 @@ export class BranchesService {
     repoPath: string,
     branch: iRawBranch,
     parent: string,
+    refs: ReadonlyMap<string, string>,
     defaultBranch: string | undefined,
   ): Promise<{ name: string; commitsAhead: number } | undefined> {
-    if (parent === defaultBranch) return undefined;
-    const forkPoint = await this.gitService.run(repoPath, ['merge-base', `refs/heads/${parent}`, branch.headSha], {
+    const parentRef = refs.get(parent);
+    if (parent === defaultBranch || !parentRef) return undefined;
+    const forkPoint = await this.gitService.run(repoPath, ['merge-base', parentRef, branch.headSha], {
       allowFailure: true,
     });
     const forkSha = forkPoint.stdout.trim();
     if (forkPoint.exitCode !== 0 || !forkSha) return undefined;
-    if (defaultBranch) {
-      const onDefault = await this.gitService.run(
-        repoPath,
-        ['merge-base', '--is-ancestor', forkSha, `refs/heads/${defaultBranch}`],
-        { allowFailure: true },
-      );
+    const defaultRef = defaultBranch ? refs.get(defaultBranch) : undefined;
+    if (defaultRef) {
+      const onDefault = await this.gitService.run(repoPath, ['merge-base', '--is-ancestor', forkSha, defaultRef], {
+        allowFailure: true,
+      });
       if (onDefault.exitCode === 0) return undefined;
     }
     return { name: parent, commitsAhead: await this.countCommits(repoPath, forkSha, branch.headSha) };

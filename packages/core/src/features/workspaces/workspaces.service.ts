@@ -6,6 +6,7 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import { REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { BranchRefsService } from '@~/features/git/branch-refs.service';
 import { GitService } from '@~/features/git/git.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import { localArchiveChanges } from '@~/features/reviews/review-targets/target-archive.utils';
@@ -34,6 +35,7 @@ export class WorkspacesService {
   constructor(
     @inject(WORKSPACE_REPOSITORY_TOKEN) private readonly workspaceRepository: iWorkspaceRepository,
     private readonly gitService: GitService,
+    private readonly branchRefsService: BranchRefsService,
     private readonly branchesService: BranchesService,
     private readonly snapshotStoreService: SnapshotStoreService,
     @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
@@ -75,15 +77,16 @@ export class WorkspacesService {
     return { workspaceId };
   }
 
-  /** Local branches with the parent each is reviewed against and whether it has uncommitted work. */
+  /** Local and recent remote-only branches with the parent each is reviewed against and whether it has uncommitted work. */
   public async listBranches(workspaceId: string): Promise<iBranchResponse[]> {
     const record = await this.getRecord(workspaceId);
-    const [branches, targets, worktrees] = await Promise.all([
+    const [branches, branchNames, targets, worktrees] = await Promise.all([
       this.branchesService.listBranches(
         record.repoPath,
         record.defaultBranch,
         new Map(record.knownParents.map(({ branch, parent }) => [branch, parent])),
       ),
+      this.branchRefsService.listNames(record.repoPath),
       this.reviewTargetRepository.list(workspaceId),
       this.snapshotStoreService.listWorktrees(record.repoPath),
     ]);
@@ -93,7 +96,7 @@ export class WorkspacesService {
         .map((target) => [target.branch, target.parentBranch]),
     );
     await this.rememberParents(record, branches);
-    await this.applyArchive(localArchiveChanges(targets, new Set(branches.map((branch) => branch.name))));
+    await this.applyArchive(localArchiveChanges(targets, branchNames));
     return mapWithConcurrency(branches, STATUS_CONCURRENCY, async (branch) => {
       const confirmedParent = confirmedParents.get(branch.name);
       const parent = confirmedParent ?? branch.suggestedParent;
@@ -119,6 +122,11 @@ export class WorkspacesService {
   /** Changes between where the branch left its parent and its tip; zero when either branch is missing. */
   public async branchStat({ workspaceId, branch, parentBranch }: iBranchStatInput) {
     const record = await this.getRecord(workspaceId);
+    const [branchRef, parentRef] = await Promise.all([
+      this.branchRefsService.qualify(record.repoPath, branch),
+      this.branchRefsService.qualify(record.repoPath, parentBranch),
+    ]);
+    if (!branchRef || !parentRef) return { fileCount: 0, additions: 0, deletions: 0 };
     const { stdout, exitCode } = await this.gitService.run(
       record.repoPath,
       [
@@ -130,7 +138,7 @@ export class WorkspacesService {
         '--find-renames',
         '--no-ext-diff',
         '--no-textconv',
-        `refs/heads/${parentBranch}...refs/heads/${branch}`,
+        `${parentRef}...${branchRef}`,
         '--',
       ],
       { allowFailure: true },
@@ -146,11 +154,11 @@ export class WorkspacesService {
   public async syncArchive(workspaceId: string) {
     const record = await this.getRecord(workspaceId);
     if (!(await pathExists(path.join(record.repoPath, '.git')))) return;
-    const [output, targets] = await Promise.all([
-      this.gitService.output(record.repoPath, ['for-each-ref', '--format=%(refname:short)', 'refs/heads']),
+    const [branchNames, targets] = await Promise.all([
+      this.branchRefsService.listNames(record.repoPath),
       this.reviewTargetRepository.list(workspaceId),
     ]);
-    await this.applyArchive(localArchiveChanges(targets, new Set(output.split('\n').filter(Boolean))));
+    await this.applyArchive(localArchiveChanges(targets, branchNames));
   }
 
   private async applyArchive(changes: readonly iArchiveChange[]) {
@@ -167,10 +175,14 @@ export class WorkspacesService {
 
   /** Whether the branch has every commit of its parent. A parent that no longer exists counts as contained. */
   private async contains(repoPath: string, branch: iGitBranch, parent: string) {
+    const parentRef = await this.branchRefsService.qualify(repoPath, parent);
+    if (!parentRef) return true;
     const { exitCode } = await this.gitService.run(
       repoPath,
-      ['merge-base', '--is-ancestor', `refs/heads/${parent}`, branch.headSha],
-      { allowFailure: true },
+      ['merge-base', '--is-ancestor', parentRef, branch.headSha],
+      {
+        allowFailure: true,
+      },
     );
     return exitCode !== 1;
   }

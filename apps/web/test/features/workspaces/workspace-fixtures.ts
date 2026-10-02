@@ -12,6 +12,7 @@ export const workspace: iWorkspace = {
 export function branch(name: string, overrides: Partial<iBranch> = {}): iBranch {
   return {
     name,
+    isRemote: false,
     headSha: `${name}-sha`,
     subject: `Work on ${name}`,
     authorName: 'Roman',
