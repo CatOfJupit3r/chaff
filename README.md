@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings and the second pass after the agent pushes work today. Export and posting findings back to the host are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent and posting findings as host drafts work today. Fix hand-off, project preferences and swipe are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -185,7 +185,7 @@ Every finding is looked for again in the new version: the same lines, the code b
 
 ### Merge requests and pull requests
 
-Connect GitLab (gitlab.com or self-managed) or GitHub in **Settings** with a read-only token, which is checked once and kept in your system keychain. Each repository's project is detected from its remotes, or picked by hand.
+Connect GitLab (gitlab.com or self-managed) or GitHub in **Settings** with a token, which is checked once and kept in your system keychain. Each repository's project is detected from its remotes, or picked by hand.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png" />
@@ -209,6 +209,29 @@ The merge request's discussions show read-only on the unit they are about, in Fo
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/mr-discussion-dark.png" />
   <img src="docs/screenshots/mr-discussion-light.png" alt="Full diff with a GitLab discussion under the line it is about" />
+</picture>
+
+### Export and post
+
+**Export** turns your findings into something to act on. Pick a scope (this review, the whole stack or the repository) and which statuses to include, then copy a Markdown or JSON packet, or the **Agent prompt**: the packet plus instructions to fix each concern, answer each question and reply with a short JSON report. **Copy** on a finding copies just that one.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/export-dark.png" />
+  <img src="docs/screenshots/export-light.png" alt="Export screen with scope and status filters and the Markdown packet" />
+</picture>
+
+**Import agent report** reads the agent's reply. Concerns it fixed move to **Fix proposed** and questions it answered to **Answered**, with its note and commits; nothing is verified for you, and ids that match no finding are listed.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/import-result-dark.png" />
+  <img src="docs/screenshots/import-result-light.png" alt="Import agent report dialog showing two findings moved and one unknown id" />
+</picture>
+
+On a merge or pull request, the drafts tab posts the findings as GitLab draft notes or one pending GitHub review, each on the first changed line it is about. Nothing is published: you submit the review on the host. The same calls are shown as `glab`/`gh` and curl commands if you would rather run them yourself.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/export-drafts-dark.png" />
+  <img src="docs/screenshots/export-drafts-light.png" alt="GitLab drafts tab listing three findings and the lines they will be posted on" />
 </picture>
 
 ### Open in your editor
@@ -247,10 +270,10 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
 | GitHub pull requests, the same way | Works |
 | Linking a local branch's review to the merge request it became | Works |
-| Findings posted as GitLab draft notes or a pending GitHub review | Planned |
+| Findings posted as GitLab draft notes or a pending GitHub review | Works |
 | Working changes (uncommitted work) as a review target | Works |
 | Second pass: interdiffs, re-anchored findings, Verify screen | Works |
-| Export: Markdown and JSON packets, GitLab draft notes, agent report import | Planned |
+| Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import | Works |
 
 ## Stack
 

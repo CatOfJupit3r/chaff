@@ -111,7 +111,7 @@ Generated files, lockfiles and very large diffs stay collapsed until you ask for
 | Snapshot stores | `<app data>/stores/<workspace id>.git` |
 | Logs | the OS log folder for Chaff, `chaff.log` |
 
-`<app data>` is `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS and `~/.config/Chaff` on Linux. Development runs (`pnpm run dev`) use a separate `Chaff Dev` folder. Reviews stay on that machine; export (**planned**) is the way to move them.
+`<app data>` is `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS and `~/.config/Chaff` on Linux. Development runs (`pnpm run dev`) use a separate `Chaff Dev` folder. Reviews stay on that machine; export is the way to move findings out.
 
 ## The AI digest
 
@@ -135,4 +135,11 @@ GitLab merge requests and GitHub pull requests are read through one provider int
 - **Discussions** are read from the host and shown read-only on the lines and units they are about. Threads written against another commit are marked as such and stay out of the Full diff.
 - **Linking.** A local branch's review can be moved onto the merge request it was pushed as. The review keeps its snapshots, decisions and findings; its next update reads from the host.
 
-Posting findings back, as GitLab draft notes or a pending GitHub review that you submit yourself, is **planned** with export.
+- **Posting.** Findings go back as GitLab draft notes or one pending GitHub review, never published or submitted by Chaff. See [Export and posting](#export-and-posting).
+
+## Export and posting
+
+- **Packets.** An export collects the findings of one review, of every review in its stack (targets linked by branch and parent branch, bottom first) or of the whole repository, filtered by status. Each finding carries its id (`F-12`), kind, status, location and the quoted code from the snapshot where it was last raised. JSON uses lowercase values; the agent prompt is the Markdown packet plus instructions.
+- **Agent reports.** Chaff reads the whole reply as JSON, else its last fenced `json` block, else the outermost brackets, and accepts a list, an object holding one under `findings`, `items` or `report`, or one item. Ids may be written `F-12`, `F12`, `#12` or `12`. Only two statuses are taken: `fix_proposed` on an open concern and `answered` (with a note) on an open question. Anything else is left as it was with the reason shown, and unknown ids are listed. Each change is recorded with the agent as its source, its note and its commits.
+- **Drafts.** Posting needs a token that can write (`api` on GitLab, Pull requests write on GitHub). For GitLab, Chaff finds the merge request version whose head is the reviewed commit and creates one draft note per finding, positioned on the first added or removed line in the finding's range; findings without such a line, or when the host has no version at that commit, go on the merge request as a whole. For GitHub, one pending review with a comment per finding goes on the reviewed commit, and unplaced findings go in its body. Each comment ends with `Chaff F-12 · Concern`. A finding is posted at most once, and the host's answer is stored with it.
+- **Commands.** The preview also shows the same requests as `glab api`/`gh api` and curl commands that read the token from `GITLAB_TOKEN` or `GITHUB_TOKEN`.
