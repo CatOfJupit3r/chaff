@@ -3,7 +3,6 @@ import { singleton } from 'tsyringe';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 import { describeClaudeProgress, parseClaudeStreamEvent } from '@~/features/agents/claude-code-events.utils';
 
-import { AGENT_DIGEST_JSON_SCHEMA } from './digest-output.schema';
 import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
 
 /** Only these tools exist in the session, so the agent can read and search but never edit or run commands. */
@@ -16,7 +15,7 @@ const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch'
  */
 @singleton()
 export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, prompt, signal, onProgress }: iDigestRunInput) {
+  public async run(command: string, { cwd, prompt, schema, signal, onProgress }: iDigestRunInput) {
     let answer: unknown;
     let failure: string | undefined;
 
@@ -31,7 +30,7 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         'stream-json',
         '--verbose',
         '--json-schema',
-        JSON.stringify(AGENT_DIGEST_JSON_SCHEMA),
+        JSON.stringify(schema),
         '--tools',
         READ_ONLY_TOOLS,
         '--disallowedTools',

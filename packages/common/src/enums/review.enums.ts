@@ -126,6 +126,21 @@ export const FINDING_SCOPE_LABELS = findingScopesEnumwaii.derive({
 });
 
 /**
+ * A finding's suggested task: a coding agent is writing it, it waits for the reviewer, the reviewer
+ * accepted it (as written or edited), or writing it failed. Discarding removes it.
+ */
+export const findingTaskStatesEnumwaii = new Enumwaii('FindingTaskState', [
+  'WRITING',
+  'PROPOSED',
+  'ACCEPTED',
+  'FAILED',
+]);
+
+export const FINDING_TASK_STATES = findingTaskStatesEnumwaii.enum;
+export type FindingTaskState = InferEnumwaii<typeof findingTaskStatesEnumwaii>;
+export const findingTaskStateSchema = findingTaskStatesEnumwaii.schema;
+
+/**
  * Concerns go Open, Fix proposed, Verified (or Reopened); questions go Open, Answered, Closed.
  * Withdrawn is the reviewer changing their mind; Unmatched means the anchor was lost in a newer snapshot.
  */

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Stands in for `claude -p` in tests. With the read-only tool list it writes a digest; with the editing
-// tool list and acceptEdits it fixes the findings in its prompt. FAKE_AGENT_MODE picks the behaviour:
+// tool list and acceptEdits it fixes the findings in its prompt; asked for a task, it restates the finding. FAKE_AGENT_MODE picks the behaviour:
 // unset answers, `fail` exits with an error, `hang` never answers.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -39,6 +39,20 @@ process.stdin.on('end', () => {
 
   if (isFix) {
     fix();
+    return;
+  }
+
+  const schema = args[args.indexOf('--json-schema') + 1] ?? '';
+  if (schema.includes('"verify"')) {
+    const finding = /Finding (F-\d+)/.exec(prompt)?.[1] ?? 'F-?';
+    emit({
+      type: 'result',
+      is_error: false,
+      structured_output: {
+        task: `  Address ${finding} as the comment asks.  `,
+        verify: 'The comment no longer applies.',
+      },
+    });
     return;
   }
 

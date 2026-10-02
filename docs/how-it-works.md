@@ -125,7 +125,8 @@ A preference is a rule you state for one repository, often promoted from a findi
 
 ## Agents and keys
 
-- **Finding an agent.** For each of Claude Code and Codex, Chaff uses the command or path saved in Settings, else `claude` or `codex`. A name is looked up on PATH and then through your login shell, because apps started from a desktop launcher often get a shorter PATH; a path must point at an executable file. Digests, fixes and the run dialogs all use the same lookup.
+- **Finding an agent.** For each of Claude Code and Codex, Chaff uses the command or path saved in Settings, else `claude` or `codex`. A name is looked up on PATH and then through your login shell, because apps started from a desktop launcher often get a shorter PATH; a path must point at an executable file. Digests, fixes, suggested tasks and the run dialogs all use the same lookup.
+- **Suggested tasks.** The agent picked in Settings gets the finding's comment, kind, severity and quoted code in the prompt, runs read-only in an empty folder, and must answer with a task and a way to verify it. The answer is trimmed and refused when empty or longer than a short paragraph. It is stored apart from the comment, and only a task you accepted (as written or edited) goes into exports.
 - **Keys.** Settings stores only the keys you changed. Each screen (Focus, Verify) resolves its actions against the defaults; the core refuses a map where two actions on one screen share a key or an action takes 1 to 4 in Focus. Arrows always move, whatever the map says.
 - **Swipe.** A touch or pen drag on the Focus card moves it with a CSS transform only, so nothing around it shifts. Mostly vertical drags scroll the page as usual.
 

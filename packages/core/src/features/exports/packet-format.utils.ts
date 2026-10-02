@@ -7,6 +7,7 @@ import {
   FINDING_SCOPES,
   FINDING_SEVERITY_LABELS,
   FINDING_STATUS_LABELS,
+  FINDING_TASK_STATES,
   IS_ACTIVE_FINDING_STATUS,
   REVIEW_TARGET_KINDS,
 } from '@chaff/common/enums/review.enums';
@@ -69,6 +70,13 @@ const indent = (text: string, prefix = '  ') =>
     .map((line) => (line ? `${prefix}${line}` : prefix.trimEnd()))
     .join('\n');
 
+/** The task the reviewer accepted; a suggestion still waiting for them is left out. */
+function acceptedTask(finding: iFindingRecord) {
+  return finding.task?.state === FINDING_TASK_STATES.ACCEPTED && finding.task.task
+    ? { task: finding.task.task, verify: finding.task.verify ?? null }
+    : undefined;
+}
+
 function agentEvent(finding: iFindingRecord) {
   return finding.events.findLast((event) => event.source === FINDING_EVENT_SOURCES.AGENT);
 }
@@ -92,6 +100,11 @@ function findingMarkdown({ finding, anchors }: iPacketFinding, shouldQuoteCode: 
   if (finding.scope === FINDING_SCOPES.STACK) lines.push('  On the whole stack');
   else if (anchors.length === 0) lines.push('  On the whole branch');
   lines.push('', indent(finding.body, '  > '));
+  const task = acceptedTask(finding);
+  if (task) {
+    lines.push('', indent(`Suggested task: ${task.task}`));
+    if (task.verify) lines.push(indent(`Verify: ${task.verify}`));
+  }
   if (shouldQuoteCode) {
     for (const anchor of anchors.filter((candidate) => candidate.original.quote !== '')) {
       const marker = fence(anchor.original.quote);
@@ -207,6 +220,7 @@ export function packetJson(packet: iPacket) {
         scope: finding.scope.toLowerCase(),
         status: finding.status.toLowerCase(),
         comment: finding.body,
+        suggestedTask: acceptedTask(finding) ?? null,
         answer: finding.answer ?? null,
         createdAt: finding.createdAt.toISOString(),
         postedUrl: finding.post?.url ?? null,

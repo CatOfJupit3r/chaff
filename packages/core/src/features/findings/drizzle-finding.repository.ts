@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, getTableColumns, inArray, max, sql } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
-import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { FINDING_KINDS, FINDING_STATUSES, FINDING_TASK_STATES } from '@chaff/common/enums/review.enums';
 import type { FindingSeverity, FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { DatabaseService } from '@~/db/database.service';
@@ -11,6 +11,7 @@ import {
   findingEvents,
   findingPosts,
   findings,
+  findingTasks,
 } from '@~/db/schema/findings.schema';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
 import { snapshots } from '@~/db/schema/snapshots.schema';
@@ -18,6 +19,7 @@ import { snapshots } from '@~/db/schema/snapshots.schema';
 import type { iFindingRepository } from './finding.repository';
 import { FindingResolver } from './finding.resolver';
 import type {
+  iFindingTaskChange,
   iListFindingsInput,
   iNewAnchorLocation,
   iNewFinding,
@@ -160,6 +162,36 @@ export class DrizzleFindingRepository implements iFindingRepository {
     this.databaseService.getDb().delete(findings).where(eq(findings.id, findingId)).run();
   }
 
+  public async setTask(findingId: string, task: iFindingTaskChange) {
+    const values = {
+      state: task.state,
+      runner: task.runner,
+      task: task.task ?? null,
+      verify: task.verify ?? null,
+      error: task.error ?? null,
+    };
+    this.databaseService
+      .getDb()
+      .insert(findingTasks)
+      .values({ findingId, ...values })
+      .onConflictDoUpdate({ target: findingTasks.findingId, set: values })
+      .run();
+    return this.findById(findingId);
+  }
+
+  public async removeTask(findingId: string) {
+    this.databaseService.getDb().delete(findingTasks).where(eq(findingTasks.findingId, findingId)).run();
+  }
+
+  public async failWritingTasks(error: string) {
+    this.databaseService
+      .getDb()
+      .update(findingTasks)
+      .set({ state: FINDING_TASK_STATES.FAILED, error })
+      .where(eq(findingTasks.state, FINDING_TASK_STATES.WRITING))
+      .run();
+  }
+
   private selectFindings() {
     return this.databaseService
       .getDb()
@@ -207,9 +239,21 @@ export class DrizzleFindingRepository implements iFindingRepository {
         ),
       )
       .all();
+    const tasks = this.databaseService
+      .getDb()
+      .select()
+      .from(findingTasks)
+      .where(
+        inArray(
+          findingTasks.findingId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .all();
     return rows.map((row) => ({
       ...this.findingResolver.toFindingRecord(row),
       post: this.findingResolver.toPostRecord(posts.find((post) => post.findingId === row.id)),
+      task: this.findingResolver.toTaskRecord(tasks.find((task) => task.findingId === row.id)),
       events: events
         .filter((event) => event.findingId === row.id)
         .map((event) => this.findingResolver.toEventRecord(event)),

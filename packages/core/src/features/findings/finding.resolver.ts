@@ -1,6 +1,7 @@
 import { singleton } from 'tsyringe';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
+import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import {
   anchorMatchSchema,
   diffSideSchema,
@@ -9,6 +10,7 @@ import {
   findingScopeSchema,
   findingSeveritySchema,
   findingStatusSchema,
+  findingTaskStateSchema,
 } from '@chaff/common/enums/review.enums';
 
 import type {
@@ -17,6 +19,7 @@ import type {
   findingEvents,
   findingPosts,
   findings,
+  findingTasks,
 } from '@~/db/schema/findings.schema';
 import { createRowResolver } from '@~/lib/row-resolver';
 
@@ -26,6 +29,7 @@ import type {
   iFindingEventRecord,
   iFindingPostRecord,
   iFindingRecord,
+  iFindingTaskRecord,
 } from './findings.types';
 
 type FindingWithBranchRow = typeof findings.$inferSelect & { branch: string; parentBranch: string };
@@ -33,6 +37,7 @@ type FindingAnchorRow = typeof findingAnchors.$inferSelect;
 type LocationRow = typeof findingAnchorLocations.$inferSelect & { version: number; headSha: string };
 type FindingEventRow = typeof findingEvents.$inferSelect;
 type FindingPostRow = typeof findingPosts.$inferSelect;
+type FindingTaskRow = typeof findingTasks.$inferSelect;
 
 @singleton()
 export class FindingResolver {
@@ -64,6 +69,19 @@ export class FindingResolver {
 
   public toPostRecord(row: FindingPostRow | undefined) {
     return row ? this.toPost(row) : undefined;
+  }
+
+  private readonly toTask = createRowResolver<FindingTaskRow, iFindingTaskRecord>({
+    optional: ['task', 'verify', 'error'],
+    omit: ['findingId'],
+    overrides: (row) => ({
+      state: findingTaskStateSchema.parse(row.state),
+      runner: digestRunnerSchema.parse(row.runner),
+    }),
+  });
+
+  public toTaskRecord(row: FindingTaskRow | undefined) {
+    return row ? this.toTask(row) : undefined;
   }
 
   public toFindingRecord = createRowResolver<FindingWithBranchRow, Omit<iFindingRecord, 'anchors' | 'events' | 'post'>>(

@@ -1,6 +1,7 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import { FINDING_EVENT_SOURCES, FINDING_SCOPES } from '@chaff/common/enums/review.enums';
 import type {
   AnchorMatch,
@@ -10,6 +11,7 @@ import type {
   FindingScope,
   FindingSeverity,
   FindingStatus,
+  FindingTaskState,
 } from '@chaff/common/enums/review.enums';
 
 import { idPrimaryKey, timestampColumn, timestamps } from '../schema.helpers';
@@ -148,3 +150,20 @@ export const findingPosts = sqliteTable(
   },
   (table) => [uniqueIndex('finding_posts_finding_unique').on(table.findingId)],
 );
+
+/**
+ * A finding restated as a task for a coding agent, proposed by an agent and kept apart from the
+ * reviewer's comment, which is never rewritten. The reviewer accepts it as is or edited, or discards it.
+ */
+export const findingTasks = sqliteTable('finding_tasks', {
+  findingId: text('finding_id')
+    .primaryKey()
+    .references(() => findings.id, { onDelete: 'cascade' }),
+  state: text('state').$type<FindingTaskState>().notNull(),
+  runner: text('runner').$type<DigestRunner>().notNull(),
+  task: text('task'),
+  /** How to tell the task is done. */
+  verify: text('verify'),
+  error: text('error'),
+  ...timestamps(),
+});

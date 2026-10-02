@@ -1,4 +1,5 @@
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import type {
   AnchorMatch,
   DiffSide,
@@ -7,6 +8,7 @@ import type {
   FindingScope,
   FindingSeverity,
   FindingStatus,
+  FindingTaskState,
 } from '@chaff/common/enums/review.enums';
 
 import type {
@@ -15,6 +17,7 @@ import type {
   findingEvents,
   findingPosts,
   findings,
+  findingTasks,
 } from '@~/db/schema/findings.schema';
 
 type FindingRow = typeof findings.$inferSelect;
@@ -22,6 +25,21 @@ type FindingAnchorRow = typeof findingAnchors.$inferSelect;
 type AnchorLocationRow = typeof findingAnchorLocations.$inferSelect;
 type FindingEventRow = typeof findingEvents.$inferSelect;
 type FindingPostRow = typeof findingPosts.$inferSelect;
+type FindingTaskRow = typeof findingTasks.$inferSelect;
+
+/** The finding restated as a task for a coding agent, apart from the comment. */
+export type iFindingTaskRecord = Omit<
+  FindingTaskRow,
+  'findingId' | 'state' | 'runner' | 'task' | 'verify' | 'error'
+> & {
+  state: FindingTaskState;
+  runner: DigestRunner;
+  task?: string;
+  verify?: string;
+  error?: string;
+};
+
+export type iFindingTaskChange = Pick<iFindingTaskRecord, 'state' | 'runner' | 'task' | 'verify' | 'error'>;
 
 /** Where an anchor was found in a later snapshot, with that snapshot's version and head. */
 export type iAnchorLocationRecord = Omit<AnchorLocationRow, 'match' | 'fileId' | 'unitId' | 'startLine' | 'endLine'> & {
@@ -90,6 +108,8 @@ export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer' | 'se
   events: iFindingEventRecord[];
   /** Set once the finding was posted to its merge or pull request. */
   post?: iFindingPostRecord;
+  /** Set once a task was suggested or written for it. */
+  task?: iFindingTaskRecord;
   /** Branch of the review the finding was written in. */
   branch: string;
   parentBranch: string;

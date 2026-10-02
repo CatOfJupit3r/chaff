@@ -21,7 +21,7 @@ import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrappe
 import { ClaudeCodeAdapter } from './claude-code.adapter';
 import { CodexAdapter } from './codex.adapter';
 import { checkDigest } from './digest-check.utils';
-import { agentDigestSchema } from './digest-output.schema';
+import { AGENT_DIGEST_JSON_SCHEMA, agentDigestSchema } from './digest-output.schema';
 import { buildDigestPrompt } from './digest-prompt.utils';
 import type { iDigestRepository } from './digest.repository';
 import type { iDigestRunnerAdapter, iPromptUnit } from './digests.types';
@@ -154,6 +154,7 @@ export class DigestsService {
         cwd: checkout,
         scratchDir,
         prompt,
+        schema: AGENT_DIGEST_JSON_SCHEMA,
         signal,
         onProgress,
       });

@@ -21,6 +21,7 @@ import { FindingAnchorChange } from './finding-anchor-change';
 import { FindingBadges } from './finding-badges';
 import { FindingLifecycle } from './finding-lifecycle';
 import { FindingQuote } from './finding-quote';
+import { FindingTaskSection } from './finding-task-section';
 import { SeverityPicker } from './severity-picker';
 
 const LINK_CLASS =
@@ -143,6 +144,7 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
           </div>
         ) : null}
       </section>
+      <FindingTaskSection key={finding.id} finding={finding} />
       <FindingAgentNote finding={finding} />
       <FindingActions finding={finding} isPending={isPending} onSetStatus={onSetStatus} />
     </article>

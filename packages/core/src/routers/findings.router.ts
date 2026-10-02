@@ -1,6 +1,7 @@
 import { container } from 'tsyringe';
 
 import { AgentReportService } from '@~/features/findings/agent-report.service';
+import { FindingTasksService } from '@~/features/findings/finding-tasks.service';
 import { FindingsService } from '@~/features/findings/findings.service';
 import { base, procedure } from '@~/lib/orpc';
 
@@ -19,6 +20,18 @@ export const findingsRouter = base.findings.router({
 
   fromStack: procedure.findings.fromStack.handler(async ({ input }) =>
     container.resolve(FindingsService).fromStack(input.snapshotId),
+  ),
+
+  suggestTask: procedure.findings.suggestTask.handler(async ({ input }) =>
+    container.resolve(FindingTasksService).suggest(input.findingId),
+  ),
+
+  acceptTask: procedure.findings.acceptTask.handler(async ({ input }) =>
+    container.resolve(FindingTasksService).accept(input.findingId, input.task, input.verify),
+  ),
+
+  discardTask: procedure.findings.discardTask.handler(async ({ input }) =>
+    container.resolve(FindingTasksService).discard(input.findingId),
   ),
 
   convertToConcern: procedure.findings.convertToConcern.handler(async ({ input }) =>

@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
+import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { reportSkipReasonSchema } from '@chaff/common/enums/export.enums';
 import {
   anchorMatchSchema,
@@ -11,12 +12,14 @@ import {
   findingScopeSchema,
   findingSeveritySchema,
   findingStatusSchema,
+  findingTaskStateSchema,
 } from '@chaff/common/enums/review.enums';
 
 const idSchema = z.string().min(1).max(64);
 const MAX_BODY_LENGTH = 20_000;
 const MAX_ANCHORS = 50;
 const MAX_REPORT_LENGTH = 1_000_000;
+const MAX_TASK_LENGTH = 2000;
 
 const lineSchema = z.number().int().nonnegative();
 
@@ -50,6 +53,18 @@ export const findingPostSchema = z.object({
   remoteId: z.string(),
   url: z.string().optional(),
   createdAt: z.date(),
+});
+
+/** The finding restated as a task for a coding agent, kept apart from the comment. */
+export const findingTaskSchema = z.object({
+  state: findingTaskStateSchema,
+  runner: digestRunnerSchema,
+  task: z.string().optional(),
+  /** How to tell the task is done. */
+  verify: z.string().optional(),
+  error: z.string().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 const reportedFindingSchema = z.object({
@@ -104,6 +119,7 @@ export const findingSchema = z.object({
   /** Every status the finding went through, oldest first. */
   events: z.array(findingEventSchema),
   post: findingPostSchema.optional(),
+  task: findingTaskSchema.optional(),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
@@ -184,6 +200,37 @@ export const findingsContract = oc.router({
     })
     .input(z.object({ snapshotId: idSchema }))
     .output(z.array(findingSchema)),
+
+  suggestTask: oc
+    .route({
+      summary: 'Suggest a task for a finding',
+      description:
+        'Asks the coding agent picked in Settings, read-only, to restate the finding as one task no wider than the comment. Returns at once with the task being written.',
+    })
+    .input(z.object({ findingId: idSchema }))
+    .output(findingSchema),
+
+  acceptTask: oc
+    .route({
+      summary: "Accept a finding's task",
+      description: 'Keeps the task as given: the suggestion as written, edited, or written by the reviewer.',
+    })
+    .input(
+      z.object({
+        findingId: idSchema,
+        task: z.string().trim().min(1).max(MAX_TASK_LENGTH),
+        verify: z.string().trim().max(MAX_TASK_LENGTH).optional(),
+      }),
+    )
+    .output(findingSchema),
+
+  discardTask: oc
+    .route({
+      summary: "Discard a finding's task",
+      description: 'Removes the task, stopping the agent if it is still writing it.',
+    })
+    .input(z.object({ findingId: idSchema }))
+    .output(findingSchema),
 
   convertToConcern: oc
     .route({

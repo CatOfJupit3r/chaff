@@ -2,6 +2,7 @@ import type { FindingSeverity, FindingStatus } from '@chaff/common/enums/review.
 
 import type {
   iAnchorLocationRecord,
+  iFindingTaskChange,
   iFindingRecord,
   iListFindingsInput,
   iNewAnchorLocation,
@@ -32,4 +33,9 @@ export interface iFindingRepository {
   /** Records where findings were posted; a finding already posted keeps its first post. */
   addPosts: (posts: readonly iNewFindingPost[]) => Promise<void>;
   remove: (findingId: string) => Promise<void>;
+  /** Stores the finding's suggested task, replacing the one it had. */
+  setTask: (findingId: string, task: iFindingTaskChange) => Promise<iFindingRecord | undefined>;
+  removeTask: (findingId: string) => Promise<void>;
+  /** Marks every task still being written as failed; used at startup. */
+  failWritingTasks: (error: string) => Promise<void>;
 }

@@ -194,6 +194,13 @@ A concern can carry a severity (Minor, Major or Blocking), picked while you writ
   <img src="docs/screenshots/findings-severity-light.png" alt="Findings screen showing a Major concern about the whole stack with its severity picker" />
 </picture>
 
+**Suggest a task** asks your coding agent, read-only, to restate a finding as one task an agent can act on, no wider than your comment, with a line on how to verify it. You accept it as written or edited, or discard it; your comment is never rewritten, and only an accepted task goes into exports.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/finding-task-dark.png" />
+  <img src="docs/screenshots/finding-task-light.png" alt="A suggested task written by Claude Code under a concern, editable, with Accept task, Suggest again and Discard" />
+</picture>
+
 A finding stays on the branch where you wrote it, and the branches above it hear about it: reviewing a branch shows open concerns from the branches it builds on and notes about the whole stack in a banner over the card (and under **Context**), and the Stack overview marks each affected branch.
 
 <picture>
@@ -369,6 +376,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Change units: digest groups as Focus cards; make, split, merge, rename, reorder; Changes, Functions or Sections progression | Works |
 | Skip with a reason; a review is complete once every region is decided on or skipped | Works |
 | Finding severity; findings on several units, a whole branch or a whole stack; concerns shown on the branches above | Works |
+| Suggested task for a finding from your coding agent: accept, edit or discard; exported once accepted | Works |
 | Rebindable keys for Focus and Verify | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 

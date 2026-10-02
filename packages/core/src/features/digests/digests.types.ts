@@ -61,11 +61,13 @@ export interface iDigestRunInput {
   /** Scratch folder outside the checkout for files the CLI writes. */
   scratchDir: string;
   prompt: string;
+  /** JSON schema the answer must follow. */
+  schema: Record<string, unknown>;
   signal: AbortSignal;
   onProgress: (progress: string) => void;
 }
 
-/** Starts one coding agent CLI and returns its structured answer, unchecked. */
+/** Starts one coding agent CLI, read-only, and returns its structured answer, unchecked. */
 export interface iDigestRunnerAdapter {
   run: (command: string, input: iDigestRunInput) => Promise<unknown>;
 }
