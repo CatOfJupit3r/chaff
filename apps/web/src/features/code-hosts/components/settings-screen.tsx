@@ -2,13 +2,14 @@ import { Screen } from '@~/components/layout/screen';
 import { TopBar } from '@~/components/layout/top-bar';
 import { List } from '@~/components/ui/list';
 import { SectionLabel } from '@~/components/ui/section-label';
+import { PreferencesSection } from '@~/features/preferences/components/preferences-section';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 
 import { useConnections } from '../hooks/use-connections';
 import { ConnectionsSection } from './connections-section';
 import { RepositoryRemoteRow } from './repository-remote-row';
 
-/** Accounts on GitLab and GitHub, and which project each repository reads its merge requests from. */
+/** Accounts on GitLab and GitHub, the project each repository reads its merge requests from, and preferences. */
 export function SettingsScreen() {
   const workspaces = useWorkspaces();
   const connections = useConnections();
@@ -35,6 +36,7 @@ export function SettingsScreen() {
               </List>
             </section>
           ) : null}
+          <PreferencesSection workspaces={workspaces} />
         </div>
       </Screen>
     </>
