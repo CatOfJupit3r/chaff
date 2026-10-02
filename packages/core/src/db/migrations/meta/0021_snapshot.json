@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ce7ab39b-9411-44a3-b7eb-0598cde56012",
+  "id": "59a7346b-6a42-460f-9f27-d8891c186cc8",
   "prevId": "ab59e328-4fec-4b15-a551-73ebff2ae2bc",
   "tables": {
     "change_unit_members": {
@@ -209,13 +209,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "model": {
-          "name": "model",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "status": {
@@ -1527,22 +1520,6 @@
           "autoincrement": false,
           "default": "'[]'"
         },
-        "agent_models": {
-          "name": "agent_models",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
-        "digest_instructions": {
-          "name": "digest_instructions",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
         "shortcuts": {
           "name": "shortcuts",
           "type": "text",
@@ -1557,7 +1534,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'{\"status\":\"NOT_STARTED\",\"step\":\"CHOOSE_CHANGE\",\"reviewId\":null}'"
+          "default": "'{\"status\":\"NOT_STARTED\",\"completedItems\":[],\"shownHints\":[]}'"
         },
         "updated_at": {
           "name": "updated_at",

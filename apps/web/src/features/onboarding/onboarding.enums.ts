@@ -1,19 +1,28 @@
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
-const onboardingScreenEnumwaii = new Enumwaii('OnboardingScreen', [
-  'REVIEWS',
-  'REVIEW',
-  'STACK',
-  'DIFF',
-  'FINDINGS',
-  'EXPORT',
-  'HISTORY',
-  'SETTINGS',
+export const onboardingGroupsEnumwaii = new Enumwaii('OnboardingGroup', [
+  'START',
+  'READ',
+  'DECIDE',
+  'NOTE',
+  'HAND_OFF',
+  'MAKE_IT_YOURS',
+  'LATER',
 ]);
-export const ONBOARDING_SCREENS = onboardingScreenEnumwaii.enum;
-export type OnboardingScreen = InferEnumwaii<typeof onboardingScreenEnumwaii>;
-export const onboardingScreenSchema = onboardingScreenEnumwaii.schema;
+export const ONBOARDING_GROUPS = onboardingGroupsEnumwaii.enum;
+export type OnboardingGroup = InferEnumwaii<typeof onboardingGroupsEnumwaii>;
+export const onboardingGroupValues = onboardingGroupsEnumwaii.values;
+
+export const ONBOARDING_GROUP_LABELS = onboardingGroupsEnumwaii.derive({
+  [ONBOARDING_GROUPS.START]: 'Start',
+  [ONBOARDING_GROUPS.READ]: 'Read',
+  [ONBOARDING_GROUPS.DECIDE]: 'Decide',
+  [ONBOARDING_GROUPS.NOTE]: 'Note',
+  [ONBOARDING_GROUPS.HAND_OFF]: 'Hand off',
+  [ONBOARDING_GROUPS.MAKE_IT_YOURS]: 'Make it yours',
+  [ONBOARDING_GROUPS.LATER]: 'Later',
+});
 
 const onboardingMutationStatusEnumwaii = new Enumwaii('OnboardingMutationStatus', [
   'idle',
@@ -22,5 +31,3 @@ const onboardingMutationStatusEnumwaii = new Enumwaii('OnboardingMutationStatus'
   'error',
 ]);
 export const ONBOARDING_MUTATION_STATUSES = onboardingMutationStatusEnumwaii.enum;
-export type OnboardingMutationStatus = InferEnumwaii<typeof onboardingMutationStatusEnumwaii>;
-export const onboardingMutationStatusSchema = onboardingMutationStatusEnumwaii.schema;

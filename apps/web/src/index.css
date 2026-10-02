@@ -55,6 +55,8 @@
   --avatar-b: #c9cdd9;
   --modal-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 16px 40px -20px rgba(20, 20, 40, 0.18);
   --panel-shadow: -20px 0 40px rgba(20, 20, 40, 0.12);
+  --dock-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 12px 32px -12px rgba(20, 20, 40, 0.22);
+  --spotlight-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
 
   --accent-violet: #8b6cf6;
   --accent-teal: #16a39a;
@@ -117,6 +119,8 @@
   --avatar-b: #262833;
   --modal-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 20px 50px -20px rgba(0, 0, 0, 0.7);
   --panel-shadow: -20px 0 40px rgba(0, 0, 0, 0.5);
+  --dock-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 40px -12px rgba(0, 0, 0, 0.65);
+  --spotlight-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 /* Appearance settings switch these attributes on <html>. */
@@ -267,6 +271,8 @@
 
   --shadow-modal: var(--modal-shadow);
   --shadow-panel: var(--panel-shadow);
+  --shadow-dock: var(--dock-shadow);
+  --shadow-spotlight: var(--spotlight-shadow);
 }
 
 @theme {

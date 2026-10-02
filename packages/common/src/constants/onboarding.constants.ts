@@ -1,7 +1,17 @@
-import { ONBOARDING_STATUSES, ONBOARDING_STEPS } from '../enums/onboarding.enums';
+import { ONBOARDING_STATUSES } from '../enums/onboarding.enums';
+import type { OnboardingHint, OnboardingItem, OnboardingStatus } from '../enums/onboarding.enums';
 
-export const INITIAL_ONBOARDING = {
+interface iInitialOnboarding {
+  status: OnboardingStatus;
+  completedItems: OnboardingItem[];
+  shownHints: OnboardingHint[];
+}
+
+export const INITIAL_ONBOARDING: iInitialOnboarding = {
   status: ONBOARDING_STATUSES.NOT_STARTED,
-  step: ONBOARDING_STEPS.CHOOSE_CHANGE,
-  reviewId: null,
+  completedItems: [],
+  shownHints: [],
 };
+
+/** Upper bound on the stored item and hint lists. */
+export const MAX_ONBOARDING_ENTRIES = 64;
