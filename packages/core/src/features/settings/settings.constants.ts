@@ -35,6 +35,8 @@ export const DEFAULT_SETTINGS = {
   defaultProgression: REVIEW_PROGRESSIONS.changes,
   digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
   agentCommands: [],
+  agentModels: [],
+  digestInstructions: '',
   shortcuts: [],
   onboarding: INITIAL_ONBOARDING,
 } satisfies iSettingsResponse;

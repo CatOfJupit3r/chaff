@@ -160,7 +160,7 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
   <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
 </picture>
 
-**AI digest** in the top bar starts one and says which company receives the code before anything runs.
+**AI digest** in the top bar starts one and says which company receives the code before anything runs. **Model and instructions**, folded away in the same dialog, picks the model for this run (Claude Code gets `--model`, Codex `-m`, for example `opus` or `gpt-6-astra`; empty keeps the agent's default) and adds extra instructions. They go into the prompt in their own section and cannot change the shape Chaff checks. Both start from the defaults in Settings, and the context panel shows which agent and model wrote the digest.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
@@ -343,7 +343,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 ### Agents and keys
 
-**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
+**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, a default model for each agent's digests and extra instructions every digest starts with, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-agents-dark.png" />
@@ -425,6 +425,7 @@ The width you drag the Full diff's file list to is kept.
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
 | Digest reads the MR or PR description and linked issues, outlines branches too large to send whole, streams in while Claude Code writes, and its diagram boxes open their units | Works |
+| Digest model per agent and extra instructions, from Settings or per run; the digest shows the model that wrote it | Works |
 | Stack overview with parent editing and cumulative view | Works |
 | GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
 | GitHub pull requests, the same way | Works |

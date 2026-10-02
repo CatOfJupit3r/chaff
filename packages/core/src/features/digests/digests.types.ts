@@ -15,9 +15,10 @@ export type iDigestPreview = z.infer<typeof digestPreviewSchema>;
 
 export type iDigestRecord = Omit<
   DigestRow,
-  'runner' | 'status' | 'progress' | 'error' | 'content' | 'preview' | 'finishedAt'
+  'runner' | 'model' | 'status' | 'progress' | 'error' | 'content' | 'preview' | 'finishedAt'
 > & {
   runner: DigestRunner;
+  model?: string;
   status: DigestStatus;
   progress?: string;
   error?: string;
@@ -72,6 +73,17 @@ export interface iDigestPromptInput {
   change?: iPromptChange;
   /** The reviewer's project preferences for the repository. */
   preferences: string[];
+  /** What the reviewer asked for when starting the digest. */
+  instructions?: string;
+}
+
+export interface iDigestStartInput {
+  snapshotId: string;
+  runner: DigestRunner;
+  /** Omitted: the model from Settings. Empty: the agent's own default. */
+  model?: string;
+  /** Omitted: the instructions from Settings. */
+  instructions?: string;
 }
 
 export interface iDigestRunInput {
@@ -80,6 +92,8 @@ export interface iDigestRunInput {
   /** Scratch folder outside the checkout for files the CLI writes. */
   scratchDir: string;
   prompt: string;
+  /** The model to ask for; the agent's own default when absent. */
+  model?: string;
   /** JSON schema the answer must follow. */
   schema: Record<string, unknown>;
   signal: AbortSignal;

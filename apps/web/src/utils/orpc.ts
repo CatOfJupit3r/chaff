@@ -1,6 +1,6 @@
 import { createORPCClient, onError } from '@orpc/client';
 import { RPCLink } from '@orpc/client/message-port';
-import type { ContractRouterClient, InferContractRouterOutputs } from '@orpc/contract';
+import type { ContractRouterClient, InferContractRouterInputs, InferContractRouterOutputs } from '@orpc/contract';
 
 import { DESKTOP_RPC_PORT_MESSAGE } from '@chaff/common/constants/desktop-bridge.constants';
 import type { CONTRACT } from '@chaff/server-contract/app.contract';
@@ -26,5 +26,6 @@ function connectToCore() {
 
 const client: ContractRouterClient<typeof CONTRACT> = createORPCClient(connectToCore());
 
+export type ORPCInputs = InferContractRouterInputs<typeof CONTRACT>;
 export type ORPCOutputs = InferContractRouterOutputs<typeof CONTRACT>;
 export default client;

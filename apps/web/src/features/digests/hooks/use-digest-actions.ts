@@ -1,13 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { DigestRunner } from '@chaff/common/enums/digest.enums';
-
 import { showToast } from '@~/components/toast/toast-store';
 import { useUpdateSettings } from '@~/features/settings/hooks/use-update-settings';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
-import type { iDigest } from '../digests.types';
+import type { iDigest, iDigestStartOptions } from '../digests.types';
 import { digestQueryOptions } from './use-digest';
 
 /** Starts and stops digests; the runner picked last becomes the default. */
@@ -23,9 +21,9 @@ export function useDigestActions(snapshotId: string) {
   const cancel = useMutation(tanstackRPC.digests.cancel.mutationOptions({ onSettled }));
 
   return {
-    start: (runner: DigestRunner) => {
-      updateSettings({ digestRunner: runner });
-      start.mutate({ snapshotId, runner });
+    start: (options: iDigestStartOptions) => {
+      updateSettings({ digestRunner: options.runner });
+      start.mutate({ snapshotId, ...options });
     },
     cancel: (digestId: string) => cancel.mutate({ digestId }),
     isStarting: start.isPending,

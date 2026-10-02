@@ -1,25 +1,32 @@
 import { DIGEST_RUNNER_LABELS, DIGEST_RUNNER_PROVIDERS } from '@chaff/common/enums/digest.enums';
-import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 
 import { Button } from '@~/components/ui/button';
 import { Callout } from '@~/components/ui/callout';
 import { Dialog, DialogBody, DialogClose, DialogContent, DialogFooter, DialogHeader } from '@~/components/ui/dialog';
 
+import type { iDigestStartOptions } from '../digests.types';
+import { useDigestOptions } from '../hooks/use-digest-options';
 import { useRunnerChoice } from '../hooks/use-runner-choice';
+import { DigestOptions } from './digest-options';
 import { RunnerPicker } from './runner-picker';
 
 interface iDigestRunDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onStart: (runner: DigestRunner) => void;
+  onStart: (options: iDigestStartOptions) => void;
 }
 
-/** Picks the coding agent and says plainly what it will see before anything runs. */
+/** Picks the coding agent, and optionally its model and extra instructions, and says plainly what it will see before anything runs. */
 export function DigestRunDialog({ isOpen, onOpenChange, onStart }: iDigestRunDialogProps) {
   const { runners, isPending, runner, setPicked, isRunnerAvailable } = useRunnerChoice(isOpen);
+  const options = useDigestOptions(runner);
+  const changeOpen = (next: boolean) => {
+    if (!next) options.reset();
+    onOpenChange(next);
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={changeOpen}>
       <DialogContent>
         <DialogHeader
           title="Write an AI digest"
@@ -27,6 +34,7 @@ export function DigestRunDialog({ isOpen, onOpenChange, onStart }: iDigestRunDia
         />
         <DialogBody>
           <RunnerPicker runners={runners} isPending={isPending} runner={runner} onPick={setPicked} />
+          <DigestOptions runner={runner} options={options} />
           <Callout variant="warn">
             {DIGEST_RUNNER_LABELS(runner)} sends the code it reads from this branch to {DIGEST_RUNNER_PROVIDERS(runner)}
             , under your own account and its settings. It works in a throwaway copy of the snapshot and can only read
@@ -36,10 +44,10 @@ export function DigestRunDialog({ isOpen, onOpenChange, onStart }: iDigestRunDia
             <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
             <Button
               variant="primary"
-              disabled={!isRunnerAvailable}
+              disabled={!isRunnerAvailable || !options.isModelValid}
               onClick={() => {
-                onStart(runner);
-                onOpenChange(false);
+                onStart({ runner, ...options.picked });
+                changeOpen(false);
               }}
             >
               Write digest

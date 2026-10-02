@@ -20,6 +20,18 @@ export const DIGEST_RUNNER_COMMANDS = digestRunnersEnumwaii.derive({
   [DIGEST_RUNNERS.CODEX]: 'codex',
 });
 
+/** The option that picks the model on each agent's command line. */
+export const DIGEST_RUNNER_MODEL_FLAGS = digestRunnersEnumwaii.derive({
+  [DIGEST_RUNNERS.CLAUDE_CODE]: '--model',
+  [DIGEST_RUNNERS.CODEX]: '-m',
+});
+
+/** A model id each agent accepts, shown as an example. */
+export const DIGEST_RUNNER_MODEL_EXAMPLES = digestRunnersEnumwaii.derive({
+  [DIGEST_RUNNERS.CLAUDE_CODE]: 'opus',
+  [DIGEST_RUNNERS.CODEX]: 'gpt-6-astra',
+});
+
 /** Who receives the repository context when the runner works. */
 export const DIGEST_RUNNER_PROVIDERS = digestRunnersEnumwaii.derive({
   [DIGEST_RUNNERS.CLAUDE_CODE]: 'Anthropic',

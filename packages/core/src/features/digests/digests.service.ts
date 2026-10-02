@@ -6,6 +6,7 @@ import { DIGEST_RUNNER_LABELS, DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/co
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import { isSafeAgentModel } from '@chaff/common/helpers/agent-model.helper';
 
 import type { iCoreOptions } from '@~/core.types';
 import { CORE_OPTIONS_TOKEN, DIGEST_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
@@ -19,6 +20,7 @@ import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import type { iSnapshotRecord } from '@~/features/reviews/snapshots/snapshots.types';
+import { SettingsService } from '@~/features/settings/settings.service';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
 import { ClaudeCodeAdapter } from './claude-code.adapter';
@@ -29,7 +31,7 @@ import { fitPatch } from './digest-patch.utils';
 import { previewOf } from './digest-preview.utils';
 import { buildDigestPrompt } from './digest-prompt.utils';
 import type { iDigestRepository } from './digest.repository';
-import type { iDigestPreview, iDigestRunnerAdapter, iPromptUnit } from './digests.types';
+import type { iDigestPreview, iDigestRunnerAdapter, iDigestStartInput, iPromptUnit } from './digests.types';
 
 const DIGESTS_DIRECTORY = 'digests';
 /** Characters of diff put in the prompt; files past this are outlined and the agent reads them in the checkout. */
@@ -39,6 +41,17 @@ const MAX_COMMIT_MESSAGES = 50;
 const DIGEST_TIMEOUT_MS = 20 * 60 * 1000;
 /** Progress is written at most this often, so a chatty agent doesn't hammer the database. */
 const PROGRESS_INTERVAL_MS = 400;
+
+/** One digest being written, with everything settled before the agent starts. */
+interface iDigestRun {
+  digestId: string;
+  command: string;
+  runner: DigestRunner;
+  model: string | undefined;
+  instructions: string;
+  snapshot: iSnapshotRecord;
+  target: iReviewTargetRecord;
+}
 
 const lineRange = (start?: number, end?: number) =>
   start === undefined || end === undefined ? undefined : `${start}-${end}`;
@@ -66,6 +79,7 @@ export class DigestsService {
     private readonly preferencesService: PreferencesService,
     private readonly changeUnitsService: ChangeUnitsService,
     private readonly remoteChangesService: RemoteChangesService,
+    private readonly settingsService: SettingsService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('digests');
@@ -80,22 +94,31 @@ export class DigestsService {
     return this.agentCommandsService.runners();
   }
 
-  public async start(snapshotId: string, runner: DigestRunner) {
+  public async start({ snapshotId, runner, model: pickedModel, instructions: pickedInstructions }: iDigestStartInput) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
     const latest = await this.digestRepository.findLatest(snapshotId);
     if (latest?.status === DIGEST_STATUSES.RUNNING && this.running.has(latest.id)) {
       throw ORPCBadRequestError(errorCodes.DIGEST_ALREADY_RUNNING);
     }
+    const settings = await this.settingsService.get();
+    const chosenModel = (
+      pickedModel ??
+      settings.agentModels.find((candidate) => candidate.runner === runner)?.model ??
+      ''
+    ).trim();
+    const model = chosenModel === '' ? undefined : chosenModel;
+    if (model !== undefined && !isSafeAgentModel(model)) throw ORPCBadRequestError(errorCodes.INVALID_AGENT_MODEL);
+    const instructions = pickedInstructions ?? settings.digestInstructions;
     const command = await this.agentCommandsService.resolve(runner);
 
-    const digest = await this.digestRepository.create(snapshotId, runner);
+    const digest = await this.digestRepository.create(snapshotId, runner, model);
     const controller = new AbortController();
     this.running.set(digest.id, controller);
     const timeout = setTimeout(
       () => controller.abort(new Error('The digest took too long and was stopped')),
       DIGEST_TIMEOUT_MS,
     );
-    this.write(digest.id, command, runner, snapshot, target, controller.signal)
+    this.write({ digestId: digest.id, command, runner, model, instructions, snapshot, target }, controller.signal)
       .catch((error: unknown) => this.logger.error('Digest failed', { digestId: digest.id, error: String(error) }))
       .finally(() => {
         clearTimeout(timeout);
@@ -133,11 +156,7 @@ export class DigestsService {
   }
 
   private async write(
-    digestId: string,
-    command: string,
-    runner: DigestRunner,
-    snapshot: iSnapshotRecord,
-    target: iReviewTargetRecord,
+    { digestId, command, runner, model, instructions, snapshot, target }: iDigestRun,
     signal: AbortSignal,
   ) {
     const folder = path.join(this.options.dataDir, DIGESTS_DIRECTORY, digestId);
@@ -174,12 +193,13 @@ export class DigestsService {
       await mkdir(scratchDir, { recursive: true });
       onProgress('Checking out the snapshot');
       await this.snapshotStoreService.addWorktree(target.workspaceId, snapshot.headSha, checkout);
-      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(snapshot, target);
+      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(snapshot, target, instructions);
       onProgress(`Starting ${DIGEST_RUNNER_LABELS(runner)}`);
       const answer = await this.adapterFor(runner).run(command, {
         cwd: checkout,
         scratchDir,
         prompt,
+        model,
         schema: AGENT_DIGEST_JSON_SCHEMA,
         signal,
         onProgress,
@@ -218,7 +238,7 @@ export class DigestsService {
     }
   }
 
-  private async preparePrompt(snapshot: iSnapshotRecord, target: iReviewTargetRecord) {
+  private async preparePrompt(snapshot: iSnapshotRecord, target: iReviewTargetRecord, instructions: string) {
     const [units, files, commits, fullPatch, preferences, change] = await Promise.all([
       this.snapshotRepository.listUnits(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
@@ -259,6 +279,7 @@ export class DigestsService {
       outlined,
       change,
       preferences,
+      instructions,
     });
     return {
       prompt,

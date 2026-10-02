@@ -56,6 +56,13 @@ export const settings = sqliteTable('settings', {
     .$type<{ runner: DigestRunner; command: string }[]>()
     .notNull()
     .default([]),
+  /** Models the user set for coding agents, by runner; a runner left out uses the agent's own default. */
+  agentModels: text('agent_models', { mode: 'json' })
+    .$type<{ runner: DigestRunner; model: string }[]>()
+    .notNull()
+    .default([]),
+  /** Extra instructions added to every digest prompt unless changed when starting one. */
+  digestInstructions: text('digest_instructions').notNull().default(''),
   /** Keys the user rebound; other actions keep their default key. */
   shortcuts: text('shortcuts', { mode: 'json' }).$type<iShortcutBinding[]>().notNull().default([]),
   onboarding: text('onboarding', { mode: 'json' })

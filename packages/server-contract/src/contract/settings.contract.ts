@@ -1,6 +1,7 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
+import { MAX_DIGEST_INSTRUCTIONS_LENGTH } from '@chaff/common/constants/agents.constants';
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
 import {
   accentSchema,
@@ -17,6 +18,7 @@ import { editorSchema } from '@chaff/common/enums/editors.enums';
 import { onboardingStatusSchema, onboardingStepSchema } from '@chaff/common/enums/onboarding.enums';
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
 import { shortcutActionSchema } from '@chaff/common/enums/shortcuts.enums';
+import { isSafeAgentModel } from '@chaff/common/helpers/agent-model.helper';
 
 export const onboardingSchema = z.object({
   status: onboardingStatusSchema,
@@ -34,6 +36,22 @@ export const shortcutBindingsSchema = z.array(z.object({ action: shortcutActionS
 export const agentCommandsSchema = z.array(
   z.object({ runner: digestRunnerSchema, command: z.string().trim().min(1).max(1024) }),
 );
+
+/** A model id handed to a coding agent, or empty for the agent's own default. */
+export const agentModelSchema = z
+  .string()
+  .trim()
+  .refine((model) => model === '' || isSafeAgentModel(model), {
+    message: 'Use one model id with no spaces that does not start with a dash',
+  });
+
+/** For each runner set by the user: the model its digests use unless one is picked when starting. */
+export const agentModelsSchema = z.array(
+  z.object({ runner: digestRunnerSchema, model: agentModelSchema.pipe(z.string().min(1)) }),
+);
+
+/** Extra instructions from the reviewer, added to the digest prompt. */
+export const digestInstructionsSchema = z.string().trim().max(MAX_DIGEST_INSTRUCTIONS_LENGTH);
 
 export const settingsSchema = z.object({
   /** Editor that file and line links open in. */
@@ -67,6 +85,10 @@ export const settingsSchema = z.object({
   digestRunner: digestRunnerSchema,
   /** Where to find each coding agent when it is not the usual command on PATH. */
   agentCommands: agentCommandsSchema,
+  /** Model each coding agent writes digests with when the user set one. */
+  agentModels: agentModelsSchema,
+  /** Extra instructions every digest starts with; they can be changed when starting one. */
+  digestInstructions: digestInstructionsSchema,
   shortcuts: shortcutBindingsSchema,
   onboarding: onboardingSchema,
 });
@@ -84,7 +106,7 @@ export const settingsContract = oc.router({
     .route({
       summary: 'Change app settings',
       description:
-        'Updates the given preferences and returns the full settings. A theme change also restyles the window. Agent commands and shortcuts replace the stored maps whole; two actions on one screen cannot share a key.',
+        'Updates the given preferences and returns the full settings. A theme change also restyles the window. Agent commands, agent models and shortcuts replace the stored maps whole; two actions on one screen cannot share a key.',
     })
     .input(settingsSchema.omit({ onboarding: true }).partial())
     .output(settingsSchema),

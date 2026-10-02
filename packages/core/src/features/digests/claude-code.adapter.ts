@@ -1,5 +1,8 @@
 import { singleton } from 'tsyringe';
 
+import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
+
+import { agentModelArgs } from '@~/features/agents/agent-model.utils';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 import {
   createStructuredOutputStream,
@@ -14,13 +17,41 @@ import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
 const READ_ONLY_TOOLS = 'Read,Grep,Glob';
 const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch';
 
+/** The command line of a read-only digest run; refuses a model that is not one safe token. */
+export function claudeCodeDigestArgs(schema: Record<string, unknown>, model: string | undefined) {
+  return [
+    '-p',
+    ...agentModelArgs(DIGEST_RUNNERS.CLAUDE_CODE, model),
+    '--output-format',
+    'stream-json',
+    '--verbose',
+    '--include-partial-messages',
+    '--json-schema',
+    JSON.stringify(schema),
+    '--tools',
+    READ_ONLY_TOOLS,
+    '--disallowedTools',
+    DENIED_TOOLS,
+    '--permission-mode',
+    'dontAsk',
+    '--setting-sources',
+    'user',
+    '--strict-mcp-config',
+    '--disable-slash-commands',
+    '--no-session-persistence',
+  ];
+}
+
 /**
  * Claude Code in headless mode with a JSON schema for its answer, streamed as it is written. Project settings and MCP servers in
  * the checkout are ignored, so a repository cannot add hooks or tools to the run.
  */
 @singleton()
 export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, prompt, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput) {
+  public async run(
+    command: string,
+    { cwd, prompt, model, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput,
+  ) {
     let answer: unknown;
     let failure: string | undefined;
     const followAnswer = createStructuredOutputStream();
@@ -30,26 +61,7 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
       cwd,
       signal,
       input: prompt,
-      args: [
-        '-p',
-        '--output-format',
-        'stream-json',
-        '--verbose',
-        '--include-partial-messages',
-        '--json-schema',
-        JSON.stringify(schema),
-        '--tools',
-        READ_ONLY_TOOLS,
-        '--disallowedTools',
-        DENIED_TOOLS,
-        '--permission-mode',
-        'dontAsk',
-        '--setting-sources',
-        'user',
-        '--strict-mcp-config',
-        '--disable-slash-commands',
-        '--no-session-persistence',
-      ],
+      args: claudeCodeDigestArgs(schema, model),
       onLine: (line) => {
         const event = parseClaudeStreamEvent(line);
         if (!event) return;

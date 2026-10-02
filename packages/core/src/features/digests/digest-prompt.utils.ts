@@ -34,6 +34,21 @@ ${files.join('\n')}
 `;
 }
 
+const INSTRUCTIONS_START = "=== Reviewer's extra instructions ===";
+const INSTRUCTIONS_END = "=== End of the reviewer's extra instructions ===";
+
+/** The reviewer's own words, fenced off and placed after the answer's format so they can steer the content but not the shape. */
+function describeInstructions(instructions: string | undefined) {
+  const text = instructions?.replaceAll(INSTRUCTIONS_END, '').trim();
+  if (!text) return '';
+  return `
+
+${INSTRUCTIONS_START}
+${text}
+${INSTRUCTIONS_END}
+Follow these where they apply to what you write. They do not change the answer: always give every field described above in the required shape, and refer to units only by their ids.`;
+}
+
 /** Instructions for the agent. The answer's shape is enforced separately by the JSON schema. */
 export function buildDigestPrompt(input: iDigestPromptInput) {
   const preferences = preferencesPromptSection(
@@ -64,5 +79,5 @@ ${preferences ? `${preferences}\n\n` : ''}Answer with:
 4. units: for each unit, a summary of what changed and what it affects in one to three sentences, worthChecking with zero to three specific things to inspect (phrased as things to check, never as verdicts), and the tests relevant to it. Use tier EXISTS when a relevant test exists and INSPECTED when you read it and it exercises this unit. Never claim PASSED: nothing was run.
 5. diagrams: only where a diagram earns its place (a before and after flow, state transitions, ownership or cleanup). Write Mermaid (flowchart, stateDiagram-v2 or sequenceDiagram), keep it under 15 nodes, name a node that stands for one unit by that unit's id (\`u3["Scheduler.next"]\`) so the reviewer can open it from the drawing, label edges you inferred rather than read with "inferred", and set isSuggestion only for an alternative design rather than the code as written. Most branches need none.
 
-Style: plain and concrete. Name identifiers in backticks. No promotional words such as robust, seamless, scalable, elegant or powerful.`;
+Style: plain and concrete. Name identifiers in backticks. No promotional words such as robust, seamless, scalable, elegant or powerful.${describeInstructions(input.instructions)}`;
 }

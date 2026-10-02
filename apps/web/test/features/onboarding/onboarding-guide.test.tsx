@@ -82,6 +82,8 @@ function mountGuide(onboarding: iOnboardingState = INITIAL_ONBOARDING) {
     defaultProgression: REVIEW_PROGRESSIONS.changes,
     digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
     agentCommands: [],
+    agentModels: [],
+    digestInstructions: '',
     shortcuts: [],
     onboarding,
   });

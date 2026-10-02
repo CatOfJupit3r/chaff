@@ -6,6 +6,7 @@ import { SectionLabel } from '@~/components/ui/section-label';
 import { useDigestRunners } from '@~/features/digests/hooks/use-digest-runners';
 
 import { AgentRow } from './agent-row';
+import { DigestInstructionsField } from './digest-instructions-field';
 
 /** Claude Code and Codex: where Chaff finds them, which one runs by default, and where the code goes. */
 export function AgentsSection() {
@@ -16,7 +17,7 @@ export function AgentsSection() {
       <SectionLabel>Coding agents</SectionLabel>
       <p className="m-0 text-[12.5px] text-muted">
         They write digests and fixes. Chaff looks for them on PATH; give a command or a full path when yours lives
-        elsewhere.
+        elsewhere, and a model when digests should not use the agent&apos;s default.
       </p>
       <Callout>
         Chaff starts the agent with your own account. The code it reads, your findings and your preferences go to
@@ -28,6 +29,7 @@ export function AgentsSection() {
           <AgentRow key={runner} runner={runner} status={runners?.find((candidate) => candidate.runner === runner)} />
         ))}
       </List>
+      <DigestInstructionsField />
     </section>
   );
 }

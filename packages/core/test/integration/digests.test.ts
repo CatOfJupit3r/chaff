@@ -21,9 +21,89 @@ async function waitForStatus(snapshotId: string, status: string) {
 }
 
 describe('digests', () => {
-  afterEach(() => {
+  afterEach(async () => {
     delete process.env.FAKE_AGENT_MODE;
     delete process.env.FAKE_AGENT_PROMPT_FILE;
+    delete process.env.FAKE_AGENT_ARGS_FILE;
+    await call(appRouter.settings.update, { agentModels: [], digestInstructions: '' });
+  });
+
+  it('uses the model and extra instructions from Settings, and keeps the model with the digest', async () => {
+    const promptFile = path.join(testDataDir, 'digest-settings-prompt.txt');
+    const argsFile = path.join(testDataDir, 'digest-settings-args.json');
+    process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+    process.env.FAKE_AGENT_ARGS_FILE = argsFile;
+    await call(appRouter.settings.update, {
+      agentModels: [{ runner: DIGEST_RUNNERS.CLAUDE_CODE, model: 'sonnet' }],
+      digestInstructions: 'Point out every retry loop.',
+    });
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    const started = await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    const digest = await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    expect(started.model).toBe('sonnet');
+    expect(digest.model).toBe('sonnet');
+    const args = JSON.parse(readFileSync(argsFile, 'utf8')) as string[];
+    expect(args[args.indexOf('--model') + 1]).toBe('sonnet');
+    expect(readFileSync(promptFile, 'utf8')).toContain(
+      "=== Reviewer's extra instructions ===\nPoint out every retry loop.\n",
+    );
+  });
+
+  it('lets a digest pick its own model and instructions, or none at all', async () => {
+    const promptFile = path.join(testDataDir, 'digest-override-prompt.txt');
+    const argsFile = path.join(testDataDir, 'digest-override-args.json');
+    process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+    process.env.FAKE_AGENT_ARGS_FILE = argsFile;
+    await call(appRouter.settings.update, {
+      agentModels: [{ runner: DIGEST_RUNNERS.CLAUDE_CODE, model: 'sonnet' }],
+      digestInstructions: 'Point out every retry loop.',
+    });
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    await call(appRouter.digests.start, {
+      snapshotId,
+      runner: DIGEST_RUNNERS.CLAUDE_CODE,
+      model: 'claude-opus-4-1[1m]',
+      instructions: 'Only explain the tests.',
+    });
+    await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+    let args = JSON.parse(readFileSync(argsFile, 'utf8')) as string[];
+    expect(args[args.indexOf('--model') + 1]).toBe('claude-opus-4-1[1m]');
+    let prompt = readFileSync(promptFile, 'utf8');
+    expect(prompt).toContain('Only explain the tests.');
+    expect(prompt).not.toContain('Point out every retry loop.');
+
+    const agentDefault = await call(appRouter.digests.start, {
+      snapshotId,
+      runner: DIGEST_RUNNERS.CLAUDE_CODE,
+      model: '',
+      instructions: '',
+    });
+    await vi.waitFor(async () => {
+      const digest = await call(appRouter.digests.get, { snapshotId });
+      if (digest?.id !== agentDefault.id || digest.status !== DIGEST_STATUSES.READY) throw new Error('Not ready');
+    }, WAIT);
+    args = JSON.parse(readFileSync(argsFile, 'utf8')) as string[];
+    expect(args).not.toContain('--model');
+    expect(agentDefault.model).toBeUndefined();
+    prompt = readFileSync(promptFile, 'utf8');
+    expect(prompt).not.toContain('extra instructions');
+  });
+
+  it('refuses a model that could pass more than a model id, from a digest or from Settings', async () => {
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    for (const model of ['--dangerously-skip-permissions', 'opus --tools Bash']) {
+      await expect(
+        call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE, model }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        call(appRouter.settings.update, { agentModels: [{ runner: DIGEST_RUNNERS.CODEX, model }] }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    }
+    expect(await call(appRouter.digests.get, { snapshotId })).toBeNull();
   });
 
   it('reports which coding agents are installed', async () => {

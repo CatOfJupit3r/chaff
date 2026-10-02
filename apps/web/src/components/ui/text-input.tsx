@@ -14,6 +14,18 @@ export function TextInput({ className, ...props }: ComponentProps<'input'>) {
   );
 }
 
+export function TextArea({ className, ...props }: ComponentProps<'textarea'>) {
+  return (
+    <textarea
+      className={cn(
+        'min-h-16 w-full min-w-0 resize-y rounded-sm border border-line-strong bg-surface px-2.5 py-2 text-[13px] leading-normal text-fg outline-none placeholder:text-faint focus:border-accent-line',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export function SelectInput({ className, ...props }: ComponentProps<'select'>) {
   return (
     <select

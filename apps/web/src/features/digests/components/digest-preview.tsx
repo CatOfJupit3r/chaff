@@ -1,9 +1,8 @@
-import { DIGEST_RUNNER_LABELS } from '@chaff/common/enums/digest.enums';
-
 import { SectionLabel } from '@~/components/ui/section-label';
 import { pluralize } from '@~/utils/pluralize';
 
 import type { iDigest } from '../digests.types';
+import { digestAuthor } from '../digests.utils';
 import { InlineCodeText } from './inline-code-text';
 
 /** What the digest has written so far, while the agent is still writing it. */
@@ -14,7 +13,7 @@ export function DigestPreview({ digest }: { digest: iDigest }) {
     <section className="flex flex-col gap-2" aria-live="polite">
       <SectionLabel className="flex items-center gap-1.5">
         <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-accent" />
-        Digest · {DIGEST_RUNNER_LABELS(digest.runner)} · writing
+        Digest · {digestAuthor(digest)} · writing
       </SectionLabel>
       {preview ? (
         <>

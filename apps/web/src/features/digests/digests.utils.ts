@@ -1,6 +1,11 @@
-import { DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
+import { DIGEST_RUNNER_LABELS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 
 import type { iDigest, iDigestContent } from './digests.types';
+
+/** Who wrote the digest: the agent, and the model when one was asked for. */
+export function digestAuthor({ runner, model }: Pick<iDigest, 'runner' | 'model'>) {
+  return model ? `${DIGEST_RUNNER_LABELS(runner)} · ${model}` : DIGEST_RUNNER_LABELS(runner);
+}
 
 /** The digest's content once it is ready; a running, failed or stopped digest has none to show. */
 export function readyContent(digest: iDigest | null | undefined): iDigestContent | undefined {

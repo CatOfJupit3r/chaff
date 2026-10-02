@@ -18,11 +18,11 @@ export class DrizzleDigestRepository implements iDigestRepository {
     private readonly digestResolver: DigestResolver,
   ) {}
 
-  public async create(snapshotId: string, runner: DigestRunner) {
+  public async create(snapshotId: string, runner: DigestRunner, model?: string) {
     const row = this.databaseService
       .getDb()
       .insert(digests)
-      .values({ snapshotId, runner, status: DIGEST_STATUSES.RUNNING })
+      .values({ snapshotId, runner, model: model ?? null, status: DIGEST_STATUSES.RUNNING })
       .returning()
       .get();
     return this.digestResolver.toDigestRecord(row);

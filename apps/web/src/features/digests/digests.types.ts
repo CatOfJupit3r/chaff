@@ -1,4 +1,7 @@
-import type { ORPCOutputs } from '@~/utils/orpc';
+import type { ORPCInputs, ORPCOutputs } from '@~/utils/orpc';
+
+/** What can be chosen when starting a digest: the agent, its model and extra instructions. */
+export type iDigestStartOptions = Omit<ORPCInputs['digests']['start'], 'snapshotId'>;
 
 export type iDigest = NonNullable<ORPCOutputs['digests']['get']>;
 

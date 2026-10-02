@@ -2,6 +2,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { singleton } from 'tsyringe';
 
+import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
+
+import { agentModelArgs } from '@~/features/agents/agent-model.utils';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 
 import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
@@ -20,12 +23,41 @@ function describeItem(event: iCodexEvent) {
   return undefined;
 }
 
+interface iCodexArgsInput {
+  cwd: string;
+  schemaPath: string;
+  answerPath: string;
+  model: string | undefined;
+}
+
+/** The command line of a read-only digest run, reading the prompt from stdin; refuses a model that is not one safe token. */
+export function codexDigestArgs({ cwd, schemaPath, answerPath, model }: iCodexArgsInput) {
+  return [
+    'exec',
+    ...agentModelArgs(DIGEST_RUNNERS.CODEX, model),
+    '--sandbox',
+    'read-only',
+    '--skip-git-repo-check',
+    '--color',
+    'never',
+    '--json',
+    '--output-schema',
+    schemaPath,
+    '--output-last-message',
+    answerPath,
+    '--cd',
+    cwd,
+    '-',
+  ];
+}
+
 /** `codex exec` in its read-only sandbox, with the answer's schema and the final message written to files. */
 @singleton()
 export class CodexAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, scratchDir, prompt, schema, signal, onProgress }: iDigestRunInput) {
+  public async run(command: string, { cwd, scratchDir, prompt, model, schema, signal, onProgress }: iDigestRunInput) {
     const schemaPath = path.join(scratchDir, 'answer.schema.json');
     const answerPath = path.join(scratchDir, 'answer.json');
+    const args = codexDigestArgs({ cwd, schemaPath, answerPath, model });
     await writeFile(schemaPath, JSON.stringify(schema));
     let failure: string | undefined;
 
@@ -34,22 +66,7 @@ export class CodexAdapter implements iDigestRunnerAdapter {
       cwd,
       signal,
       input: prompt,
-      args: [
-        'exec',
-        '--sandbox',
-        'read-only',
-        '--skip-git-repo-check',
-        '--color',
-        'never',
-        '--json',
-        '--output-schema',
-        schemaPath,
-        '--output-last-message',
-        answerPath,
-        '--cd',
-        cwd,
-        '-',
-      ],
+      args,
       onLine: (line) => {
         let event: iCodexEvent;
         try {

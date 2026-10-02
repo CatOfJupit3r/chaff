@@ -9,6 +9,8 @@ import {
   testTierSchema,
 } from '@chaff/common/enums/digest.enums';
 
+import { agentModelSchema, digestInstructionsSchema } from './settings.contract';
+
 const idSchema = z.string().min(1).max(64);
 
 export const digestTestSchema = z.object({
@@ -79,6 +81,8 @@ export const digestSchema = z.object({
   id: z.string(),
   snapshotId: z.string(),
   runner: digestRunnerSchema,
+  /** The model the agent was asked to use; absent when it used its own default. */
+  model: z.string().optional(),
   status: digestStatusSchema,
   progress: z.string().optional(),
   error: z.string().optional(),
@@ -111,9 +115,17 @@ export const digestsContract = oc.router({
     .route({
       summary: 'Write a digest',
       description:
-        'Starts the chosen coding agent in a read-only checkout of the snapshot. It runs in the background; poll `get` for progress.',
+        'Starts the chosen coding agent in a read-only checkout of the snapshot. It runs in the background; poll `get` for progress. Model and instructions default to the ones in Settings; an empty model leaves the choice to the agent.',
     })
-    .input(z.object({ snapshotId: idSchema, runner: digestRunnerSchema }))
+    .input(
+      z.object({
+        snapshotId: idSchema,
+        runner: digestRunnerSchema,
+        model: agentModelSchema.optional(),
+        /** Added to the prompt after the answer's format, which they cannot change. */
+        instructions: digestInstructionsSchema.optional(),
+      }),
+    )
     .output(digestSchema),
 
   cancel: oc

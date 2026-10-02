@@ -15,6 +15,7 @@ import type { iDigestRunnerStatus } from '@~/features/digests/digests.types';
 
 import { useSettings } from '../hooks/use-settings';
 import { useUpdateSettings } from '../hooks/use-update-settings';
+import { AgentModelInput } from './agent-model-input';
 
 interface iAgentRowProps {
   runner: DigestRunner;
@@ -29,7 +30,7 @@ function AgentStatus({ status }: { status: iDigestRunnerStatus | undefined }) {
   return <span className="truncate font-mono text-[11.5px] text-faint">{status.path}</span>;
 }
 
-/** One coding agent: where Chaff finds it, an optional command or path, and whether it is the default. */
+/** One coding agent: where Chaff finds it, an optional command or path and model, and whether it is the default. */
 export function AgentRow({ runner, status }: iAgentRowProps) {
   const settings = useSettings();
   const updateSettings = useUpdateSettings();
@@ -65,6 +66,7 @@ export function AgentRow({ runner, status }: iAgentRowProps) {
           }}
         />
         <AgentStatus status={status} />
+        <AgentModelInput runner={runner} />
       </div>
       <Button
         disabled={isDefault || !status?.isAvailable}

@@ -15,6 +15,7 @@ import { editorSchema } from '@chaff/common/enums/editors.enums';
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
 import {
   agentCommandsSchema,
+  agentModelsSchema,
   shortcutBindingsSchema,
   onboardingSchema,
 } from '@chaff/server-contract/contract/settings.contract';
@@ -46,6 +47,7 @@ export class SettingsResolver {
       defaultProgression: reviewProgressionSchema.parse(row.defaultProgression),
       digestRunner: digestRunnerSchema.parse(row.digestRunner),
       agentCommands: agentCommandsSchema.parse(row.agentCommands),
+      agentModels: agentModelsSchema.parse(row.agentModels),
       shortcuts: shortcutBindingsSchema.parse(row.shortcuts),
       onboarding: onboardingSchema.parse(row.onboarding),
     }),
