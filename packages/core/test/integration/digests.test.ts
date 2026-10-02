@@ -67,7 +67,10 @@ describe('digests', () => {
     ]);
     expect(content.diagrams).toEqual([expect.objectContaining({ id: 'd1', title: 'Retry', unitIds: [unitIds[0]] })]);
 
-    expect(existsSync(path.join(testDataDir, 'digests', digest.id))).toBe(false);
+    // The checkout is removed right after the digest is kept.
+    await vi.waitFor(() => {
+      if (existsSync(path.join(testDataDir, 'digests', digest.id))) throw new Error('Checkout still there');
+    }, WAIT);
     expect(repo.git('worktree', 'list').split('\n')).toHaveLength(1);
     expect(repo.git('status', '--porcelain')).toBe('');
   });
