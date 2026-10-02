@@ -149,6 +149,17 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
     return row ? { patch: row.patch ?? undefined } : undefined;
   }
 
+  public async listPatches(snapshotId: string) {
+    const rows = this.databaseService
+      .getDb()
+      .select({ fileId: snapshotFiles.id, path: snapshotFiles.path, patch: snapshotFiles.patch })
+      .from(snapshotFiles)
+      .where(eq(snapshotFiles.snapshotId, snapshotId))
+      .orderBy(asc(snapshotFiles.ordinal))
+      .all();
+    return rows.map((row) => ({ fileId: row.fileId, path: row.path, patch: row.patch ?? undefined }));
+  }
+
   public async listUnits(snapshotId: string) {
     return this.databaseService
       .getDb()

@@ -106,6 +106,7 @@ export class RemoteChangesService {
       provider.branchHead(access, project, target.parentBranch),
     ]);
     const unchanged = {
+      isWatched: false,
       isBranchMissing: false,
       newCommitCount: 0,
       isBranchRewritten: false,

@@ -63,6 +63,8 @@ export type iSnapshotResponse = iSnapshotSummary &
   };
 
 export interface iSnapshotLiveStatus {
+  /** Branch moves are pushed by watching the repository's refs; otherwise the status is re-read on a timer. */
+  isWatched: boolean;
   isBranchMissing: boolean;
   newCommitCount: number;
   isBranchRewritten: boolean;

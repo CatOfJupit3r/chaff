@@ -148,11 +148,16 @@ Chaff can ask the coding agent already on your computer (Claude Code or Codex) t
   <img src="docs/screenshots/digest-streaming-light.png" alt="Context panel showing the digest overview and change titles while Claude Code is still writing, with 9 of 19 unit notes done" />
 </picture>
 
-The Tests tab keeps three facts apart: a test exists, the agent read it, and it passed. Chaff never runs tests, so a digest can't claim the third.
+The Tests tab keeps three facts apart: a test exists, the agent read it, and it passed. Chaff never runs tests, so a digest can't claim the third. Without a digest, the tab lists the test files that mention the unit by name.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-dark.png" />
   <img src="docs/screenshots/focus-tests-light.png" alt="Tests tab listing the test the digest tied to the unit, with Exists, Agent read it and Passed columns" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-found-dark.png" />
+  <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
 </picture>
 
 **AI digest** in the top bar starts one and says which company receives the code before anything runs.
@@ -164,7 +169,7 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
 
 ### Full diff
 
-One branch against its parent, with a resizable file tree (or flat list) and a filter. Switch between one file at a time and all files in one scroll, unified or split, with word-level highlights, syntax colors and expandable context.
+One branch against its parent, with a resizable file tree (or flat list) and a filter that matches file names and the changed lines themselves. Switch between one file at a time and all files in one scroll, unified or split, with word-level highlights, syntax colors and expandable context.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/full-diff-dark.png" />
@@ -174,6 +179,11 @@ One branch against its parent, with a resizable file tree (or flat list) and a f
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/all-files-dark.png" />
   <img src="docs/screenshots/all-files-light.png" alt="Full diff with all files in one continuous scroll" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/diff-search-dark.png" />
+  <img src="docs/screenshots/diff-search-light.png" alt="The file filter matching the word anchor in the added lines of several files" />
 </picture>
 
 The bar beside each changed line shows the decision on its unit, and the file list shows how far each file got. Click the **+** beside a line (or pick a range first) to write a concern, question or note on exactly those lines.
@@ -402,9 +412,9 @@ The width you drag the Full diff's file list to is kept.
 | Add repositories from disk, read-only | Works |
 | Local branch stacks with suggested parents, kept together when a lower branch gets new commits | Works |
 | Frozen snapshots in Chaff's own git store | Works |
-| Regions, Function and Section units (tree-sitter, 13 languages) | Works |
-| Full diff: tree or list, one or all files, unified or split, wrap, context | Works |
-| New commits, rewritten branches and moved parents detected; Update | Works |
+| Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
+| Full diff: tree or list, one or all files, unified or split, wrap, context; filter by file name or changed code | Works |
+| New commits, rewritten branches and moved parents detected as they happen (refs are watched); Update | Works |
 | Open in VS Code, Insiders or Cursor | Works |
 | Light and dark themes, accent, code size | Works |
 | Code font, line height, UI density, syntax colors per mode | Works |

@@ -1,4 +1,4 @@
-import { oc } from '@orpc/contract';
+import { eventIterator, oc } from '@orpc/contract';
 import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
@@ -111,6 +111,8 @@ export const snapshotSchema = snapshotSummarySchema.extend({
 });
 
 export const snapshotLiveStatusSchema = z.object({
+  /** Branch moves are pushed through `watch`; otherwise re-read the status on a timer. */
+  isWatched: z.boolean(),
   /** The branch no longer exists in the repository. */
   isBranchMissing: z.boolean(),
   /** Commits on the branch since the snapshot; zero when the branch was rewritten. */
@@ -183,6 +185,8 @@ export const unitUsageSchema = z.object({
   code: z.array(z.string()),
   /** The file is part of the changes under review. */
   isInReview: z.boolean(),
+  /** The file is a test by its name (`*.test.ts`, `test_*.py`, `tests/`). */
+  isInTest: z.boolean(),
 });
 
 const snapshotIdInput = z.object({ snapshotId: idSchema });
@@ -258,6 +262,37 @@ export const reviewsContract = oc.router({
     })
     .input(snapshotIdInput)
     .output(snapshotLiveStatusSchema),
+
+  searchDiff: oc
+    .route({
+      summary: 'Search the changed code',
+      description:
+        'Finds the added and deleted lines of a snapshot that contain the query, ignoring case, grouped by file in reading order. Files too large to keep are not searched.',
+    })
+    .input(z.object({ snapshotId: idSchema, query: z.string().trim().min(2).max(200) }))
+    .output(
+      z.object({
+        files: z.array(
+          z.object({
+            fileId: z.string(),
+            path: z.string(),
+            matchCount: z.number().int().positive(),
+            matches: z.array(z.object({ side: diffSideSchema, line: z.number().int().positive(), text: z.string() })),
+          }),
+        ),
+        /** The search stopped early; refine the query to see the rest. */
+        isTruncated: z.boolean(),
+      }),
+    ),
+
+  watch: oc
+    .route({
+      summary: 'Watch the repository of a review',
+      description:
+        'Sends an event each time a branch may have moved in the repository a local review reads, so the live status can be read again. Ends at once for merge and pull requests.',
+    })
+    .input(snapshotIdInput)
+    .output(eventIterator(z.object({ changedAt: z.number() }))),
 
   fileDiff: oc
     .route({

@@ -4,6 +4,7 @@ packages:
   - configs/*
 allowBuilds:
   '@swc/core': true
+  '@tree-sitter-grammars/tree-sitter-kotlin': false
   electron-winstaller: false
   esbuild: true
   unrs-resolver: true

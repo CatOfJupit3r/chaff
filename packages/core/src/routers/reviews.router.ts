@@ -1,5 +1,6 @@
 import { container } from 'tsyringe';
 
+import { DiffSearchService } from '@~/features/reviews/diff/diff-search.service';
 import { ReviewHistoryService } from '@~/features/reviews/history/review-history.service';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { UnitsService } from '@~/features/reviews/units/units.service';
@@ -28,6 +29,14 @@ export const reviewsRouter = base.reviews.router({
   liveStatus: procedure.reviews.liveStatus.handler(async ({ input }) =>
     container.resolve(ReviewsService).getLiveStatus(input.snapshotId),
   ),
+
+  searchDiff: procedure.reviews.searchDiff.handler(async ({ input }) =>
+    container.resolve(DiffSearchService).search(input.snapshotId, input.query),
+  ),
+
+  watch: procedure.reviews.watch.handler(async function* watchLiveStatus({ input, signal }) {
+    yield* container.resolve(ReviewsService).watchLiveStatus(input.snapshotId, signal ?? new AbortController().signal);
+  }),
 
   fileDiff: procedure.reviews.fileDiff.handler(async ({ input }) =>
     container.resolve(ReviewsService).getFileDiff(input.snapshotId, input.fileId, {
