@@ -2,9 +2,13 @@ import type { ReactNode } from 'react';
 
 import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
+import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
+import type { ShortcutAction } from '@chaff/common/enums/shortcuts.enums';
 
 import { CheckIcon, ClockIcon, MessageIcon, NextIcon, QuestionIcon } from '@~/components/icons/icons';
 import { Kbd } from '@~/components/ui/kbd';
+import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
+import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
 import { cn } from '@~/lib/utils';
 
 import type { CommentMark } from '../hooks/use-focus-review';
@@ -49,6 +53,8 @@ export function DecisionDock({
   onLooksGood,
   onLater,
 }: iDecisionDockProps) {
+  const keys = useShortcutBindings();
+  const keyFor = (action: ShortcutAction) => shortcutKeyLabel(keys.get(action) ?? '');
   const isPressed = (candidate: UnitMark) => noteMark === candidate || (!noteMark && mark === candidate);
   const commentButton = (candidate: CommentMark, icon: ReactNode, label: string, key: string) => (
     <button
@@ -83,8 +89,13 @@ export function DecisionDock({
           <div className="flex min-w-0 flex-col gap-1.5">
             <GroupHeading title="Comment" hint="write a note first" />
             <div className="grid grid-cols-2 gap-2">
-              {commentButton(UNIT_MARKS.CONCERN, <MessageIcon />, 'Concern…', 'C')}
-              {commentButton(UNIT_MARKS.QUESTION, <QuestionIcon />, 'Question…', 'Q')}
+              {commentButton(UNIT_MARKS.CONCERN, <MessageIcon />, 'Concern…', keyFor(SHORTCUT_ACTIONS.FOCUS_CONCERN))}
+              {commentButton(
+                UNIT_MARKS.QUESTION,
+                <QuestionIcon />,
+                'Question…',
+                keyFor(SHORTCUT_ACTIONS.FOCUS_QUESTION),
+              )}
             </div>
           </div>
           <div aria-hidden="true" className="self-stretch bg-line" />
@@ -102,7 +113,7 @@ export function DecisionDock({
               >
                 <ClockIcon />
                 Later
-                <Kbd>L</Kbd>
+                <Kbd>{keyFor(SHORTCUT_ACTIONS.FOCUS_LATER)}</Kbd>
                 <NextIcon className="size-3.5! text-faint" />
               </button>
               <button
@@ -116,7 +127,7 @@ export function DecisionDock({
               >
                 <CheckIcon />
                 Looks good
-                <Kbd>G</Kbd>
+                <Kbd>{keyFor(SHORTCUT_ACTIONS.FOCUS_LOOKS_GOOD)}</Kbd>
                 <NextIcon className="size-3.5!" />
               </button>
             </div>

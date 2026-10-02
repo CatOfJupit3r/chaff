@@ -3,13 +3,18 @@ import { TopBar } from '@~/components/layout/top-bar';
 import { List } from '@~/components/ui/list';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { PreferencesSection } from '@~/features/preferences/components/preferences-section';
+import { AgentsSection } from '@~/features/settings/components/agents-section';
+import { ShortcutsSection } from '@~/features/settings/components/shortcuts-section';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 
 import { useConnections } from '../hooks/use-connections';
 import { ConnectionsSection } from './connections-section';
 import { RepositoryRemoteRow } from './repository-remote-row';
 
-/** Accounts on GitLab and GitHub, the project each repository reads its merge requests from, and preferences. */
+/**
+ * Accounts on GitLab and GitHub, the project each repository reads its merge requests from, the coding agents,
+ * preferences and the keyboard map.
+ */
 export function SettingsScreen() {
   const workspaces = useWorkspaces();
   const connections = useConnections();
@@ -36,7 +41,9 @@ export function SettingsScreen() {
               </List>
             </section>
           ) : null}
+          <AgentsSection />
           <PreferencesSection workspaces={workspaces} />
+          <ShortcutsSection />
         </div>
       </Screen>
     </>

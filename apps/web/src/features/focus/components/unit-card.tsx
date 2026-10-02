@@ -9,8 +9,10 @@ import type { iFinding } from '@~/features/findings/findings.types';
 import type { iSnapshot, iUnit } from '@~/features/reviews/reviews.types';
 import { cn } from '@~/lib/utils';
 
-import { CARD_EXIT_CLASSES, CARD_VIEWS, UNIT_MARK_LABELS } from '../focus.enums';
+import { swipeExit } from '../focus-swipe.utils';
+import { CARD_EXIT_CLASSES, CARD_EXITS, CARD_VIEWS, UNIT_MARK_LABELS } from '../focus.enums';
 import type { CardExit, CardView } from '../focus.enums';
+import { useCardSwipe } from '../hooks/use-card-swipe';
 import { useUnitDetail } from '../hooks/use-unit-detail';
 import { useUnitUsages } from '../hooks/use-unit-usages';
 import { UnitCardTop } from './unit-card-top';
@@ -28,7 +30,15 @@ interface iUnitCardProps {
   exit?: CardExit;
   onViewChange: (view: CardView) => void;
   onOpenInEditor: (path: string, line?: number) => void;
+  /** A finger or pen let go of the card past the edge: right means Looks good, left means Concern. */
+  onSwipe?: (exit: CardExit) => unknown;
 }
+
+/** Card border while dragged far enough that letting go decides. */
+const SWIPE_BORDER_CLASSES = new Map<CardExit | undefined, string>([
+  [CARD_EXITS.RIGHT, 'border-good'],
+  [CARD_EXITS.LEFT, 'border-warn'],
+]);
 
 /** One unit: what it is, what the digest says, the decision already made on it, and one of its views. */
 export function UnitCard({
@@ -40,7 +50,9 @@ export function UnitCard({
   exit,
   onViewChange,
   onOpenInEditor,
+  onSwipe,
 }: iUnitCardProps) {
+  const swipe = useCardSwipe(onSwipe);
   const file = snapshot.files.find((candidate) => candidate.id === unit.fileId);
   const { data: detail } = useUnitDetail(snapshot.id, unit.id);
   const { data: usages } = useUnitUsages(snapshot.id, unit.id);
@@ -58,9 +70,13 @@ export function UnitCard({
   return (
     <article
       aria-label={unit.title}
+      {...swipe.handlers}
+      style={swipe.isDragging ? { translate: `${swipe.offset}px 0`, rotate: `${swipe.offset / 70}deg` } : undefined}
       className={cn(
-        'relative z-1 animate-card-in overflow-hidden rounded-xl border border-line-strong bg-surface shadow-modal',
-        'transition-[translate,rotate,scale,opacity] duration-280 ease-[cubic-bezier(.3,.7,.3,1)]',
+        'relative z-1 animate-card-in touch-pan-y overflow-hidden rounded-xl border border-line-strong bg-surface shadow-modal',
+        'transition-[translate,rotate,scale,opacity,border-color] duration-280 ease-[cubic-bezier(.3,.7,.3,1)]',
+        swipe.isDragging && 'transition-[border-color] duration-150',
+        SWIPE_BORDER_CLASSES.get(swipeExit(swipe.offset)),
         exit && CARD_EXIT_CLASSES(exit),
       )}
     >

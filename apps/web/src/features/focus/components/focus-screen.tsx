@@ -6,7 +6,7 @@ import { ReviewTopBar } from '@~/features/reviews/components/review-top-bar';
 import { cn } from '@~/lib/utils';
 
 import { tallyMarks } from '../focus-queue.utils';
-import { FOCUS_QUEUES } from '../focus.enums';
+import { CARD_EXITS, FOCUS_QUEUES } from '../focus.enums';
 import { useFocusKeyboard } from '../hooks/use-focus-keyboard';
 import { useFocusReview } from '../hooks/use-focus-review';
 import type { CommentMark } from '../hooks/use-focus-review';
@@ -92,6 +92,9 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                   exit={focus.exit}
                   onViewChange={focus.setView}
                   onOpenInEditor={focus.openInEditor}
+                  onSwipe={(side) =>
+                    side === CARD_EXITS.RIGHT ? focus.decide(UNIT_MARKS.LOOKS_GOOD) : setNoteMark(UNIT_MARKS.CONCERN)
+                  }
                 />
               ) : (
                 <FocusEndCard

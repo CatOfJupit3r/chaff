@@ -1,5 +1,7 @@
 import { FINDING_STATUSES, findingStatusesEnumwaii } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
+import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
+import type { ShortcutAction } from '@chaff/common/enums/shortcuts.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
@@ -72,14 +74,14 @@ export const FINDING_ACTION_LABELS = findingStatusesEnumwaii.derive({
   [FINDING_STATUSES.UNMATCHED]: 'Mark outdated',
 });
 
-/** Keys on the Verify screen that move the selected finding, when that move is allowed. */
-export const FINDING_ACTION_KEYS = findingStatusesEnumwaii.derive<string | undefined>({
-  [FINDING_STATUSES.OPEN]: 'r',
+/** Shortcut on the Verify screen that moves the selected finding, when that move is allowed. */
+export const FINDING_ACTION_SHORTCUTS = findingStatusesEnumwaii.derive<ShortcutAction | undefined>({
+  [FINDING_STATUSES.OPEN]: SHORTCUT_ACTIONS.VERIFY_REOPEN,
   [FINDING_STATUSES.FIX_PROPOSED]: undefined,
-  [FINDING_STATUSES.VERIFIED]: 'v',
-  [FINDING_STATUSES.REOPENED]: 'r',
+  [FINDING_STATUSES.VERIFIED]: SHORTCUT_ACTIONS.VERIFY_VERIFY,
+  [FINDING_STATUSES.REOPENED]: SHORTCUT_ACTIONS.VERIFY_REOPEN,
   [FINDING_STATUSES.ANSWERED]: undefined,
-  [FINDING_STATUSES.CLOSED]: 'x',
-  [FINDING_STATUSES.WITHDRAWN]: 'w',
+  [FINDING_STATUSES.CLOSED]: SHORTCUT_ACTIONS.VERIFY_CLOSE,
+  [FINDING_STATUSES.WITHDRAWN]: SHORTCUT_ACTIONS.VERIFY_WITHDRAW,
   [FINDING_STATUSES.UNMATCHED]: undefined,
 });
