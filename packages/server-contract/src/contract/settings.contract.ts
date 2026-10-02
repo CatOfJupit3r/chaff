@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import z from 'zod';
 
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
+import { MAX_ONBOARDING_ENTRIES } from '@chaff/common/constants/onboarding.constants';
 import {
   accentSchema,
   codeFontSchema,
@@ -14,14 +15,19 @@ import {
 import { diffContextSchema, diffLayoutSchema, inlineDiffSchema } from '@chaff/common/enums/diff.enums';
 import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
-import { onboardingStatusSchema, onboardingStepSchema } from '@chaff/common/enums/onboarding.enums';
+import {
+  onboardingHintSchema,
+  onboardingItemSchema,
+  onboardingStatusSchema,
+} from '@chaff/common/enums/onboarding.enums';
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
 import { shortcutActionSchema } from '@chaff/common/enums/shortcuts.enums';
 
+/** The getting-started checklist: whether it is open, the items the user has done, and the screen hints already shown. */
 export const onboardingSchema = z.object({
   status: onboardingStatusSchema,
-  step: onboardingStepSchema,
-  reviewId: z.string().min(1).max(64).nullable(),
+  completedItems: z.array(onboardingItemSchema).max(MAX_ONBOARDING_ENTRIES),
+  shownHints: z.array(onboardingHintSchema).max(MAX_ONBOARDING_ENTRIES),
 });
 
 /** A lower-cased `KeyboardEvent.key`: one printable character other than a space or a capital letter. */
@@ -93,7 +99,7 @@ export const settingsContract = oc.router({
     .route({
       summary: 'Save onboarding progress',
       description:
-        'Stores the current guide step and selected review on this computer. Completed and skipped guides stay closed.',
+        'Stores the checklist on this computer: its status, the items done and the screen hints already shown. Repeated entries are kept once. Completed and skipped guides stay closed.',
     })
     .input(onboardingSchema)
     .output(onboardingSchema),
@@ -101,7 +107,7 @@ export const settingsContract = oc.router({
   replayOnboarding: oc
     .route({
       summary: 'Replay onboarding guide',
-      description: 'Starts the guide from the beginning and clears its selected review, preserving app preferences.',
+      description: 'Opens the checklist again with no items done and no hints shown, preserving app preferences.',
     })
     .output(onboardingSchema),
 });

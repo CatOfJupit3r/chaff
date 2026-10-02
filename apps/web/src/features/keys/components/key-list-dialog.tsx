@@ -1,5 +1,6 @@
-import { useAtom } from 'jotai';
+import { useEffect, useState } from 'react';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import {
   SHORTCUT_ACTION_LABELS,
   SHORTCUT_ACTION_SCREENS,
@@ -13,11 +14,10 @@ import type { ShortcutScreen } from '@chaff/common/enums/shortcuts.enums';
 import { Dialog, DialogBody, DialogContent, DialogHeader } from '@~/components/ui/dialog';
 import { Kbd } from '@~/components/ui/kbd';
 import { SectionLabel } from '@~/components/ui/section-label';
+import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
 import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
 import { useShortcutKeys } from '@~/hooks/use-shortcut-keys';
-
-import { isKeyListOpenAtom } from '../key-list.store';
 
 interface iKeyRow {
   keys: string[];
@@ -57,9 +57,12 @@ function KeyRows({ title, rows }: { title: string; rows: readonly iKeyRow[] }) {
 
 /** Every key Chaff answers to, as bound now; opened with ?. */
 export function KeyListDialog() {
-  const [isOpen, setIsOpen] = useAtom(isKeyListOpenAtom);
+  const [isOpen, setIsOpen] = useState(false);
   const keys = useShortcutBindings();
   useShortcutKeys((key) => (key === '?' ? () => setIsOpen(true) : undefined));
+  useEffect(() => {
+    if (isOpen) reportGuideAction(ONBOARDING_ITEMS.KEY_LIST);
+  }, [isOpen]);
   const screenRows = (screen: ShortcutScreen) =>
     shortcutActionValues
       .filter((action) => SHORTCUT_ACTION_SCREENS(action) === screen)
@@ -67,7 +70,7 @@ export function KeyListDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent data-onboarding-keys className="w-[min(560px,100%)]">
+      <DialogContent className="w-[min(560px,100%)]">
         <DialogHeader title="Keyboard" description="Focus and Verify keys can be changed in Settings." />
         <DialogBody className="gap-5">
           <KeyRows title="Everywhere" rows={EVERYWHERE} />

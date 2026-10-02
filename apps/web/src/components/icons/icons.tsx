@@ -200,3 +200,11 @@ export const LinkIcon = createIcon(
     <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
   </>,
 );
+export const MoreIcon = createIcon(
+  'MoreIcon',
+  <>
+    <circle cx="6" cy="12" r="0.8" />
+    <circle cx="12" cy="12" r="0.8" />
+    <circle cx="18" cy="12" r="0.8" />
+  </>,
+);

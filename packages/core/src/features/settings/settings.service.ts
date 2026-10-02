@@ -41,7 +41,14 @@ export class SettingsService {
   public async updateOnboarding(onboarding: iSettingsResponse['onboarding']) {
     return this.settingsMutex.run(SETTINGS_ROW_ID, async () => {
       const current = await this.get();
-      const saved = await this.settingsRepository.save({ ...current, onboarding });
+      const saved = await this.settingsRepository.save({
+        ...current,
+        onboarding: {
+          status: onboarding.status,
+          completedItems: [...new Set(onboarding.completedItems)],
+          shownHints: [...new Set(onboarding.shownHints)],
+        },
+      });
       return saved.onboarding;
     });
   }

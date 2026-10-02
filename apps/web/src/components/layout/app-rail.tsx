@@ -3,6 +3,9 @@ import type { LinkProps } from '@tanstack/react-router';
 import { useAtom, useAtomValue } from 'jotai';
 import { useEffect } from 'react';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+import type { OnboardingItem } from '@chaff/common/enums/onboarding.enums';
+
 import type { IconComponent } from '@~/components/icons/create-icon';
 import {
   DiffIcon,
@@ -31,15 +34,18 @@ interface iRailLinkProps {
   label: string;
   /** Count shown on the icon, such as open findings. */
   badge?: number;
+  /** The getting-started item this link is the control for. */
+  guideItem?: OnboardingItem;
 }
 
-function RailLink({ to, params, search, icon: Icon, label, badge }: iRailLinkProps) {
+function RailLink({ to, params, search, icon: Icon, label, badge, guideItem }: iRailLinkProps) {
   return (
     <Link
       to={to}
       params={params}
       search={search}
       activeOptions={{ exact: true, includeSearch: false }}
+      data-onboarding={guideItem}
       className={RAIL_LINK_CLASS}
     >
       <Icon />
@@ -83,6 +89,7 @@ export function AppRail() {
             params={{ snapshotId: reviewSnapshotId }}
             icon={DiffIcon}
             label="Diff"
+            guideItem={ONBOARDING_ITEMS.FULL_DIFF}
           />
         </>
       ) : null}
