@@ -22,7 +22,10 @@ export function DigestChip({ snapshotId }: { snapshotId: string }) {
         <span className="inline-flex h-[26px] max-w-[320px] items-center gap-2 rounded-full border border-accent-line bg-accent-soft pr-1 pl-2.5 text-[12px] text-accent">
           <span aria-hidden="true" className="size-1.5 flex-none animate-pulse rounded-full bg-accent" />
           <span className="truncate" title={digest.progress}>
-            {DIGEST_RUNNER_LABELS(digest.runner)} · {digest.progress ?? 'starting'}
+            {DIGEST_RUNNER_LABELS(digest.runner)} ·{' '}
+            {digest.preview
+              ? `${digest.preview.noteCount} of ${digest.preview.unitCount} notes`
+              : (digest.progress ?? 'starting')}
           </span>
           <button
             type="button"

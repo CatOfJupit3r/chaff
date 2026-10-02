@@ -1,8 +1,11 @@
 import { call } from '@orpc/server';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CODE_HOSTS, INBOX_FILTERS } from '@chaff/common/enums/code-host.enums';
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import { DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
 import {
@@ -16,9 +19,11 @@ import {
 import { FakeCodeHost, GOOD_TOKEN, REVIEWER } from '../helpers/fake-code-host';
 import { cloneTestGitRepo, createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
-import { appRouter, fakeHost } from '../helpers/instance';
+import { appRouter, fakeHost, testDataDir } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
 import { addWorkspace } from '../helpers/review-repo';
+
+const WAIT = { timeout: 10_000, interval: 50 };
 
 let codeHost: FakeCodeHost;
 let server: TestGitRepo;
@@ -243,6 +248,35 @@ describe('code hosts', () => {
       ]),
     );
   });
+
+  it.each([CODE_HOSTS.GITLAB, CODE_HOSTS.GITHUB])(
+    "gives the digest agent the %s change's description and the issues it links to",
+    async (host) => {
+      const promptFile = path.join(testDataDir, 'digest-prompt.txt');
+      process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+      await connect(host);
+      const { workspace } = await addClone(host === CODE_HOSTS.GITHUB ? 'owner/repo' : 'group/project');
+      const change = codeHost.changes.find((candidate) => candidate.number === 1);
+      if (change) change.description = 'Retries were lost on timeouts. Closes #7, see #8 and !1.';
+      codeHost.issues.set(7, { title: 'Deliveries vanish', description: 'Seen when the receiver is slow.' });
+      const { snapshotId } = await call(appRouter.codeHosts.startChange, { workspaceId: workspace.id, number: 1 });
+
+      try {
+        await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+        await vi.waitFor(async () => {
+          const digest = await call(appRouter.digests.get, { snapshotId });
+          if (digest?.status !== DIGEST_STATUSES.READY) throw new Error(`Digest is ${digest?.status}`);
+        }, WAIT);
+      } finally {
+        delete process.env.FAKE_AGENT_PROMPT_FILE;
+      }
+
+      const prompt = readFileSync(promptFile, 'utf8');
+      expect(prompt).toContain('Title: Retry three times\nRetries were lost on timeouts. Closes #7, see #8 and !1.');
+      expect(prompt).toContain('Issue #7: Deliveries vanish\nSeen when the receiver is slow.');
+      expect(prompt).not.toContain('Issue #8');
+    },
+  );
 
   it("moves a local branch's review onto the change it was pushed as", async () => {
     await connect();

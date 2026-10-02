@@ -29,6 +29,7 @@ interface iUnitCardProps {
   exit?: CardExit;
   onViewChange: (view: CardView) => void;
   onOpenInEditor: (path: string, line?: number) => void;
+  onOpenUnit: (unitId: string) => void;
   /** A finger or pen let go of the card past the edge: right means Looks good, left means Concern. */
   onSwipe?: (exit: CardExit) => unknown;
 }
@@ -43,6 +44,7 @@ export function UnitCard({
   exit,
   onViewChange,
   onOpenInEditor,
+  onOpenUnit,
   onSwipe,
 }: iUnitCardProps) {
   const file = snapshot.files.find((candidate) => candidate.id === unit.fileId);
@@ -98,7 +100,13 @@ export function UnitCard({
       ) : null}
       {view === CARD_VIEWS.diagram ? (
         <div className="border-t border-line">
-          <UnitDiagramView diagrams={diagrams} hasDigest={content !== undefined} />
+          <UnitDiagramView
+            snapshotId={snapshot.id}
+            diagrams={diagrams}
+            hasDigest={content !== undefined}
+            currentUnitIds={new Set([unit.id])}
+            onOpenUnit={onOpenUnit}
+          />
         </div>
       ) : null}
       {view === CARD_VIEWS.tests ? (

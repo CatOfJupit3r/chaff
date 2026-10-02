@@ -1,7 +1,12 @@
 import { singleton } from 'tsyringe';
 
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
-import { describeClaudeProgress, parseClaudeStreamEvent } from '@~/features/agents/claude-code-events.utils';
+import {
+  createStructuredOutputStream,
+  describeClaudeProgress,
+  parseClaudeStreamEvent,
+} from '@~/features/agents/claude-code-events.utils';
+import { parsePartialJson } from '@~/lib/partial-json';
 
 import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
 
@@ -10,14 +15,15 @@ const READ_ONLY_TOOLS = 'Read,Grep,Glob';
 const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch';
 
 /**
- * Claude Code in headless mode with a JSON schema for its answer. Project settings and MCP servers in
+ * Claude Code in headless mode with a JSON schema for its answer, streamed as it is written. Project settings and MCP servers in
  * the checkout are ignored, so a repository cannot add hooks or tools to the run.
  */
 @singleton()
 export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, prompt, schema, signal, onProgress }: iDigestRunInput) {
+  public async run(command: string, { cwd, prompt, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput) {
     let answer: unknown;
     let failure: string | undefined;
+    const followAnswer = createStructuredOutputStream();
 
     await runAgentProcess({
       command,
@@ -29,6 +35,7 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         '--output-format',
         'stream-json',
         '--verbose',
+        '--include-partial-messages',
         '--json-schema',
         JSON.stringify(schema),
         '--tools',
@@ -48,6 +55,8 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         if (!event) return;
         const progress = describeClaudeProgress(event, cwd);
         if (progress) onProgress(progress);
+        const partial = followAnswer(event);
+        if (partial !== undefined && onPartialAnswer) onPartialAnswer(parsePartialJson(partial));
         if (event.type === 'result') {
           if (event.is_error) failure = typeof event.result === 'string' ? event.result : 'Claude Code failed';
           else answer = event.structured_output;

@@ -25,6 +25,7 @@ interface iChangeCardProps {
   exit?: CardExit;
   onViewChange: (view: CardView) => void;
   onOpenInEditor: (path: string, line?: number) => void;
+  onOpenUnit: (unitId: string) => void;
   onEdit: () => void;
   onSwipe?: (exit: CardExit) => unknown;
 }
@@ -39,6 +40,7 @@ export function ChangeCard({
   exit,
   onViewChange,
   onOpenInEditor,
+  onOpenUnit,
   onEdit,
   onSwipe,
 }: iChangeCardProps) {
@@ -80,7 +82,13 @@ export function ChangeCard({
         : null}
       {view === CARD_VIEWS.diagram ? (
         <div className="border-t border-line">
-          <UnitDiagramView diagrams={diagrams} hasDigest={content !== undefined} />
+          <UnitDiagramView
+            snapshotId={snapshot.id}
+            diagrams={diagrams}
+            hasDigest={content !== undefined}
+            currentUnitIds={unitIds}
+            onOpenUnit={onOpenUnit}
+          />
         </div>
       ) : null}
       {view === CARD_VIEWS.tests ? (

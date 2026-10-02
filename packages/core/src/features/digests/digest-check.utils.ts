@@ -15,6 +15,15 @@ function toRepoPath(root: string, candidate: string) {
   return relative.split(path.sep).join('/');
 }
 
+/** The drawing's nodes named after a unit's short id (`u3["Scheduler.next"]`), with the unit each opens. */
+function nodeUnits(mermaid: string, shortIds: ReadonlyMap<string, string>) {
+  const nodes = new Set(mermaid.match(/\bu\d+\b/g) ?? []);
+  return [...nodes].flatMap((node) => {
+    const unitId = shortIds.get(node);
+    return unitId ? [{ node, unitId }] : [];
+  });
+}
+
 /**
  * Turns the agent's answer into a digest the reviewer can trust to be complete: unknown unit ids are
  * dropped, a unit belongs to one group at most, units no group explains land in a visible "Other
@@ -106,8 +115,16 @@ export function checkDigest(
       kind: diagram.kind,
       mermaid: diagram.mermaid.trim(),
       unitIds: resolveAll(diagram.units),
+      nodeUnits: nodeUnits(diagram.mermaid, shortIds),
       isSuggestion: diagram.isSuggestion,
     }));
 
-  return { overview: answer.overview.trim(), groups, readingOrder, units, diagrams } satisfies iDigestContent;
+  return {
+    overview: answer.overview.trim(),
+    groups,
+    readingOrder,
+    units,
+    diagrams,
+    outlinedPaths: [],
+  } satisfies iDigestContent;
 }

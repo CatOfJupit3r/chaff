@@ -23,6 +23,8 @@ export const digests = sqliteTable(
     error: text('error'),
     /** The checked digest as JSON, once it is ready. */
     content: text('content'),
+    /** What has arrived of the answer as JSON, while it is being written. */
+    preview: text('preview'),
     startedAt: timestampColumn('started_at')
       .notNull()
       .$defaultFn(() => new Date()),

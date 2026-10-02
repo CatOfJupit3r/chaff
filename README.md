@@ -121,7 +121,7 @@ On a touch screen or with a pen, swipe the card: right is **Looks good**, left s
 
 ### AI digest
 
-Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits or inferred), the tests that cover the unit, and a diagram where one helps. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
+Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits and merge request or inferred), the tests that cover the unit, and a diagram where one helps; a box in the diagram that stands for a unit opens that unit's card. With Claude Code the overview and groups show in the context panel while the agent is still writing. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-digest-dark.png" />
@@ -136,6 +136,16 @@ Chaff can ask the coding agent already on your computer (Claude Code or Codex) t
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-diagram-dark.png" />
   <img src="docs/screenshots/focus-diagram-light.png" alt="Diagram tab with a state diagram the digest drew for the unit" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-diagram-links-dark.png" />
+  <img src="docs/screenshots/focus-diagram-links-light.png" alt="A flow diagram whose deliver and AttemptStore boxes open their cards, with the units it covers listed below" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-streaming-dark.png" />
+  <img src="docs/screenshots/digest-streaming-light.png" alt="Context panel showing the digest overview and change titles while Claude Code is still writing, with 9 of 19 unit notes done" />
 </picture>
 
 The Tests tab keeps three facts apart: a test exists, the agent read it, and it passed. Chaff never runs tests, so a digest can't claim the third.
@@ -387,6 +397,7 @@ The width you drag the Full diff's file list to is kept.
 | Decisions on every unit, shown in Full diff with line coverage | Works |
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
+| Digest reads the MR or PR description and linked issues, outlines branches too large to send whole, streams in while Claude Code writes, and its diagram boxes open their units | Works |
 | Stack overview with parent editing and cumulative view | Works |
 | GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
 | GitHub pull requests, the same way | Works |

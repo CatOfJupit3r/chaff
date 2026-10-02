@@ -105,6 +105,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                   exit={focus.exit}
                   onViewChange={focus.setView}
                   onOpenInEditor={focus.openInEditor}
+                  onOpenUnit={focus.openUnit}
                   onEdit={() => setIsEditingChanges(true)}
                   onSwipe={swipe}
                 />
@@ -120,6 +121,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                   exit={focus.exit}
                   onViewChange={focus.setView}
                   onOpenInEditor={focus.openInEditor}
+                  onOpenUnit={focus.openUnit}
                   onSwipe={swipe}
                 />
               ) : null}

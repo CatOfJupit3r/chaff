@@ -194,5 +194,6 @@ export function useFocusReview(snapshotId: string) {
     undo,
     move,
     goTo,
+    openUnit: (unitId: string) => position.update({ unit: unitId, view: CARD_VIEWS.code }),
   };
 }

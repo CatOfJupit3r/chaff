@@ -11,6 +11,7 @@ import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
 import { ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
 
 import { ConnectionsService } from './connections.service';
+import { issueRefs } from './issue-refs.utils';
 import { RemoteProjectsService } from './remote-projects.service';
 
 /** How long a host's answer about a change is reused, so polling the review doesn't hammer the API. */
@@ -25,6 +26,11 @@ interface iCachedStatus {
  * Reads merge and pull requests that are under review: copying them into the store and telling the
  * review what moved on the host since its snapshot.
  */
+/** Issues read from a change's description, at most. */
+const MAX_LINKED_ISSUES = 3;
+/** Characters kept of a change's or an issue's description. */
+const MAX_DESCRIPTION_CHARS = 8000;
+
 @singleton()
 export class RemoteChangesService {
   private readonly statusCache = new Map<string, iCachedStatus>();
@@ -110,6 +116,25 @@ export class RemoteChangesService {
   public async versionOf(target: iReviewTargetRecord, headSha: string) {
     const { provider, access, project, changeNumber } = await this.locate(target);
     return (await provider.diffRefs(access, project, changeNumber, headSha))?.version;
+  }
+
+  /** The change's title and description, and the issues it mentions, for an agent to read as intent. */
+  public async describe(target: iReviewTargetRecord) {
+    const { provider, access, project, changeNumber } = await this.locate(target);
+    const change = await provider.getChange(access, project, changeNumber);
+    if (!change) return undefined;
+    const issues = await Promise.all(
+      issueRefs(change.description, changeNumber, MAX_LINKED_ISSUES).map(async (number) =>
+        provider.getIssue(access, project, number).catch(() => undefined),
+      ),
+    );
+    return {
+      title: change.title,
+      description: change.description.slice(0, MAX_DESCRIPTION_CHARS),
+      issues: issues
+        .filter((issue) => issue !== undefined)
+        .map((issue) => ({ ...issue, description: issue.description.slice(0, MAX_DESCRIPTION_CHARS) })),
+    };
   }
 
   public forget(snapshotId: string) {
