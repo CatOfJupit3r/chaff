@@ -14,6 +14,12 @@ export const DIGEST_RUNNER_LABELS = digestRunnersEnumwaii.derive({
   [DIGEST_RUNNERS.CODEX]: 'Codex',
 });
 
+/** The command looked up on PATH when Settings names no other. */
+export const DIGEST_RUNNER_COMMANDS = digestRunnersEnumwaii.derive({
+  [DIGEST_RUNNERS.CLAUDE_CODE]: 'claude',
+  [DIGEST_RUNNERS.CODEX]: 'codex',
+});
+
 /** Who receives the repository context when the runner works. */
 export const DIGEST_RUNNER_PROVIDERS = digestRunnersEnumwaii.derive({
   [DIGEST_RUNNERS.CLAUDE_CODE]: 'Anthropic',

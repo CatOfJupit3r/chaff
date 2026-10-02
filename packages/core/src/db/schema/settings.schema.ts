@@ -4,6 +4,7 @@ import type { Accent, CodeSize, ThemeMode } from '@chaff/common/enums/appearance
 import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import type { Editor } from '@chaff/common/enums/editors.enums';
+import type { iShortcutBinding } from '@chaff/common/helpers/shortcuts.helper';
 
 import { timestampColumn } from '../schema.helpers';
 
@@ -16,6 +17,13 @@ export const settings = sqliteTable('settings', {
   codeSize: text('code_size').$type<CodeSize>().notNull(),
   /** Coding agent that writes digests. */
   digestRunner: text('digest_runner').$type<DigestRunner>().notNull().default(DIGEST_RUNNERS.CLAUDE_CODE),
+  /** Commands or paths the user set for coding agents, by runner. */
+  agentCommands: text('agent_commands', { mode: 'json' })
+    .$type<{ runner: DigestRunner; command: string }[]>()
+    .notNull()
+    .default([]),
+  /** Keys the user rebound; other actions keep their default key. */
+  shortcuts: text('shortcuts', { mode: 'json' }).$type<iShortcutBinding[]>().notNull().default([]),
   updatedAt: timestampColumn('updated_at')
     .notNull()
     .$defaultFn(() => new Date())

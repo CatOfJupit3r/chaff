@@ -76,6 +76,8 @@ export const digestSchema = z.object({
 export const digestRunnerStatusSchema = z.object({
   runner: digestRunnerSchema,
   isAvailable: z.boolean(),
+  /** What was looked up: the command or path from Settings, else the usual command name. */
+  command: z.string(),
   /** Where the agent was found. */
   path: z.string().optional(),
 });

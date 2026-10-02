@@ -10,6 +10,8 @@ export const DEFAULT_SETTINGS = {
   accent: ACCENTS.DEFAULT,
   codeSize: CODE_SIZES.DEFAULT,
   digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
+  agentCommands: [],
+  shortcuts: [],
 } satisfies iSettingsResponse;
 
 /** Settings live in a single row with this id. */

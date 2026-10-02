@@ -14,7 +14,7 @@ export interface iCoreOptions {
   treeSitterDir?: string;
   /** Log file path; logs go to the console only when omitted. */
   logFilePath?: string;
-  /** Executables for the coding agents that write digests; `claude` and `codex` from PATH by default. */
+  /** Executables for the coding agents when Settings names none; `claude` and `codex` from PATH by default. */
   agentCommands?: ReadonlyMap<DigestRunner, string>;
   /** Version string reported by `app.info`. */
   appVersion: string;

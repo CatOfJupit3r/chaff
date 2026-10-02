@@ -42,6 +42,7 @@ const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
   'FIX_STILL_RUNNING',
   'NOTHING_TO_FIX',
   'PREFERENCE_NOT_FOUND',
+  'SHORTCUT_CONFLICT',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -89,5 +90,6 @@ export const errorMessages = errorCodesEnumwaii.derive({
   [errorCodes.FIX_ALREADY_RUNNING]: 'An agent is already working on fixes for this review',
   [errorCodes.FIX_STILL_RUNNING]: 'Stop the agent before discarding its fix',
   [errorCodes.PREFERENCE_NOT_FOUND]: 'Preference not found',
+  [errorCodes.SHORTCUT_CONFLICT]: 'Two actions on the same screen cannot share a key',
   [errorCodes.NOTHING_TO_FIX]: 'None of the selected findings is open for the agent to work on',
 });
