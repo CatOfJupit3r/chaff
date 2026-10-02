@@ -29,7 +29,7 @@ import { fitPatch } from './digest-patch.utils';
 import { previewOf } from './digest-preview.utils';
 import { buildDigestPrompt } from './digest-prompt.utils';
 import type { iDigestRepository } from './digest.repository';
-import type { iDigestPreview, iDigestRunnerAdapter, iPromptUnit } from './digests.types';
+import type { iDigestPreview, iDigestRunnerAdapter, iDigestStartOptions, iPromptUnit } from './digests.types';
 
 const DIGESTS_DIRECTORY = 'digests';
 /** Characters of diff put in the prompt; files past this are outlined and the agent reads them in the checkout. */
@@ -80,7 +80,7 @@ export class DigestsService {
     return this.agentCommandsService.runners();
   }
 
-  public async start(snapshotId: string, runner: DigestRunner) {
+  public async start(snapshotId: string, runner: DigestRunner, options: iDigestStartOptions) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
     const latest = await this.digestRepository.findLatest(snapshotId);
     if (latest?.status === DIGEST_STATUSES.RUNNING && this.running.has(latest.id)) {
@@ -88,14 +88,14 @@ export class DigestsService {
     }
     const command = await this.agentCommandsService.resolve(runner);
 
-    const digest = await this.digestRepository.create(snapshotId, runner);
+    const digest = await this.digestRepository.create(snapshotId, runner, options);
     const controller = new AbortController();
     this.running.set(digest.id, controller);
     const timeout = setTimeout(
       () => controller.abort(new Error('The digest took too long and was stopped')),
       DIGEST_TIMEOUT_MS,
     );
-    this.write(digest.id, command, runner, snapshot, target, controller.signal)
+    this.write(digest.id, command, runner, options, snapshot, target, controller.signal)
       .catch((error: unknown) => this.logger.error('Digest failed', { digestId: digest.id, error: String(error) }))
       .finally(() => {
         clearTimeout(timeout);
@@ -136,6 +136,7 @@ export class DigestsService {
     digestId: string,
     command: string,
     runner: DigestRunner,
+    { model, instructions }: iDigestStartOptions,
     snapshot: iSnapshotRecord,
     target: iReviewTargetRecord,
     signal: AbortSignal,
@@ -174,12 +175,13 @@ export class DigestsService {
       await mkdir(scratchDir, { recursive: true });
       onProgress('Checking out the snapshot');
       await this.snapshotStoreService.addWorktree(target.workspaceId, snapshot.headSha, checkout);
-      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(snapshot, target);
+      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(snapshot, target, instructions);
       onProgress(`Starting ${DIGEST_RUNNER_LABELS(runner)}`);
       const answer = await this.adapterFor(runner).run(command, {
         cwd: checkout,
         scratchDir,
         prompt,
+        model,
         schema: AGENT_DIGEST_JSON_SCHEMA,
         signal,
         onProgress,
@@ -218,7 +220,7 @@ export class DigestsService {
     }
   }
 
-  private async preparePrompt(snapshot: iSnapshotRecord, target: iReviewTargetRecord) {
+  private async preparePrompt(snapshot: iSnapshotRecord, target: iReviewTargetRecord, instructions?: string) {
     const [units, files, commits, fullPatch, preferences, change] = await Promise.all([
       this.snapshotRepository.listUnits(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
@@ -259,6 +261,7 @@ export class DigestsService {
       outlined,
       change,
       preferences,
+      instructions,
     });
     return {
       prompt,

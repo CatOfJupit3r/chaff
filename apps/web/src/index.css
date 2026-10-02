@@ -31,6 +31,7 @@
   --warn-fg: #6e4a10;
   --bad: #c93a30;
   --bad-soft: rgba(201, 58, 48, 0.1);
+  --bad-line: rgba(201, 58, 48, 0.3);
   --add-bg: rgba(46, 160, 67, 0.1);
   --add-gut: rgba(46, 160, 67, 0.18);
   --add-ln: #1f6b3a;
@@ -93,6 +94,7 @@
   --warn-fg: #e9d8b2;
   --bad: #ff7b72;
   --bad-soft: rgba(255, 123, 114, 0.12);
+  --bad-line: rgba(255, 123, 114, 0.3);
   --add-bg: rgba(46, 160, 67, 0.13);
   --add-gut: rgba(46, 160, 67, 0.22);
   --add-ln: #b9e6c6;
@@ -237,6 +239,7 @@
   --color-warn-fg: var(--warn-fg);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
+  --color-bad-line: var(--bad-line);
   --color-add-bg: var(--add-bg);
   --color-add-gut: var(--add-gut);
   --color-add-ln: var(--add-ln);

@@ -1,10 +1,26 @@
-import { DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
+import { DIGEST_RUNNER_LABELS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
+import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 
-import type { iDigest, iDigestContent } from './digests.types';
+import type { iDigest, iDigestContent, iDigestModels } from './digests.types';
 
 /** The digest's content once it is ready; a running, failed or stopped digest has none to show. */
 export function readyContent(digest: iDigest | null | undefined): iDigestContent | undefined {
   return digest?.status === DIGEST_STATUSES.READY ? digest.content : undefined;
+}
+
+/** The agent that writes the digest, with the model it was asked to use. */
+export function describeDigestRunner({ runner, model }: Pick<iDigest, 'runner' | 'model'>) {
+  return model ? `${DIGEST_RUNNER_LABELS(runner)} · ${model}` : DIGEST_RUNNER_LABELS(runner);
+}
+
+/** The remembered models with this runner's replaced by `model`, or dropped when it is empty. */
+export function rememberDigestModel(
+  models: iDigestModels,
+  runner: DigestRunner,
+  model: string | undefined,
+): iDigestModels {
+  const others = models.filter((candidate) => candidate.runner !== runner);
+  return model ? [...others, { runner, model }] : others;
 }
 
 /** Units in the digest's reading order; units it does not mention keep their order at the end. */

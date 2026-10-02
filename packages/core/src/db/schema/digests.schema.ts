@@ -17,6 +17,10 @@ export const digests = sqliteTable(
       .notNull()
       .references(() => snapshots.id, { onDelete: 'cascade' }),
     runner: text('runner').$type<DigestRunner>().notNull(),
+    /** The model the agent was asked to use; null for its default. */
+    model: text('model'),
+    /** Extra instructions the reviewer gave for this digest. */
+    instructions: text('instructions'),
     status: text('status').$type<DigestStatus>().notNull(),
     /** What the agent is doing now, while it runs. */
     progress: text('progress'),

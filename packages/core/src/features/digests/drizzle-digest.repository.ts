@@ -9,7 +9,7 @@ import { digests } from '@~/db/schema/digests.schema';
 
 import type { iDigestRepository } from './digest.repository';
 import { DigestResolver } from './digest.resolver';
-import type { iDigestUpdate } from './digests.types';
+import type { iDigestStartOptions, iDigestUpdate } from './digests.types';
 
 @singleton()
 export class DrizzleDigestRepository implements iDigestRepository {
@@ -18,11 +18,11 @@ export class DrizzleDigestRepository implements iDigestRepository {
     private readonly digestResolver: DigestResolver,
   ) {}
 
-  public async create(snapshotId: string, runner: DigestRunner) {
+  public async create(snapshotId: string, runner: DigestRunner, { model, instructions }: iDigestStartOptions) {
     const row = this.databaseService
       .getDb()
       .insert(digests)
-      .values({ snapshotId, runner, status: DIGEST_STATUSES.RUNNING })
+      .values({ snapshotId, runner, model, instructions, status: DIGEST_STATUSES.RUNNING })
       .returning()
       .get();
     return this.digestResolver.toDigestRecord(row);

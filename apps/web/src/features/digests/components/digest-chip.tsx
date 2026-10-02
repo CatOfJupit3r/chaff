@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
-import { DIGEST_RUNNER_LABELS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
+import { DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 
 import { SparkIcon, StopIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 
+import { describeDigestRunner } from '../digests.utils';
 import { useDigest } from '../hooks/use-digest';
 import { useDigestActions } from '../hooks/use-digest-actions';
 import { DigestRunDialog } from './digest-run-dialog';
@@ -22,7 +23,7 @@ export function DigestChip({ snapshotId }: { snapshotId: string }) {
         <span className="inline-flex h-[26px] max-w-[320px] items-center gap-2 rounded-full border border-accent-line bg-accent-soft pr-1 pl-2.5 text-[12px] text-accent">
           <span aria-hidden="true" className="size-1.5 flex-none animate-pulse rounded-full bg-accent" />
           <span className="truncate" title={digest.progress}>
-            {DIGEST_RUNNER_LABELS(digest.runner)} ·{' '}
+            {describeDigestRunner(digest)} ·{' '}
             {digest.preview
               ? `${digest.preview.noteCount} of ${digest.preview.unitCount} notes`
               : (digest.progress ?? 'starting')}

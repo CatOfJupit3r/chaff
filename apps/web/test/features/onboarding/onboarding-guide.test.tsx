@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
@@ -82,6 +82,7 @@ function mountGuide(onboarding: iOnboardingState = INITIAL_ONBOARDING) {
     defaultProgression: REVIEW_PROGRESSIONS.changes,
     digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
     agentCommands: [],
+    digestModels: [],
     shortcuts: [],
     onboarding,
   });
@@ -124,6 +125,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // The guide observes the page until it unmounts, so it goes before the ResizeObserver stub does.
+  cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });

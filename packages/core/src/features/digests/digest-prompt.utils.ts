@@ -34,6 +34,14 @@ ${files.join('\n')}
 `;
 }
 
+function describeInstructions(instructions: string | undefined) {
+  if (!instructions) return '';
+  return `The reviewer's extra instructions for this digest. Follow them as long as the answer keeps the shape asked for below:
+${instructions}
+
+`;
+}
+
 /** Instructions for the agent. The answer's shape is enforced separately by the JSON schema. */
 export function buildDigestPrompt(input: iDigestPromptInput) {
   const preferences = preferencesPromptSection(
@@ -57,7 +65,7 @@ The diff${input.outlined.length > 0 ? ' of the files that fit' : ''}:
 ${input.patch}
 \`\`\`
 ${describeOutline(input.outlined)}
-${preferences ? `${preferences}\n\n` : ''}Answer with:
+${preferences ? `${preferences}\n\n` : ''}${describeInstructions(input.instructions)}Answer with:
 1. overview: two to four plain sentences on what the branch does.
 2. groups: the meaningful behavior or design changes. Give each a short title, the behavior before and after in plain words, and the reason for it in intent. Set intentSource to DOCUMENTED only when a commit message, the merge request, a linked issue or a code comment states the reason; otherwise INFERRED. List the ids of the units that make up the change. Put each unit in at most one group; leave out units you cannot explain rather than forcing them in.
 3. readingOrder: every unit id once, in the order a reviewer should read them: contracts and types before the code that uses them, the mechanism before its integration, and each implementation right before its tests.
