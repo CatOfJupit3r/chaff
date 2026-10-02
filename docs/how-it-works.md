@@ -121,6 +121,12 @@ A preference is a rule you state for one repository, often promoted from a findi
 - the export's agent prompt and its JSON (`preferences`), which also makes them part of every fix hand-off;
 - the `CLAUDE.md`/`AGENTS.md` snippet in Settings, a `## Review preferences` list to paste into the repository yourself.
 
+## Agents and keys
+
+- **Finding an agent.** For each of Claude Code and Codex, Chaff uses the command or path saved in Settings, else `claude` or `codex`. A name is looked up on PATH and then through your login shell, because apps started from a desktop launcher often get a shorter PATH; a path must point at an executable file. Digests, fixes and the run dialogs all use the same lookup.
+- **Keys.** Settings stores only the keys you changed. Each screen (Focus, Verify) resolves its actions against the defaults; the core refuses a map where two actions on one screen share a key or an action takes 1 to 4 in Focus. Arrows always move, whatever the map says.
+- **Swipe.** A touch or pen drag on the Focus card moves it with a CSS transform only, so nothing around it shifts. Mostly vertical drags scroll the page as usual.
+
 ## Where data lives
 
 | What | Where |

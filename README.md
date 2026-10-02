@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences work too; swipe, rebindable keys and agent settings are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences, swipe on touch screens, rebindable keys and agent settings work too. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -86,6 +86,13 @@ One unit at a time: a function, a type or a section of a file, shown whole with 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-note-dark.png" />
   <img src="docs/screenshots/focus-note-light.png" alt="Writing a concern on the unit in Focus review" />
+</picture>
+
+On a touch screen or with a pen, swipe the card: right is **Looks good**, left starts a **Concern**. The border turns green or amber once letting go will decide; a short drag slides back. A mouse keeps selecting code.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-swipe-dark.png" />
+  <img src="docs/screenshots/focus-swipe-light.png" alt="A Focus card dragged to the right with a green border, about to be marked Looks good" />
 </picture>
 
 ### AI digest
@@ -257,6 +264,22 @@ On a merge or pull request, the drafts tab posts the findings as GitLab draft no
   <img src="docs/screenshots/settings-preferences-light.png" alt="Preferences in Settings, one promoted from finding F-2" />
 </picture>
 
+### Agents and keys
+
+**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-agents-dark.png" />
+  <img src="docs/screenshots/settings-agents-light.png" alt="Coding agents in Settings with Claude Code found on PATH and Codex not found" />
+</picture>
+
+Every Focus and Verify action can take another key: click it and press the new one. A key already used on that screen is refused with the action that has it, and **Reset** puts the default back. The hints under the card and on the buttons follow your keys.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-keyboard-dark.png" />
+  <img src="docs/screenshots/settings-keyboard-light.png" alt="Keyboard map in Settings with Later moved to B" />
+</picture>
+
 ### Open in your editor
 
 File names and line numbers link into VS Code, VS Code Insiders or Cursor, at the path of your local checkout.
@@ -299,6 +322,9 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import | Works |
 | Fix hand-off: a local agent fixes findings in its own checkout, on a branch of Chaff's store | Works |
 | Project preferences: promoted from findings, exported for CLAUDE.md, given to digests and agents | Works |
+| Swipe decisions in Focus with a finger or pen | Works |
+| Rebindable keys for Focus and Verify | Works |
+| Agent settings: custom command paths, default agent, privacy notice | Works |
 
 ## Stack
 
