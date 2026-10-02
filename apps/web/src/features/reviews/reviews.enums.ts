@@ -1,4 +1,4 @@
-import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import { FILE_STATUSES, fileStatusesEnumwaii, REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
@@ -59,6 +59,31 @@ export const FILE_DECISION_DOTS = fileDecisionsEnumwaii.derive({
   [FILE_DECISIONS.PARTIAL]: 'border-[1.5px] border-good',
   [FILE_DECISIONS.LOOKS_GOOD]: 'bg-good',
   [FILE_DECISIONS.CONCERN]: 'bg-warn',
+});
+
+/** The one-letter status git tools show beside a changed file. */
+export const FILE_STATUS_LETTERS = fileStatusesEnumwaii.derive({
+  [FILE_STATUSES.ADDED]: 'A',
+  [FILE_STATUSES.MODIFIED]: 'M',
+  [FILE_STATUSES.DELETED]: 'D',
+  [FILE_STATUSES.RENAMED]: 'R',
+  [FILE_STATUSES.TYPE_CHANGED]: 'T',
+});
+
+export const FILE_STATUS_TONES = fileStatusesEnumwaii.derive({
+  [FILE_STATUSES.ADDED]: 'text-good',
+  [FILE_STATUSES.MODIFIED]: 'text-warn',
+  [FILE_STATUSES.DELETED]: 'text-bad',
+  [FILE_STATUSES.RENAMED]: 'text-accent',
+  [FILE_STATUSES.TYPE_CHANGED]: 'text-muted',
+});
+
+export const FILE_STATUS_BADGES = fileStatusesEnumwaii.derive({
+  [FILE_STATUSES.ADDED]: 'border-good-line bg-good-soft text-good',
+  [FILE_STATUSES.MODIFIED]: 'border-warn-line bg-warn-soft text-warn',
+  [FILE_STATUSES.DELETED]: 'border-bad-line bg-bad-soft text-bad',
+  [FILE_STATUSES.RENAMED]: 'border-accent-line bg-accent-soft text-accent',
+  [FILE_STATUSES.TYPE_CHANGED]: 'border-line-strong bg-raised text-muted',
 });
 
 /** Marks a review that is not a branch's own changes. */

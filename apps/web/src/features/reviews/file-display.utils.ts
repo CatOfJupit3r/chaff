@@ -1,8 +1,15 @@
-import { FILE_KINDS, FILE_STATUSES } from '@chaff/common/enums/review.enums';
+import { FILE_KINDS, FILE_STATUS_LABELS, FILE_STATUSES } from '@chaff/common/enums/review.enums';
 
 import { FILE_DISPLAYS } from './reviews.enums';
 import type { FileDisplay } from './reviews.enums';
 import type { iSnapshotFile } from './reviews.types';
+
+export type iFileStatusFile = Pick<iSnapshotFile, 'status' | 'oldPath'>;
+
+/** Hover text for a file's status, with the previous path of a renamed file. */
+export function fileStatusTitle({ status, oldPath }: iFileStatusFile) {
+  return oldPath ? `${FILE_STATUS_LABELS(status)} from ${oldPath}` : FILE_STATUS_LABELS(status);
+}
 
 /** Diffs with more changed lines than this stay collapsed until asked for. */
 export const LARGE_DIFF_LINES = 1500;

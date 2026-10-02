@@ -415,6 +415,7 @@ The width you drag the Full diff's file list to is kept.
 | Frozen snapshots in Chaff's own git store | Works |
 | Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
 | Full diff: tree or list, one or all files, unified (old and new line numbers) or split, wrap, context; filter by file name or changed code | Works |
+| Added, modified, deleted, renamed and type-changed files marked git-style: A/M/D/R/T in the file list with counts, badges and the previous path on file headers and Focus cards | Works |
 | New commits, rewritten branches and moved parents detected as they happen (refs are watched); Update | Works |
 | Open in VS Code, Insiders or Cursor | Works |
 | Light and dark themes, accent, code size | Works |

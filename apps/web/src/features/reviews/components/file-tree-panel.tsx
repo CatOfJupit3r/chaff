@@ -12,6 +12,7 @@ import { FILE_TREE_VIEWS, FILE_TREE_VIEW_LABELS, fileTreeViewValues } from '../r
 import type { FileTreeView } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffSearchResults } from './diff-search-results';
+import { FileStatusSummary } from './file-status';
 import { FileTreeFolder } from './file-tree-folder';
 import { FileTreeRow } from './file-tree-row';
 
@@ -47,6 +48,9 @@ export function FileTreePanel({ snapshotId, files, currentPath, onSelect, onOpen
           onChange={setView}
           className="[&_button]:h-[22px] [&_button]:px-2 [&_button]:text-[11.5px]"
         />
+      </div>
+      <div className="px-2 pb-2">
+        <FileStatusSummary files={files} />
       </div>
       <label className="mx-1 mb-2 flex items-center gap-2 rounded-sm border border-line bg-surface px-2 py-1.5 text-faint">
         <SearchIcon className="size-[13px]" />
