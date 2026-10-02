@@ -6,6 +6,7 @@ import { AppShell } from '@~/components/layout/app-shell';
 import { ToastViewport } from '@~/components/toast/toast-viewport';
 import { useApplyAppearance } from '@~/features/appearance/hooks/use-apply-appearance';
 import { OnboardingGuide } from '@~/features/onboarding/components/onboarding-guide';
+import { DiffWorkerPool } from '@~/features/reviews/components/diff-worker-pool';
 import { settingsQueryOptions } from '@~/features/settings/hooks/use-settings';
 import type { tanstackRPC } from '@~/utils/tanstack-orpc';
 
@@ -24,11 +25,13 @@ function RootComponent() {
 
   return (
     <NuqsAdapter>
-      <AppShell>
-        <Outlet />
-      </AppShell>
-      <ToastViewport />
-      <OnboardingGuide />
+      <DiffWorkerPool>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+        <ToastViewport />
+        <OnboardingGuide />
+      </DiffWorkerPool>
     </NuqsAdapter>
   );
 }

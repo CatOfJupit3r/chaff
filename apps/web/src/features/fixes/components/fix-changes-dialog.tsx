@@ -38,7 +38,6 @@ export function FixChangesDialog({ fix, isOpen, onOpenChange }: iFixChangesDialo
               </div>
               <PatchDiff
                 patch={file.patch}
-                disableWorkerPool
                 options={{
                   theme: DIFF_THEME_NAME,
                   themeType: isDark ? 'dark' : 'light',

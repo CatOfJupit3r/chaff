@@ -70,7 +70,10 @@ export function DiffFileSection({
         </button>
       </div>
       {isOpen ? (
-        <div style={{ minHeight: isNear ? 0 : Math.min(changedLines, MAX_ESTIMATED_LINES) * ESTIMATED_LINE_HEIGHT }}>
+        <div
+          style={{ minHeight: isNear ? 0 : Math.min(changedLines, MAX_ESTIMATED_LINES) * ESTIMATED_LINE_HEIGHT }}
+          className="[contain-intrinsic-size:auto_480px] [content-visibility:auto]"
+        >
           {isNear ? (
             <FileDiffBody snapshotId={snapshotId} file={file} layout={layout} isWrapped={isWrapped} />
           ) : (

@@ -41,8 +41,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@babel/core": "7.29.7",
     "@chaff/eslint-config": "workspace:*",
     "@chaff/prettier-config": "workspace:*",
+    "@rolldown/plugin-babel": "0.2.4",
     "@tanstack/router-plugin": "1.168.19",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
