@@ -37,14 +37,15 @@ export interface iReviewTargetResponse {
   parentBranch: string;
   change?: iChangeRequestInfo;
   latestSnapshot?: iSnapshotSummary;
+  findingCount: number;
+  /** Findings still open or waiting on a fix or a check. */
+  activeFindingCount: number;
   archived?: { at: Date; reason: ArchiveReason };
 }
 
 export type iReviewHistoryEntry = Omit<iReviewTargetResponse, 'latestSnapshot'> & {
   latestSnapshot: iSnapshotSummary;
   workspaceName: string;
-  findingCount: number;
-  activeFindingCount: number;
   lastActivityAt: Date;
 };
 

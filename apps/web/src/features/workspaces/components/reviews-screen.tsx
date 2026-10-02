@@ -8,6 +8,7 @@ import { useWorkspaces } from '../hooks/use-workspaces';
 import { NoRepositories } from './empty-components';
 import { LocalStacksGroup } from './local-stacks-group';
 import { RepositoriesGroup } from './repositories-group';
+import { StartReviewBox } from './start-review-box';
 
 export function ReviewsScreen() {
   const workspaces = useWorkspaces();
@@ -32,6 +33,7 @@ export function ReviewsScreen() {
             <NoRepositories onAdd={addFromPicker} isAdding={isAdding} />
           ) : (
             <>
+              <StartReviewBox workspaces={workspaces} />
               <ChangeRequestsGroup workspaces={workspaces} />
               <LocalStacksGroup workspaces={workspaces} />
               <RepositoriesGroup workspaces={workspaces} onAdd={addFromPicker} isAdding={isAdding} />
