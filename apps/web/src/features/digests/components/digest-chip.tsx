@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { DIGEST_RUNNER_LABELS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 
 import { SparkIcon, StopIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
@@ -19,7 +20,10 @@ export function DigestChip({ snapshotId }: { snapshotId: string }) {
   return (
     <>
       {isRunning ? (
-        <span className="inline-flex h-[26px] max-w-[320px] items-center gap-2 rounded-full border border-accent-line bg-accent-soft pr-1 pl-2.5 text-[12px] text-accent">
+        <span
+          data-onboarding={ONBOARDING_ITEMS.DIGEST}
+          className="inline-flex h-[26px] max-w-[320px] items-center gap-2 rounded-full border border-accent-line bg-accent-soft pr-1 pl-2.5 text-[12px] text-accent"
+        >
           <span aria-hidden="true" className="size-1.5 flex-none animate-pulse rounded-full bg-accent" />
           <span className="truncate" title={digest.progress}>
             {DIGEST_RUNNER_LABELS(digest.runner)} ·{' '}
@@ -42,6 +46,7 @@ export function DigestChip({ snapshotId }: { snapshotId: string }) {
           variant="ghost"
           size="sm"
           disabled={actions.isStarting}
+          data-onboarding={ONBOARDING_ITEMS.DIGEST}
           title={digest?.status === DIGEST_STATUSES.FAILED ? digest.error : undefined}
           onClick={() => setIsDialogOpen(true)}
           className={digest?.status === DIGEST_STATUSES.FAILED ? 'text-bad' : undefined}

@@ -16,7 +16,7 @@ export function SnapshotChip({ snapshot }: { snapshot: iSnapshot }) {
   const canUpdate = change !== undefined && !status?.isBranchMissing;
 
   return (
-    <div data-onboarding-snapshot className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <span
         title={
           change
