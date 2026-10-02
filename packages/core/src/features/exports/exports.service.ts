@@ -1,7 +1,7 @@
 import { inject, singleton } from 'tsyringe';
 
 import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
-import { IS_INSPECTED_MARK } from '@chaff/common/enums/review.enums';
+import { IS_INSPECTED_MARK, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
@@ -130,7 +130,12 @@ export class ExportsService {
   private unreviewed({ units, paths }: iReviewSource) {
     return units
       .filter((unit) => !unit.mark || !IS_INSPECTED_MARK.get(unit.mark))
-      .map((unit) => ({ path: paths.get(unit.fileId) ?? '', title: unit.title, kind: unit.kind }));
+      .map((unit) => ({
+        path: paths.get(unit.fileId) ?? '',
+        title: unit.title,
+        kind: unit.kind,
+        skipReason: unit.mark === UNIT_MARKS.SKIPPED ? (unit.skipReason ?? 'no reason given') : undefined,
+      }));
   }
 
   private packetFinding(

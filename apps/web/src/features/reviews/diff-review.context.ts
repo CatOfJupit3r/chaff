@@ -34,8 +34,8 @@ export interface iDiffReview {
   cancelDraft: () => void;
   /** Resolves false when the note could not be saved. */
   saveDraft: (kind: FindingKind, body: string) => Promise<boolean>;
-  /** Marks every unit in the file without a decision as Looks good. */
-  markFile: (fileId: string) => void;
+  /** Marks every unit in the file without a decision as Looks good, or skips them with the reason. */
+  markFile: (fileId: string, skipReason?: string) => void;
 }
 
 export const DiffReviewContext = createContext<iDiffReview | undefined>(undefined);

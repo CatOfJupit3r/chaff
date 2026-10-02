@@ -3,6 +3,7 @@ import { Pill } from '@~/components/ui/pill';
 import type { iFinding } from '@~/features/findings/findings.types';
 import { countActive } from '@~/features/findings/findings.utils';
 import { DiffStat } from '@~/features/reviews/components/diff-stat';
+import { isReviewComplete } from '@~/features/reviews/review-progress.utils';
 import type { iSnapshotSummary } from '@~/features/reviews/reviews.types';
 import type { iStackLink } from '@~/features/reviews/stack-review.utils';
 import { cn } from '@~/lib/utils';
@@ -12,8 +13,7 @@ import { MarkBar } from './mark-bar';
 
 function dotClass(summary: iSnapshotSummary | undefined) {
   if (!summary) return 'border-line-strong';
-  const isDone = summary.unitCount > 0 && summary.inspectedUnitCount === summary.unitCount;
-  return isDone ? 'border-good bg-good' : 'border-fg';
+  return isReviewComplete(summary) ? 'border-good bg-good' : 'border-fg';
 }
 
 interface iStackChainItemProps {
@@ -61,9 +61,10 @@ function StackChainItem({ link, findings, isSelected, onSelect }: iStackChainIte
           {summary ? (
             <>
               <DiffStat additions={summary.additions} deletions={summary.deletions} />
-              <span>
-                {summary.inspectedUnitCount}/{summary.unitCount} units
+              <span title="Regions decided on or skipped">
+                {summary.accountedRegionCount}/{summary.regionCount} regions
               </span>
+              {isReviewComplete(summary) ? <Pill variant="ok">complete</Pill> : null}
             </>
           ) : (
             <span>{pluralize(link.branch.commitsAhead, 'commit')}</span>

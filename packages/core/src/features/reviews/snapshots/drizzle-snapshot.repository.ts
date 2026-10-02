@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, sql } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
 import { DatabaseService } from '@~/db/database.service';
@@ -21,7 +21,13 @@ function chunk<TItem>(items: readonly TItem[]) {
 }
 
 const { patch: _patch, ...fileColumns } = getTableColumns(snapshotFiles);
-const unitWithMarkColumns = { ...getTableColumns(units), mark: unitMarks.mark, isMarkCarried: unitMarks.isCarried };
+const unitWithMarkColumns = {
+  ...getTableColumns(units),
+  mark: unitMarks.mark,
+  isMarkCarried: unitMarks.isCarried,
+  skipReason: unitMarks.skipReason,
+  regionCount: sql<number>`(select count(*) from ${regions} where ${regions.unitId} = ${units.id})`,
+};
 
 @singleton()
 export class DrizzleSnapshotRepository implements iSnapshotRepository {

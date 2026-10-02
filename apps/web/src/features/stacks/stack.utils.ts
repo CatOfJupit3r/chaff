@@ -5,7 +5,13 @@ import type { iSnapshotSummary } from '@~/features/reviews/reviews.types';
 import type { iLocalStack } from '@~/features/workspaces/workspaces.types';
 
 /** Order of decisions in a progress bar, after which come the undecided units. */
-const MARK_ORDER: UnitMark[] = [UNIT_MARKS.LOOKS_GOOD, UNIT_MARKS.CONCERN, UNIT_MARKS.QUESTION, UNIT_MARKS.LATER];
+const MARK_ORDER: UnitMark[] = [
+  UNIT_MARKS.LOOKS_GOOD,
+  UNIT_MARKS.CONCERN,
+  UNIT_MARKS.QUESTION,
+  UNIT_MARKS.SKIPPED,
+  UNIT_MARKS.LATER,
+];
 
 export interface iMarkSegment {
   mark?: UnitMark;

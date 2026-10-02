@@ -104,7 +104,9 @@ function reviewMarkdown(review: iPacketReview, shouldQuoteCode: boolean) {
   for (const item of review.findings) lines.push('', findingMarkdown(item, shouldQuoteCode));
   if (review.unreviewed.length > 0) {
     lines.push('', '### Units without a decision', '');
-    for (const unit of review.unreviewed) lines.push(`- \`${unit.path}\` ${unit.title}`);
+    for (const unit of review.unreviewed) {
+      lines.push(`- \`${unit.path}\` ${unit.title}${unit.skipReason ? ` (skipped: ${unit.skipReason})` : ''}`);
+    }
   }
   return lines.join('\n');
 }
@@ -217,6 +219,7 @@ export function packetJson(packet: iPacket) {
         path: unit.path,
         title: unit.title,
         kind: unit.kind.toLowerCase(),
+        skipReason: unit.skipReason ?? null,
       })),
     })),
   };

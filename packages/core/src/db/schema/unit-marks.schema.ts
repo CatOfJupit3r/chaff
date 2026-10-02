@@ -16,6 +16,8 @@ export const unitMarks = sqliteTable(
       .notNull()
       .references(() => snapshots.id, { onDelete: 'cascade' }),
     mark: text('mark').$type<UnitMark>().notNull(),
+    /** Why the reviewer skipped the unit, for a Skipped mark. */
+    skipReason: text('skip_reason'),
     /** Copied from the previous snapshot because the unit did not change, rather than decided here. */
     isCarried: integer('is_carried', { mode: 'boolean' }).notNull().default(false),
     updatedAt: timestampColumn('updated_at')

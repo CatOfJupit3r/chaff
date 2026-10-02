@@ -72,6 +72,9 @@ export type iUnitRecord = Omit<
   newEndLine?: number;
   /** Absent while the reviewer has not decided on the unit. */
   mark?: UnitMark;
+  /** Why the reviewer skipped it, for a Skipped mark. */
+  skipReason?: string;
+  regionCount: number;
 };
 
 export interface iUnitRevisionUpdate {

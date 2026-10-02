@@ -65,15 +65,18 @@ export function StackRow({ stack, reviewTargets }: iStackRowProps) {
       </div>
       <div className="flex items-center gap-4">
         {review.isStarted ? (
-          <div className="flex items-center gap-2 font-mono text-[12px] text-muted tabular-nums" title="Units reviewed">
+          <div
+            className="flex items-center gap-2 font-mono text-[12px] text-muted tabular-nums"
+            title="Regions decided on or skipped"
+          >
             <span>
-              {review.inspectedUnitCount} / {review.unitCount}
+              {review.accountedRegionCount} / {review.regionCount}
             </span>
             <span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-raised">
               <span
                 className="block h-full bg-good"
                 style={{
-                  width: `${review.unitCount === 0 ? 0 : (review.inspectedUnitCount / review.unitCount) * 100}%`,
+                  width: `${review.regionCount === 0 ? 0 : (review.accountedRegionCount / review.regionCount) * 100}%`,
                 }}
               />
             </span>

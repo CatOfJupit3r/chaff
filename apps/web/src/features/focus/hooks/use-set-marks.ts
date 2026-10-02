@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { unitMarkSchema } from '@chaff/common/enums/review.enums';
+import { UNIT_MARKS, unitMarkSchema } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iUnit } from '@~/features/reviews/reviews.types';
@@ -12,6 +12,7 @@ import { unitsQueryOptions } from './use-units';
 export interface iUnitMarkChange {
   unitId: string;
   mark?: UnitMark;
+  skipReason?: string;
 }
 
 /**
@@ -23,13 +24,14 @@ export function useSetMarks(snapshotId: string) {
   const { queryKey } = unitsQueryOptions(snapshotId);
 
   // Mutation input carries plain strings; they are parsed back into marks for the cache.
-  const writeMarks = (marks: readonly { unitId: string; mark?: string }[]) => {
-    const byUnit = new Map(marks.map(({ unitId, mark }) => [unitId, mark]));
+  const writeMarks = (marks: readonly { unitId: string; mark?: string; skipReason?: string }[]) => {
+    const byUnit = new Map(marks.map((change) => [change.unitId, change]));
     queryClient.setQueryData<iUnit[]>(queryKey, (units) =>
       units?.map((unit) => {
-        if (!byUnit.has(unit.id)) return unit;
-        const mark = byUnit.get(unit.id);
-        return { ...unit, mark: mark === undefined ? undefined : unitMarkSchema.parse(mark) };
+        const change = byUnit.get(unit.id);
+        if (!change) return unit;
+        const mark = change.mark === undefined ? undefined : unitMarkSchema.parse(change.mark);
+        return { ...unit, mark, skipReason: mark === UNIT_MARKS.SKIPPED ? change.skipReason : undefined };
       }),
     );
   };
@@ -39,10 +41,10 @@ export function useSetMarks(snapshotId: string) {
       onMutate: async ({ marks }) => {
         await queryClient.cancelQueries({ queryKey });
         const units = queryClient.getQueryData<iUnit[]>(queryKey) ?? [];
-        const previous = marks.map(({ unitId }) => ({
-          unitId,
-          mark: units.find((unit) => unit.id === unitId)?.mark,
-        }));
+        const previous = marks.map(({ unitId }) => {
+          const unit = units.find((candidate) => candidate.id === unitId);
+          return { unitId, mark: unit?.mark, skipReason: unit?.skipReason };
+        });
         writeMarks(marks);
         return { previous };
       },

@@ -100,6 +100,18 @@ Cards come in three progressions, picked above the card. **Changes** shows each 
   <img src="docs/screenshots/change-editor-light.png" alt="Edit changes dialog listing three Change units with their units, reorder and ungroup buttons, and a box to name a new change" />
 </picture>
 
+A unit that doesn't need reading (an import shuffle, a lockfile) can be skipped with **S** and a short reason, such as "imports only". Skipping counts as accounted for, and the reason goes into the export, so the agent knows what nobody read. In the Full diff, **Skip…** next to a file does the same for every undecided unit in it. A review is complete once every region is in a unit you decided on or skipped; the Reviews and Stack screens count progress in regions, and the last card says so.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-skip-dark.png" />
+  <img src="docs/screenshots/focus-skip-light.png" alt="Skipping a unit in Focus with the reason imports only, reordered by the formatter" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-complete-dark.png" />
+  <img src="docs/screenshots/focus-complete-light.png" alt="The last Focus card reading Review of feat/base-cli complete, with one unit looking good and one skipped" />
+</picture>
+
 On a touch screen or with a pen, swipe the card: right is **Looks good**, left starts a **Concern**. The border turns green or amber once letting go will decide; a short drag slides back. A mouse keeps selecting code.
 
 <picture>
@@ -336,6 +348,7 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Project preferences: promoted from findings, exported for CLAUDE.md, given to digests and agents | Works |
 | Swipe decisions in Focus with a finger or pen | Works |
 | Change units: digest groups as Focus cards; make, split, merge, rename, reorder; Changes, Functions or Sections progression | Works |
+| Skip with a reason; a review is complete once every region is decided on or skipped | Works |
 | Rebindable keys for Focus and Verify | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 

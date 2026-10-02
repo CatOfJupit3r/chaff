@@ -47,6 +47,7 @@
   --on-warn: #ffffff;
   --primary-hover: #000000;
   --later: #b8b8c3;
+  --skip: #8e8e99;
   --stripe: rgba(255, 255, 255, 0.55);
   --ring: rgba(23, 23, 28, 0.08);
   --scrim: rgba(20, 20, 30, 0.35);
@@ -106,6 +107,7 @@
   --on-warn: #1a1406;
   --primary-hover: #ffffff;
   --later: #4a4a54;
+  --skip: #6a6a75;
   --stripe: rgba(0, 0, 0, 0.35);
   --ring: rgba(237, 237, 240, 0.08);
   --scrim: rgba(0, 0, 0, 0.6);
@@ -185,6 +187,7 @@
   --color-on-warn: var(--on-warn);
   --color-primary-hover: var(--primary-hover);
   --color-later: var(--later);
+  --color-skip: var(--skip);
   --color-stripe: var(--stripe);
   --color-ring: var(--ring);
   --color-scrim: var(--scrim);

@@ -1,0 +1,1 @@
+ALTER TABLE `unit_marks` ADD `skip_reason` text;

@@ -8,13 +8,13 @@ import { useShortcutKeys } from '@~/hooks/use-shortcut-keys';
 
 import { cardViewValues } from '../focus.enums';
 import type { CardView } from '../focus.enums';
-import type { CommentMark } from './use-focus-review';
+import type { NoteMark } from './use-focus-review';
 
 interface iFocusKeyHandlers {
   hasCard: boolean;
   onLooksGood: () => unknown;
   onLater: () => unknown;
-  onComment: (mark: CommentMark) => unknown;
+  onComment: (mark: NoteMark) => unknown;
   onMove: (delta: number) => unknown;
   onUndo: () => unknown;
   onToggleContext: () => unknown;
@@ -44,6 +44,7 @@ function handlersByAction(handlers: iFocusKeyHandlers) {
     [SHORTCUT_ACTIONS.FOCUS_LATER, handlers.onLater],
     [SHORTCUT_ACTIONS.FOCUS_CONCERN, () => handlers.onComment(UNIT_MARKS.CONCERN)],
     [SHORTCUT_ACTIONS.FOCUS_QUESTION, () => handlers.onComment(UNIT_MARKS.QUESTION)],
+    [SHORTCUT_ACTIONS.FOCUS_SKIP, () => handlers.onComment(UNIT_MARKS.SKIPPED)],
   ]);
 }
 
@@ -54,7 +55,7 @@ function actionFor(key: string, handlers: iFocusKeyHandlers, keys: ReadonlyMap<S
   return view ? () => handlers.onView(view) : undefined;
 }
 
-/** Focus review keys from Settings (G, C, Q, L decide; J/K move; U undoes; I opens context), arrows and 1-4. */
+/** Focus review keys from Settings (G, C, Q, L, S decide; J/K move; U undoes; I opens context), arrows and 1-4. */
 export function useFocusKeyboard(handlers: iFocusKeyHandlers) {
   const keys = useShortcutBindings();
   useShortcutKeys((key) => actionFor(key, handlers, keys));

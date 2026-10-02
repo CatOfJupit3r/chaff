@@ -44,6 +44,8 @@ export interface iUnreviewedUnit {
   path: string;
   title: string;
   kind: UnitKind;
+  /** Set when the reviewer skipped the unit on purpose. */
+  skipReason?: string;
 }
 
 export interface iPacketReview {

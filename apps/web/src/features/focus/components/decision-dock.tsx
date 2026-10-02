@@ -5,29 +5,41 @@ import type { UnitMark } from '@chaff/common/enums/review.enums';
 import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
 import type { ShortcutAction } from '@chaff/common/enums/shortcuts.enums';
 
-import { CheckIcon, ClockIcon, MessageIcon, NextIcon, QuestionIcon } from '@~/components/icons/icons';
+import { CheckIcon, ClockIcon, MessageIcon, NextIcon, QuestionIcon, SkipIcon } from '@~/components/icons/icons';
 import { Kbd } from '@~/components/ui/kbd';
 import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
 import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
 import { cn } from '@~/lib/utils';
 
-import type { CommentMark } from '../hooks/use-focus-review';
+import type { NoteMark } from '../hooks/use-focus-review';
 import { NoteComposer } from './note-composer';
 
 interface iDecisionDockProps {
   mark?: UnitMark;
-  noteMark?: CommentMark;
+  noteMark?: NoteMark;
   headSha: string;
   isSaving: boolean;
-  onComment: (mark: CommentMark) => void;
+  onComment: (mark: NoteMark) => void;
   onCancelNote: () => void;
-  onSaveNote: (mark: CommentMark, body: string) => Promise<boolean>;
+  onSaveNote: (mark: NoteMark, body: string) => Promise<boolean>;
   onLooksGood: () => void;
   onLater: () => void;
 }
 
 const ACTION_CLASS =
   'flex h-[42px] items-center justify-center gap-2 rounded-[10px] border px-2.5 font-medium whitespace-nowrap transition-colors [&_svg]:size-4';
+
+const COMMENT_BUTTON_CLASSES = new Map<NoteMark, string>([
+  [
+    UNIT_MARKS.CONCERN,
+    'hover:border-warn-line hover:text-warn aria-pressed:border-warn-line aria-pressed:bg-warn-soft aria-pressed:text-warn',
+  ],
+  [
+    UNIT_MARKS.QUESTION,
+    'hover:border-accent-line hover:text-accent aria-pressed:border-accent-line aria-pressed:bg-accent-soft aria-pressed:text-accent',
+  ],
+  [UNIT_MARKS.SKIPPED, 'aria-pressed:border-fg aria-pressed:bg-raised aria-pressed:text-fg'],
+]);
 
 function GroupHeading({ title, hint }: { title: string; hint: string }) {
   return (
@@ -39,7 +51,7 @@ function GroupHeading({ title, hint }: { title: string; hint: string }) {
 }
 
 /**
- * Fixed under the card so it never moves. Comment actions are dashed because they open a note first;
+ * Fixed under the card so it never moves. Actions that open a note first (Concern, Question, Skip) are dashed;
  * resolving actions are solid with an arrow because they close the card.
  */
 export function DecisionDock({
@@ -56,7 +68,7 @@ export function DecisionDock({
   const keys = useShortcutBindings();
   const keyFor = (action: ShortcutAction) => shortcutKeyLabel(keys.get(action) ?? '');
   const isPressed = (candidate: UnitMark) => noteMark === candidate || (!noteMark && mark === candidate);
-  const commentButton = (candidate: CommentMark, icon: ReactNode, label: string, key: string) => (
+  const commentButton = (candidate: NoteMark, icon: ReactNode, label: string, key: string) => (
     <button
       type="button"
       aria-pressed={isPressed(candidate)}
@@ -64,9 +76,7 @@ export function DecisionDock({
       className={cn(
         ACTION_CLASS,
         'border-dashed border-line-strong bg-transparent text-muted hover:bg-hover hover:text-fg aria-pressed:border-solid',
-        candidate === UNIT_MARKS.CONCERN
-          ? 'hover:border-warn-line hover:text-warn aria-pressed:border-warn-line aria-pressed:bg-warn-soft aria-pressed:text-warn'
-          : 'hover:border-accent-line hover:text-accent aria-pressed:border-accent-line aria-pressed:bg-accent-soft aria-pressed:text-accent',
+        COMMENT_BUTTON_CLASSES.get(candidate),
       )}
     >
       {icon}
@@ -85,7 +95,7 @@ export function DecisionDock({
           onCancel={onCancelNote}
           onSave={onSaveNote}
         />
-        <div className="grid grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] items-end gap-4">
+        <div className="grid grid-cols-[minmax(0,2fr)_1px_minmax(0,3fr)] items-end gap-4">
           <div className="flex min-w-0 flex-col gap-1.5">
             <GroupHeading title="Comment" hint="write a note first" />
             <div className="grid grid-cols-2 gap-2">
@@ -101,7 +111,8 @@ export function DecisionDock({
           <div aria-hidden="true" className="self-stretch bg-line" />
           <div className="flex min-w-0 flex-col gap-1.5">
             <GroupHeading title="Resolve" hint="close this card and move on" />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
+              {commentButton(UNIT_MARKS.SKIPPED, <SkipIcon />, 'Skip…', keyFor(SHORTCUT_ACTIONS.FOCUS_SKIP))}
               <button
                 type="button"
                 aria-pressed={isPressed(UNIT_MARKS.LATER)}

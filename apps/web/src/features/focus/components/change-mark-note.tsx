@@ -23,6 +23,7 @@ export function ChangeMarkNote({ card, headSha, hasFindings }: iChangeMarkNotePr
     tally.concerns > 0 ? pluralize(tally.concerns, 'concern') : undefined,
     tally.questions > 0 ? pluralize(tally.questions, 'question') : undefined,
     tally.later > 0 ? `${tally.later} later` : undefined,
+    tally.skipped > 0 ? `${tally.skipped} skipped` : undefined,
     tally.untouched > 0 ? `${tally.untouched} without a decision` : undefined,
   ].filter((part): part is string => part !== undefined);
 
@@ -30,6 +31,7 @@ export function ChangeMarkNote({ card, headSha, hasFindings }: iChangeMarkNotePr
     <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-canvas px-[22px] py-[9px] text-[12.5px] text-muted">
       <Pill variant="neutral">{mark ? UNIT_MARK_LABELS(mark) : 'Mixed'}</Pill>
       <span>
+        {card.units[0]?.skipReason && mark ? `Skipped: ${card.units[0].skipReason}. ` : ''}
         {mark ? `You decided this on ${headSha.slice(0, 7)}.` : `Its units differ: ${parts.join(', ')}.`}
         {hasFindings ? ' Its findings stay in Findings if you change your mind.' : ''} A decision here applies to all{' '}
         {pluralize(card.units.length, 'unit')}.

@@ -8,12 +8,12 @@ import { ReviewTopBar } from '@~/features/reviews/components/review-top-bar';
 import { cn } from '@~/lib/utils';
 
 import { cardMark } from '../focus-cards.utils';
-import { tallyMarks } from '../focus-queue.utils';
+import { countRegions, tallyMarks } from '../focus-queue.utils';
 import { CARD_EXITS, FOCUS_QUEUES } from '../focus.enums';
 import type { CardExit } from '../focus.enums';
 import { useFocusKeyboard } from '../hooks/use-focus-keyboard';
 import { useFocusReview } from '../hooks/use-focus-review';
-import type { CommentMark } from '../hooks/use-focus-review';
+import type { NoteMark } from '../hooks/use-focus-review';
 import { ChangeCard } from './change-card';
 import { DecisionDock } from './decision-dock';
 import { FocusContextPanel } from './focus-context-panel';
@@ -30,9 +30,9 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
   const unit = card && !card.change ? card.units[0] : undefined;
   const [isContextOpen, setIsContextOpen] = useState(false);
   const [isEditingChanges, setIsEditingChanges] = useState(false);
-  const [noteMark, setNoteMark] = useState<CommentMark>();
+  const [noteMark, setNoteMark] = useState<NoteMark>();
 
-  const saveNote = async (mark: CommentMark, body: string) => {
+  const saveNote = async (mark: NoteMark, body: string) => {
     const isSaved = await focus.comment(mark, body);
     if (isSaved) setNoteMark(undefined);
     return isSaved;
@@ -125,6 +125,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                 <FocusEndCard
                   snapshot={snapshot}
                   tally={tallyMarks(focus.units)}
+                  regions={countRegions(focus.units)}
                   queue={focus.queue}
                   onQueue={focus.setQueue}
                 />

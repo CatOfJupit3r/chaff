@@ -103,6 +103,7 @@ export const UNIT_MARK_LABELS = unitMarksEnumwaii.derive({
   [UNIT_MARKS.CONCERN]: 'Concern',
   [UNIT_MARKS.QUESTION]: 'Question',
   [UNIT_MARKS.LATER]: 'Later',
+  [UNIT_MARKS.SKIPPED]: 'Skipped',
 });
 
 export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive({
@@ -110,6 +111,7 @@ export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive({
   [UNIT_MARKS.CONCERN]: CARD_EXITS.LEFT,
   [UNIT_MARKS.QUESTION]: CARD_EXITS.LEFT,
   [UNIT_MARKS.LATER]: CARD_EXITS.DOWN,
+  [UNIT_MARKS.SKIPPED]: CARD_EXITS.DOWN,
 });
 
 /** Progress segment color for each mark; Later is striped with the `bg-stripes` utility. */
@@ -118,6 +120,7 @@ export const UNIT_MARK_SEGMENT_CLASSES = unitMarksEnumwaii.derive({
   [UNIT_MARKS.CONCERN]: 'bg-warn',
   [UNIT_MARKS.QUESTION]: 'bg-accent',
   [UNIT_MARKS.LATER]: 'bg-later bg-stripes',
+  [UNIT_MARKS.SKIPPED]: 'bg-skip',
 });
 
 export const UNIT_CHANGE_LABELS = unitChangesEnumwaii.derive({

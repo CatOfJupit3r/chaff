@@ -1,7 +1,7 @@
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { DIFF_SIDES, SYMBOL_KINDS, UNIT_KINDS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
+import { DIFF_SIDES, SYMBOL_KINDS, UNIT_KINDS, UNIT_MARKS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import { SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
@@ -164,18 +164,25 @@ export class UnitsService {
     };
   }
 
-  public async setMarks(snapshotId: string, marks: readonly { unitId: string; mark?: UnitMark }[]) {
+  public async setMarks(
+    snapshotId: string,
+    marks: readonly { unitId: string; mark?: UnitMark; skipReason?: string }[],
+  ) {
     await this.reviewsService.getContext(snapshotId);
     const known = new Set((await this.snapshotRepository.listUnits(snapshotId)).map((unit) => unit.id));
     if (marks.some(({ unitId }) => !known.has(unitId))) throw ORPCNotFoundError(errorCodes.UNIT_NOT_FOUND);
-    for (const { unitId, mark } of marks) {
+    for (const { unitId, mark, skipReason } of marks) {
       if (mark) {
-        await this.unitMarkRepository.set(snapshotId, unitId, mark);
+        await this.unitMarkRepository.set(snapshotId, unitId, mark, skipReason);
       } else {
         await this.unitMarkRepository.clear(unitId);
       }
     }
-    return marks.map(({ unitId, mark }) => ({ unitId, mark }));
+    return marks.map(({ unitId, mark, skipReason }) => ({
+      unitId,
+      mark,
+      skipReason: mark === UNIT_MARKS.SKIPPED ? skipReason : undefined,
+    }));
   }
 
   private async getUnit(snapshotId: string, unitId: string) {

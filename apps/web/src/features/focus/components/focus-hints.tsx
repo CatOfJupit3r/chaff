@@ -17,6 +17,7 @@ const ACTION_HINTS: [ShortcutAction, string][] = [
   [SHORTCUT_ACTIONS.FOCUS_CONCERN, 'concern'],
   [SHORTCUT_ACTIONS.FOCUS_QUESTION, 'question'],
   [SHORTCUT_ACTIONS.FOCUS_LATER, 'later'],
+  [SHORTCUT_ACTIONS.FOCUS_SKIP, 'skip'],
   [SHORTCUT_ACTIONS.FOCUS_UNDO, 'undo'],
 ];
 

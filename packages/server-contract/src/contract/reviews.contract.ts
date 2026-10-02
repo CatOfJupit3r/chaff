@@ -30,6 +30,8 @@ export const snapshotSummarySchema = z.object({
   /** Units marked Looks good, Concern or Question. */
   inspectedUnitCount: z.number().int().nonnegative(),
   laterUnitCount: z.number().int().nonnegative(),
+  /** Regions in units decided on or skipped on purpose; the review is complete when this reaches `regionCount`. */
+  accountedRegionCount: z.number().int().nonnegative(),
   /** Units per decision; undecided units are the rest of `unitCount`. */
   markCounts: z.array(z.object({ mark: unitMarkSchema, count: z.number().int().positive() })),
   createdAt: z.date(),
@@ -125,6 +127,9 @@ export const unitSchema = z.object({
   deletions: z.number().int().nonnegative(),
   /** Absent while the reviewer has not decided on the unit. */
   mark: unitMarkSchema.optional(),
+  /** Why the reviewer skipped the unit, for a Skipped mark. */
+  skipReason: z.string().optional(),
+  regionCount: z.number().int().nonnegative(),
   /** The mark was kept from the previous snapshot because the unit did not change. */
   isMarkCarried: z.boolean(),
   /** How the unit compares with the previous snapshot; absent in a review's first snapshot. */
@@ -291,15 +296,23 @@ export const reviewsContract = oc.router({
     .route({
       summary: 'Mark units',
       description:
-        'Records a decision on each unit in this snapshot, or clears it when no mark is given. A Change unit is decided by marking all of its units at once.',
+        'Records a decision on each unit in this snapshot, or clears it when no mark is given. A Change unit is decided by marking all of its units at once. A Skipped mark carries the reason.',
     })
     .input(
       snapshotIdInput.extend({
         marks: z
-          .array(z.object({ unitId: idSchema, mark: unitMarkSchema.optional() }))
+          .array(
+            z.object({
+              unitId: idSchema,
+              mark: unitMarkSchema.optional(),
+              skipReason: z.string().trim().min(1).max(200).optional(),
+            }),
+          )
           .min(1)
           .max(5000),
       }),
     )
-    .output(z.array(z.object({ unitId: z.string(), mark: unitMarkSchema.optional() }))),
+    .output(
+      z.array(z.object({ unitId: z.string(), mark: unitMarkSchema.optional(), skipReason: z.string().optional() })),
+    ),
 });

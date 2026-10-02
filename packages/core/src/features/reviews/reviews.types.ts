@@ -14,6 +14,7 @@ export type iSnapshotSummary = Pick<
 > & {
   /** Units marked Looks good, Concern or Question. */
   inspectedUnitCount: number;
+  accountedRegionCount: number;
   laterUnitCount: number;
   /** Units per decision, for progress bars split by decision. */
   markCounts: { mark: UnitMark; count: number }[];

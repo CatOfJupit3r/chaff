@@ -1,4 +1,4 @@
-import { UNIT_MARKS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
+import { IS_ACCOUNTED_MARK, UNIT_MARKS, UNIT_REVISIONS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iUnit } from '@~/features/reviews/reviews.types';
@@ -13,6 +13,7 @@ export interface iMarkTally {
   concerns: number;
   questions: number;
   later: number;
+  skipped: number;
   untouched: number;
   recheck: number;
 }
@@ -24,8 +25,18 @@ export function tallyMarks(units: readonly iUnit[]): iMarkTally {
     concerns: count(UNIT_MARKS.CONCERN),
     questions: count(UNIT_MARKS.QUESTION),
     later: count(UNIT_MARKS.LATER),
+    skipped: count(UNIT_MARKS.SKIPPED),
     untouched: count(undefined),
     recheck: units.filter(needsRecheck).length,
+  };
+}
+
+/** Regions in all the units, and those in units decided on or skipped on purpose. */
+export function countRegions(units: readonly iUnit[]) {
+  const sum = (list: readonly iUnit[]) => list.reduce((total, unit) => total + unit.regionCount, 0);
+  return {
+    regionCount: sum(units),
+    accountedRegionCount: sum(units.filter((unit) => unit.mark !== undefined && IS_ACCOUNTED_MARK(unit.mark))),
   };
 }
 

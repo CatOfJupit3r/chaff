@@ -178,3 +178,10 @@ export const EditIcon = createIcon(
   </>,
 );
 export const UpIcon = createIcon('UpIcon', <path d="M6 15l6-6 6 6" />);
+export const SkipIcon = createIcon(
+  'SkipIcon',
+  <>
+    <path d="M6 6l7 6-7 6z" />
+    <path d="M17 6v12" />
+  </>,
+);

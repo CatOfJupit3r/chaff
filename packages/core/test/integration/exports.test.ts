@@ -81,7 +81,10 @@ describe('exports', () => {
     await call(appRouter.findings.setStatus, { findingId: concern.id, status: FINDING_STATUSES.WITHDRAWN });
     await call(appRouter.reviews.setMarks, {
       snapshotId,
-      marks: [{ unitId: unitTitled('Scheduler.next').id, mark: UNIT_MARKS.LOOKS_GOOD }],
+      marks: [
+        { unitId: unitTitled('Scheduler.next').id, mark: UNIT_MARKS.LOOKS_GOOD },
+        { unitId: unitTitled('backoff').id, mark: UNIT_MARKS.SKIPPED, skipReason: 'tiny helper' },
+      ],
     });
 
     const open = await call(appRouter.exports.packet, {
@@ -95,7 +98,7 @@ describe('exports', () => {
     expect(open.markdown).not.toContain(`F-${concern.number}`);
     expect(open.markdown).not.toContain('```');
     expect(open.markdown).toContain('### Units without a decision');
-    expect(open.markdown).toContain('- `src/backoff.ts` backoff');
+    expect(open.markdown).toContain('- `src/backoff.ts` backoff (skipped: tiny helper)');
     expect(open.markdown).not.toContain('- `src/scheduler.ts` Scheduler.next');
 
     const single = await call(appRouter.exports.packet, {

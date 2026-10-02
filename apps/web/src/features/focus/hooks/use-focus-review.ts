@@ -31,8 +31,8 @@ interface iFocusStep {
   findingId?: string;
 }
 
-/** The marks that write a note first. */
-export type CommentMark = typeof UNIT_MARKS.CONCERN | typeof UNIT_MARKS.QUESTION;
+/** The marks that write a note first: a finding for a concern or question, the reason for a skip. */
+export type NoteMark = typeof UNIT_MARKS.CONCERN | typeof UNIT_MARKS.QUESTION | typeof UNIT_MARKS.SKIPPED;
 
 /** The Focus review: which card is up, and the decisions that move through the cards. */
 export function useFocusReview(snapshotId: string) {
@@ -69,10 +69,10 @@ export function useFocusReview(snapshotId: string) {
     setMarks.mutate({ snapshotId, marks }, { onError: (error) => showToast(getErrorMessage(error)) });
   };
 
-  const record = (current: iFocusCard, mark: UnitMark, findingId?: string) => {
-    const previous = current.units.map((unit) => ({ unitId: unit.id, mark: unit.mark }));
+  const record = (current: iFocusCard, mark: UnitMark, findingId?: string, skipReason?: string) => {
+    const previous = current.units.map((unit) => ({ unitId: unit.id, mark: unit.mark, skipReason: unit.skipReason }));
     setHistory((steps) => [...steps, { cardId: current.id, previous, findingId }]);
-    writeMarks(current.units.map((unit) => ({ unitId: unit.id, mark })));
+    writeMarks(current.units.map((unit) => ({ unitId: unit.id, mark, skipReason })));
     const decided = new Map(current.units.map((unit) => [unit.id, mark]));
     const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
     cardExit.run(UNIT_MARK_EXITS(mark), () => goTo(nextIndex));
@@ -82,9 +82,16 @@ export function useFocusReview(snapshotId: string) {
     if (card) record(card, mark);
   };
 
-  /** Writes the note as a finding on the card's units and moves on; resolves false when it could not be saved. */
-  const comment = async (mark: CommentMark, body: string) => {
+  /**
+   * Writes the note as a finding on the card's units, or as the reason for skipping them, and moves on;
+   * resolves false when it could not be saved.
+   */
+  const comment = async (mark: NoteMark, body: string) => {
     if (!card) return false;
+    if (mark === UNIT_MARKS.SKIPPED) {
+      record(card, mark, undefined, body.trim());
+      return true;
+    }
     try {
       const finding = await findings.create.mutateAsync({
         snapshotId,

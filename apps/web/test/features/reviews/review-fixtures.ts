@@ -50,6 +50,7 @@ export function snapshotSummary(createdAt: string, overrides: Partial<iSnapshotS
     regionCount: 0,
     unitCount: 0,
     inspectedUnitCount: 0,
+    accountedRegionCount: 0,
     laterUnitCount: 0,
     markCounts: [],
     createdAt: new Date(createdAt),
@@ -70,6 +71,7 @@ export function unitFixture(id: string, mark?: UnitMark, overrides: Partial<iUni
     deletions: 1,
     mark,
     isMarkCarried: false,
+    regionCount: 1,
     ...overrides,
   };
 }

@@ -1,4 +1,4 @@
-import { IS_INSPECTED_MARK, UNIT_MARKS, unitMarksEnumwaii } from '@chaff/common/enums/review.enums';
+import { IS_ACCOUNTED_MARK, IS_INSPECTED_MARK, UNIT_MARKS, unitMarksEnumwaii } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import { FILE_DECISIONS } from './reviews.enums';
@@ -6,6 +6,7 @@ import type { FileDecision } from './reviews.enums';
 import type { iUnit } from './reviews.types';
 
 const isDecided = (unit: iUnit) => unit.mark !== undefined && IS_INSPECTED_MARK(unit.mark);
+const isAccounted = (unit: iUnit) => unit.mark !== undefined && IS_ACCOUNTED_MARK(unit.mark);
 const isComment = (mark: UnitMark | undefined) => mark === UNIT_MARKS.CONCERN || mark === UNIT_MARKS.QUESTION;
 
 export function groupUnitsByFile(units: readonly iUnit[]) {
@@ -18,10 +19,10 @@ export function groupUnitsByFile(units: readonly iUnit[]) {
   return byFile;
 }
 
-/** A concern or question wins; otherwise the file is reviewed when every unit has a decision. */
+/** A concern or question wins; otherwise the file is done when every unit is decided on or skipped. */
 export function getFileDecision(units: readonly iUnit[]): FileDecision {
   if (units.some((unit) => isComment(unit.mark))) return FILE_DECISIONS.CONCERN;
-  const decidedCount = units.filter(isDecided).length;
+  const decidedCount = units.filter(isAccounted).length;
   if (units.length > 0 && decidedCount === units.length) return FILE_DECISIONS.LOOKS_GOOD;
   return decidedCount > 0 ? FILE_DECISIONS.PARTIAL : FILE_DECISIONS.NONE;
 }
@@ -44,6 +45,7 @@ const MARK_GUTTER_COLORS = unitMarksEnumwaii.derive({
   [UNIT_MARKS.CONCERN]: 'var(--warn)',
   [UNIT_MARKS.QUESTION]: 'var(--accent)',
   [UNIT_MARKS.LATER]: 'var(--faint)',
+  [UNIT_MARKS.SKIPPED]: 'var(--skip)',
 });
 
 function lineSelectors(lineType: string, start: number | undefined, end: number | undefined) {

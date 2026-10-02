@@ -40,6 +40,38 @@ describe('review units', () => {
     expect(cleared[0]?.mark).toBeUndefined();
   });
 
+  it('counts a review complete once every region is decided on or skipped with a reason', async () => {
+    const repo = createFeatureRepo();
+    const { workspace, snapshotId } = await startFeatureReview(repo);
+    const units = await call(appRouter.reviews.units, { snapshotId });
+    const config = units.find((unit) => unit.kind === UNIT_KINDS.SECTION);
+    if (!config) throw new Error('expected a section unit');
+    const rest = units.filter((unit) => unit !== config);
+    const regionTotal = units.reduce((sum, unit) => sum + unit.regionCount, 0);
+    const summary = async () => (await call(appRouter.reviews.list, { workspaceId: workspace.id }))[0]?.latestSnapshot;
+
+    await call(appRouter.reviews.setMarks, {
+      snapshotId,
+      marks: [
+        { unitId: config.id, mark: UNIT_MARKS.SKIPPED, skipReason: 'config bump' },
+        ...rest.map((unit) => ({ unitId: unit.id, mark: UNIT_MARKS.LATER })),
+      ],
+    });
+    expect(await summary()).toMatchObject({ regionCount: regionTotal, accountedRegionCount: config.regionCount });
+    const skipped = (await call(appRouter.reviews.units, { snapshotId })).find((unit) => unit.id === config.id);
+    expect(skipped).toMatchObject({ mark: UNIT_MARKS.SKIPPED, skipReason: 'config bump' });
+
+    // Later is not accounted for; deciding the rest completes the review, and a new mark drops the reason.
+    await call(appRouter.reviews.setMarks, {
+      snapshotId,
+      marks: rest.map((unit) => ({ unitId: unit.id, mark: UNIT_MARKS.LOOKS_GOOD })),
+    });
+    expect(await summary()).toMatchObject({ accountedRegionCount: regionTotal });
+    await call(appRouter.reviews.setMarks, { snapshotId, marks: [{ unitId: config.id, mark: UNIT_MARKS.LOOKS_GOOD }] });
+    const decided = (await call(appRouter.reviews.units, { snapshotId })).find((unit) => unit.id === config.id);
+    expect(decided?.skipReason).toBeUndefined();
+  });
+
   it('rejects marks on units of another snapshot', async () => {
     const { snapshotId } = await startFeatureReview(createFeatureRepo());
     const { snapshotId: otherSnapshotId } = await startFeatureReview(createFeatureRepo());

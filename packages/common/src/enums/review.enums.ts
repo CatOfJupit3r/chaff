@@ -60,18 +60,33 @@ export const UNIT_CHANGES = unitChangesEnumwaii.enum;
 export type UnitChange = InferEnumwaii<typeof unitChangesEnumwaii>;
 export const unitChangeSchema = unitChangesEnumwaii.schema;
 
-/** The reviewer's decision on a unit in one snapshot. Every mark but Later counts as inspected. */
-export const unitMarksEnumwaii = new Enumwaii('UnitMark', ['LOOKS_GOOD', 'CONCERN', 'QUESTION', 'LATER']);
+/**
+ * The reviewer's decision on a unit in one snapshot. Skipped says the reviewer chose not to read it, with a
+ * reason; it is not approval.
+ */
+export const unitMarksEnumwaii = new Enumwaii('UnitMark', ['LOOKS_GOOD', 'CONCERN', 'QUESTION', 'LATER', 'SKIPPED']);
 
 export const UNIT_MARKS = unitMarksEnumwaii.enum;
 export type UnitMark = InferEnumwaii<typeof unitMarksEnumwaii>;
 export const unitMarkSchema = unitMarksEnumwaii.schema;
+export const unitMarkValues = unitMarksEnumwaii.values;
 
+/** The reviewer read the unit and decided on it. */
 export const IS_INSPECTED_MARK = unitMarksEnumwaii.derive({
   [UNIT_MARKS.LOOKS_GOOD]: true,
   [UNIT_MARKS.CONCERN]: true,
   [UNIT_MARKS.QUESTION]: true,
   [UNIT_MARKS.LATER]: false,
+  [UNIT_MARKS.SKIPPED]: false,
+});
+
+/** The unit's regions count towards a complete review: decided on, or skipped on purpose. */
+export const IS_ACCOUNTED_MARK = unitMarksEnumwaii.derive({
+  [UNIT_MARKS.LOOKS_GOOD]: true,
+  [UNIT_MARKS.CONCERN]: true,
+  [UNIT_MARKS.QUESTION]: true,
+  [UNIT_MARKS.LATER]: false,
+  [UNIT_MARKS.SKIPPED]: true,
 });
 
 export const findingKindsEnumwaii = new Enumwaii('FindingKind', ['CONCERN', 'QUESTION', 'NOTE']);

@@ -362,7 +362,10 @@ export class ReviewsService {
 
   private async toSummary(snapshot: iSnapshotRecord): Promise<iSnapshotSummary> {
     const { id, version, headSha, fileCount, additions, deletions, regionCount, unitCount, createdAt } = snapshot;
-    const markCounts = await this.unitMarkRepository.countByMark(id);
+    const [markCounts, accountedRegionCount] = await Promise.all([
+      this.unitMarkRepository.countByMark(id),
+      this.unitMarkRepository.countAccountedRegions(id),
+    ]);
     const inspectedUnitCount = [...markCounts].reduce(
       (sum, [mark, total]) => (IS_INSPECTED_MARK(mark) ? sum + total : sum),
       0,
@@ -377,6 +380,7 @@ export class ReviewsService {
       regionCount,
       unitCount,
       inspectedUnitCount,
+      accountedRegionCount,
       laterUnitCount: markCounts.get(UNIT_MARKS.LATER) ?? 0,
       markCounts: [...markCounts].map(([mark, count]) => ({ mark, count })),
       createdAt,

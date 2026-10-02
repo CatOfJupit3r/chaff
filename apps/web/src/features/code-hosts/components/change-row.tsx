@@ -54,8 +54,8 @@ export function ChangeRow({ project, change, below, targets }: iChangeRowProps) 
       </div>
       <div className="flex items-center gap-3">
         {snapshot ? (
-          <span className="font-mono text-[12px] text-muted tabular-nums" title="Units reviewed">
-            {snapshot.inspectedUnitCount} / {snapshot.unitCount}
+          <span className="font-mono text-[12px] text-muted tabular-nums" title="Regions decided on or skipped">
+            {snapshot.accountedRegionCount} / {snapshot.regionCount}
           </span>
         ) : null}
         {local ? (

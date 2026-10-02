@@ -15,8 +15,8 @@ const stack: iLocalStack = {
   commitCount: 3,
 };
 
-function summaryAt(createdAt: string, unitCount: number, inspectedUnitCount = 0) {
-  return snapshotSummary(createdAt, { regionCount: unitCount, unitCount, inspectedUnitCount });
+function summaryAt(createdAt: string, regionCount: number, accountedRegionCount = 0) {
+  return snapshotSummary(createdAt, { regionCount, unitCount: regionCount, accountedRegionCount });
 }
 
 describe('summarizeStackReview', () => {
@@ -35,10 +35,10 @@ describe('summarizeStackReview', () => {
 
     expect(review.isStarted).toBe(false);
     expect(review.next?.branch.name).toBe('feature/a');
-    expect(review.unitCount).toBe(0);
+    expect(review.regionCount).toBe(0);
   });
 
-  it('continues with the branch reviewed last and counts units and decisions across reviewed branches', () => {
+  it('continues with the branch reviewed last and counts regions and decisions across reviewed branches', () => {
     const review = summarizeStackReview(stack, [
       reviewTarget('feature/a', { latestSnapshot: summaryAt('2026-09-21T10:00:00Z', 4, 4) }),
       reviewTarget('feature/b', { latestSnapshot: summaryAt('2026-09-22T10:00:00Z', 6, 1) }),
@@ -50,7 +50,7 @@ describe('summarizeStackReview', () => {
 
     expect(review.isStarted).toBe(true);
     expect(review.next?.branch.name).toBe('feature/b');
-    expect(review.unitCount).toBe(10);
-    expect(review.inspectedUnitCount).toBe(5);
+    expect(review.regionCount).toBe(10);
+    expect(review.accountedRegionCount).toBe(5);
   });
 });

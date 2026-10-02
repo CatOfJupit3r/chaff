@@ -74,15 +74,17 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
     }
   };
 
-  const markFile = (fileId: string) => {
+  const markFile = (fileId: string, skipReason?: string) => {
+    const mark = skipReason ? UNIT_MARKS.SKIPPED : UNIT_MARKS.LOOKS_GOOD;
     const undecided = (unitsByFile.get(fileId) ?? []).filter((unit) => unit.mark === undefined);
     if (undecided.length > 0) {
       setMarks.mutate(
-        { snapshotId, marks: undecided.map((unit) => ({ unitId: unit.id, mark: UNIT_MARKS.LOOKS_GOOD })) },
+        { snapshotId, marks: undecided.map((unit) => ({ unitId: unit.id, mark, skipReason })) },
         { onError: (error) => showToast(getErrorMessage(error)) },
       );
     }
-    showToast(undecided.length === 0 ? 'Every unit in this file already has a decision' : 'Marked as looking good');
+    const done = skipReason ? 'Skipped' : 'Marked as looking good';
+    showToast(undecided.length === 0 ? 'Every unit in this file already has a decision' : done);
   };
 
   return {
