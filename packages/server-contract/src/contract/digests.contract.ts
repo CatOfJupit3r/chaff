@@ -118,6 +118,14 @@ export const digestRunnerStatusSchema = z.object({
   path: z.string().optional(),
 });
 
+/** A model the agent can be started with. */
+export const agentModelSchema = z.object({
+  /** What is passed as `--model`. */
+  id: digestModelSchema,
+  label: z.string(),
+  description: z.string().optional(),
+});
+
 export const digestsContract = oc.router({
   get: oc
     .route({
@@ -147,4 +155,13 @@ export const digestsContract = oc.router({
       description: 'Reports which of Claude Code and Codex can be started on this computer.',
     })
     .output(z.array(digestRunnerStatusSchema)),
+
+  models: oc
+    .route({
+      summary: "List an agent's models",
+      description:
+        "The models the agent can run a digest with: Codex's own model list, or Claude Code's model aliases. Empty when the agent isn't installed or can't list them.",
+    })
+    .input(z.object({ runner: digestRunnerSchema }))
+    .output(z.array(agentModelSchema)),
 });

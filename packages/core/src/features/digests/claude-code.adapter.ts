@@ -22,7 +22,7 @@ const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch'
 export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
   public async run(
     command: string,
-    { cwd, prompt, model, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput,
+    { cwd, diffDirectory, prompt, model, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput,
   ) {
     let answer: unknown;
     let failure: string | undefined;
@@ -52,6 +52,7 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         '--strict-mcp-config',
         '--disable-slash-commands',
         '--no-session-persistence',
+        ...(diffDirectory ? ['--add-dir', diffDirectory] : []),
         ...(model ? ['--model', model] : []),
       ],
       onLine: (line) => {

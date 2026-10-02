@@ -2,48 +2,53 @@ import { DIGEST_RUNNER_LABELS } from '@chaff/common/enums/digest.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 
 import { Field } from '@~/components/ui/field';
-import { TextInput } from '@~/components/ui/text-input';
+import { SelectInput } from '@~/components/ui/text-input';
 
 import type { useDigestOptions } from '../hooks/use-digest-options';
 
 interface iDigestOptionsFieldsProps extends Pick<
   ReturnType<typeof useDigestOptions>,
-  'model' | 'setModel' | 'instructions' | 'setInstructions' | 'isModelValid'
+  'models' | 'isModelsPending' | 'model' | 'setModel' | 'instructions' | 'setInstructions'
 > {
   runner: DigestRunner;
+}
+
+function modelHint(runner: DigestRunner, isModelsPending: boolean, modelCount: number) {
+  if (isModelsPending) return `Asking ${DIGEST_RUNNER_LABELS(runner)} for its models...`;
+  if (modelCount === 0) return `${DIGEST_RUNNER_LABELS(runner)} didn't list its models, so it runs with its default.`;
+  return `Passed to ${DIGEST_RUNNER_LABELS(runner)} as --model.`;
 }
 
 /** The model the agent runs with and anything the reviewer wants it to look at on top of the usual digest. */
 export function DigestOptionsFields({
   runner,
+  models,
+  isModelsPending,
   model,
   setModel,
   instructions,
   setInstructions,
-  isModelValid,
 }: iDigestOptionsFieldsProps) {
+  const isSavedModelListed = !model || models.some((candidate) => candidate.id === model);
+
   return (
     <>
-      <Field
-        label="Model"
-        hint={
-          isModelValid ? (
-            `Passed to ${DIGEST_RUNNER_LABELS(runner)} as --model. Leave empty for its default.`
-          ) : (
-            <span className="text-bad">Use the model id or alias the CLI accepts, such as opus or gpt-6-astra.</span>
-          )
-        }
-      >
-        <TextInput
+      <Field label="Model" hint={modelHint(runner, isModelsPending, models.length)}>
+        <SelectInput
           aria-label="Model"
-          aria-invalid={!isModelValid}
           value={model}
-          placeholder={`${DIGEST_RUNNER_LABELS(runner)} default`}
-          spellCheck={false}
-          maxLength={100}
-          className="font-mono text-[12.5px] aria-invalid:border-bad-line"
           onChange={(event) => setModel(event.target.value)}
-        />
+          className="w-full"
+        >
+          <option value="">{DIGEST_RUNNER_LABELS(runner)} default</option>
+          {models.map((candidate) => (
+            <option key={candidate.id} value={candidate.id} title={candidate.description}>
+              {candidate.label}
+              {candidate.description ? ` - ${candidate.description}` : ''}
+            </option>
+          ))}
+          {isSavedModelListed ? null : <option value={model}>{model}</option>}
+        </SelectInput>
       </Field>
       <Field label="Extra instructions" hint="Added to the prompt. The digest keeps its usual shape.">
         <textarea

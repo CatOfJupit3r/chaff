@@ -24,6 +24,7 @@ import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrappe
 import { ClaudeCodeAdapter } from './claude-code.adapter';
 import { CodexAdapter } from './codex.adapter';
 import { checkDigest } from './digest-check.utils';
+import { writeDiffFiles } from './digest-diff-files.utils';
 import { AGENT_DIGEST_JSON_SCHEMA, agentDigestSchema } from './digest-output.schema';
 import { fitPatch } from './digest-patch.utils';
 import { previewOf } from './digest-preview.utils';
@@ -32,8 +33,13 @@ import type { iDigestRepository } from './digest.repository';
 import type { iDigestPreview, iDigestRunnerAdapter, iDigestStartOptions, iPromptUnit } from './digests.types';
 
 const DIGESTS_DIRECTORY = 'digests';
-/** Characters of diff put in the prompt; files past this are outlined and the agent reads them in the checkout. */
-const MAX_PROMPT_PATCH_CHARS = 120_000;
+/**
+ * Characters of diff put in the prompt. Files past this are outlined, and the agent reads their diffs from the
+ * diff folder as it needs them, so a long merge request doesn't arrive as one huge prompt.
+ */
+const MAX_PROMPT_PATCH_CHARS = 30_000;
+/** Folder in the digest's scratch space holding every file's diff. */
+const DIFF_DIRECTORY = 'diff';
 const MAX_COMMIT_MESSAGES = 50;
 /** A digest that takes longer than this is stopped. */
 const DIGEST_TIMEOUT_MS = 20 * 60 * 1000;
@@ -144,6 +150,7 @@ export class DigestsService {
     const folder = path.join(this.options.dataDir, DIGESTS_DIRECTORY, digestId);
     const checkout = path.join(folder, 'checkout');
     const scratchDir = path.join(folder, 'scratch');
+    const diffDirectory = path.join(scratchDir, DIFF_DIRECTORY);
     let lastProgressAt = 0;
     const onProgress = (progress: string) => {
       const now = Date.now();
@@ -175,11 +182,17 @@ export class DigestsService {
       await mkdir(scratchDir, { recursive: true });
       onProgress('Checking out the snapshot');
       await this.snapshotStoreService.addWorktree(target.workspaceId, snapshot.headSha, checkout);
-      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(snapshot, target, instructions);
+      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(
+        snapshot,
+        target,
+        diffDirectory,
+        instructions,
+      );
       onProgress(`Starting ${DIGEST_RUNNER_LABELS(runner)}`);
       const answer = await this.adapterFor(runner).run(command, {
         cwd: checkout,
         scratchDir,
+        diffDirectory,
         prompt,
         model,
         schema: AGENT_DIGEST_JSON_SCHEMA,
@@ -220,7 +233,12 @@ export class DigestsService {
     }
   }
 
-  private async preparePrompt(snapshot: iSnapshotRecord, target: iReviewTargetRecord, instructions?: string) {
+  private async preparePrompt(
+    snapshot: iSnapshotRecord,
+    target: iReviewTargetRecord,
+    diffDirectory: string,
+    instructions?: string,
+  ) {
     const [units, files, commits, fullPatch, preferences, change] = await Promise.all([
       this.snapshotRepository.listUnits(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
@@ -236,6 +254,7 @@ export class DigestsService {
         ? this.remoteChangesService.describe(target).catch(() => undefined)
         : undefined,
     ]);
+    await writeDiffFiles(diffDirectory, fullPatch);
     const { patch, outlined } = fitPatch(fullPatch, MAX_PROMPT_PATCH_CHARS);
     const paths = new Map(files.map((file) => [file.id, file.path]));
     const promptUnits: iPromptUnit[] = units.map((unit, index) => ({
@@ -259,6 +278,7 @@ export class DigestsService {
       units: promptUnits,
       patch,
       outlined,
+      diffDirectory,
       change,
       preferences,
       instructions,

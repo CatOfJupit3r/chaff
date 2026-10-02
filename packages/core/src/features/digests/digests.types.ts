@@ -75,8 +75,10 @@ export interface iDigestPromptInput {
   units: iPromptUnit[];
   /** The diff of the files that fit in the prompt. */
   patch: string;
-  /** Files left out of `patch` to keep it short; the agent reads them in the checkout. */
+  /** Files left out of `patch` to keep it short; the agent reads their diffs from `diffDirectory`. */
   outlined: iOutlinedFile[];
+  /** Folder holding every file's diff, and the whole branch's, for the agent to read as it needs. */
+  diffDirectory: string;
   /** The merge or pull request the branch is, when it is one. */
   change?: iPromptChange;
   /** The reviewer's project preferences for the repository. */
@@ -90,6 +92,8 @@ export interface iDigestRunInput {
   cwd: string;
   /** Scratch folder outside the checkout for files the CLI writes. */
   scratchDir: string;
+  /** Folder outside the checkout with the branch's diffs, which the agent must be able to read. */
+  diffDirectory?: string;
   prompt: string;
   /** Model to ask the CLI for; its own default when absent. */
   model?: string;

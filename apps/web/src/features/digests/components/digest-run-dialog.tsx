@@ -20,7 +20,7 @@ interface iDigestRunDialogProps {
 /** Picks the coding agent, its model and extra instructions, and says plainly what it will see before anything runs. */
 export function DigestRunDialog({ isOpen, onOpenChange, onStart }: iDigestRunDialogProps) {
   const { runners, isPending, runner, setPicked, isRunnerAvailable } = useRunnerChoice(isOpen);
-  const { options, ...fields } = useDigestOptions(runner);
+  const { options, ...fields } = useDigestOptions(runner, isOpen);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -41,7 +41,7 @@ export function DigestRunDialog({ isOpen, onOpenChange, onStart }: iDigestRunDia
             <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
             <Button
               variant="primary"
-              disabled={!isRunnerAvailable || !fields.isModelValid}
+              disabled={!isRunnerAvailable}
               onClick={() => {
                 onStart(runner, options);
                 onOpenChange(false);

@@ -160,7 +160,7 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
   <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
 </picture>
 
-**AI digest** in the top bar starts one and says which company receives the code before anything runs. You can name the model the agent runs with (passed as `--model`, remembered per agent) and add instructions of your own to the prompt.
+**AI digest** in the top bar starts one and says which company receives the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
@@ -428,7 +428,8 @@ The width you drag the Full diff's file list to is kept.
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
 | AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
 | Digest reads the MR or PR description and linked issues, outlines branches too large to send whole, streams in while Claude Code writes, and its diagram boxes open their units | Works |
-| Digest model per agent (remembered) and extra instructions for one digest | Works |
+| Digest model picked from the agent's own model list (remembered per agent) and extra instructions for one digest | Works |
+| Digest agent reads per-file diffs on demand instead of one huge prompt on long branches | Works |
 | Stack overview with parent editing and cumulative view | Works |
 | GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
 | GitHub pull requests, the same way | Works |
