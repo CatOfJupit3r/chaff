@@ -169,7 +169,7 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
 
 ### Full diff
 
-One branch against its parent, with a resizable file tree (or flat list) and a filter that matches file names and the changed lines themselves. Switch between one file at a time and all files in one scroll, unified or split, with word-level highlights, syntax colors and expandable context.
+One branch against its parent, with a resizable file tree (or flat list) and a filter that matches file names and the changed lines themselves. Switch between one file at a time and all files in one scroll, unified or split, with word-level highlights, syntax colors and expandable context. Like other git tools, each file carries a status letter (**A**dded, **M**odified, **D**eleted, **R**enamed or moved, **T**ype changed), a rename reads `src/{old.ts → new.ts}`, a mode change shows as `+x`, and the file list header counts what was added, deleted and moved. The same letters mark files in Focus, Findings and Jump to.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/full-diff-dark.png" />
@@ -415,6 +415,7 @@ The width you drag the Full diff's file list to is kept.
 | Frozen snapshots in Chaff's own git store | Works |
 | Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
 | Full diff: tree or list, one or all files, unified (old and new line numbers) or split, wrap, context; filter by file name or changed code | Works |
+| Added, modified, deleted, renamed or moved and type-changed files marked A, M, D, R and T wherever files are listed, renames shown as `src/{old.ts → new.ts}`, mode changes such as +x | Works |
 | New commits, rewritten branches and moved parents detected as they happen (refs are watched); Update | Works |
 | Open in VS Code, Insiders or Cursor | Works |
 | Light and dark themes, accent, code size | Works |

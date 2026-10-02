@@ -5,6 +5,7 @@ import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import {
   anchorMatchSchema,
   diffSideSchema,
+  fileStatusSchema,
   findingEventSourceSchema,
   findingKindSchema,
   findingScopeSchema,
@@ -33,7 +34,7 @@ import type {
 } from './findings.types';
 
 type FindingWithBranchRow = typeof findings.$inferSelect & { branch: string; parentBranch: string };
-type FindingAnchorRow = typeof findingAnchors.$inferSelect;
+type FindingAnchorRow = typeof findingAnchors.$inferSelect & { fileStatus: string | null };
 type LocationRow = typeof findingAnchorLocations.$inferSelect & { version: number; headSha: string };
 type FindingEventRow = typeof findingEvents.$inferSelect;
 type FindingPostRow = typeof findingPosts.$inferSelect;
@@ -44,7 +45,10 @@ export class FindingResolver {
   public toAnchorRecord = createRowResolver<FindingAnchorRow, Omit<iFindingAnchorRecord, 'locations'>>({
     optional: ['unitId', 'fileId', 'startLine', 'endLine'],
     omit: ['findingId'],
-    overrides: (row) => ({ side: diffSideSchema.parse(row.side) }),
+    overrides: (row) => ({
+      side: diffSideSchema.parse(row.side),
+      fileStatus: row.fileStatus === null ? undefined : fileStatusSchema.parse(row.fileStatus),
+    }),
   });
 
   public toLocationRecord = createRowResolver<LocationRow, iAnchorLocationRecord>({

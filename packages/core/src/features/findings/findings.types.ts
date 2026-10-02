@@ -3,6 +3,7 @@ import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import type {
   AnchorMatch,
   DiffSide,
+  FileStatus,
   FindingEventSource,
   FindingKind,
   FindingScope,
@@ -99,6 +100,8 @@ export type iFindingAnchorRecord = Omit<
 > & {
   unitId?: string;
   fileId?: string;
+  /** How the anchored file changed in the snapshot the finding was written in. */
+  fileStatus?: FileStatus;
   side: DiffSide;
   startLine?: number;
   endLine?: number;

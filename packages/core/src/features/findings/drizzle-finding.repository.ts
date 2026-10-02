@@ -15,7 +15,7 @@ import {
   findingTasks,
 } from '@~/db/schema/findings.schema';
 import { reviewTargets } from '@~/db/schema/review-targets.schema';
-import { snapshots } from '@~/db/schema/snapshots.schema';
+import { snapshotFiles, snapshots } from '@~/db/schema/snapshots.schema';
 
 import type { iFindingRepository } from './finding.repository';
 import { FindingResolver } from './finding.resolver';
@@ -226,8 +226,9 @@ export class DrizzleFindingRepository implements iFindingRepository {
     if (rows.length === 0) return [];
     const anchors = this.databaseService
       .getDb()
-      .select()
+      .select({ ...getTableColumns(findingAnchors), fileStatus: snapshotFiles.status })
       .from(findingAnchors)
+      .leftJoin(snapshotFiles, eq(snapshotFiles.id, findingAnchors.fileId))
       .where(
         inArray(
           findingAnchors.findingId,

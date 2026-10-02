@@ -5,6 +5,7 @@ import { SectionLabel } from '@~/components/ui/section-label';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
 import { useDiffReview } from '../diff-review.context';
+import { summarizeFileStatuses } from '../file-status.utils';
 import { buildFileTree, filterFiles } from '../file-tree.utils';
 import { MIN_DIFF_SEARCH_LENGTH, useDiffSearch } from '../hooks/use-diff-search';
 import { countCoveredLines } from '../review-coverage.utils';
@@ -35,6 +36,7 @@ export function FileTreePanel({ snapshotId, files, currentPath, onSelect, onOpen
   const hasCodeMatches = searchedQuery.length >= MIN_DIFF_SEARCH_LENGTH && (search?.files.length ?? 0) > 0;
   const rowProps = { currentPath, onSelect, onOpenInEditor };
   const coverage = countCoveredLines([...useDiffReview().unitsByFile.values()].flat());
+  const statusSummary = summarizeFileStatuses(files);
 
   return (
     <div className="flex flex-col gap-0.5 px-2.5 py-3.5">
@@ -48,6 +50,7 @@ export function FileTreePanel({ snapshotId, files, currentPath, onSelect, onOpen
           className="[&_button]:h-[22px] [&_button]:px-2 [&_button]:text-[11.5px]"
         />
       </div>
+      {statusSummary ? <p className="m-0 -mt-1 px-2 pb-2 text-[11.5px] text-faint">{statusSummary}</p> : null}
       <label className="mx-1 mb-2 flex items-center gap-2 rounded-sm border border-line bg-surface px-2 py-1.5 text-faint">
         <SearchIcon className="size-[13px]" />
         <input
@@ -72,7 +75,7 @@ export function FileTreePanel({ snapshotId, files, currentPath, onSelect, onOpen
             ))
         : null}
       {hasCodeMatches && search ? (
-        <DiffSearchResults search={search} query={searchedQuery} onSelect={onSelect} />
+        <DiffSearchResults search={search} files={files} query={searchedQuery} onSelect={onSelect} />
       ) : null}
       <p className="m-0 px-2 pt-4 text-[12.5px] leading-normal text-faint">
         {coverage.covered} of {coverage.total} changed lines are covered by a decision. Opening or scrolling past a file

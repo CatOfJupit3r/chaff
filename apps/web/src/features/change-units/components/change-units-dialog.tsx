@@ -32,14 +32,14 @@ export function ChangeUnitsDialog({
 }: iChangeUnitsDialogProps) {
   const editor = useChangeEditor(snapshotId, changes);
   const byId = new Map(units.map((unit) => [unit.id, unit]));
-  const pathOf = (unit: iUnit) => files.find((file) => file.id === unit.fileId)?.path;
+  const fileOf = (unit: iUnit) => files.find((file) => file.id === unit.fileId);
   const grouped = new Set(changes.flatMap((change) => change.unitIds));
   const loose = units.filter((unit) => !grouped.has(unit.id));
   const pickRow = (unit: iUnit) => (
     <UnitPickRow
       key={unit.id}
       unit={unit}
-      path={pathOf(unit)}
+      file={fileOf(unit)}
       isPicked={editor.unitIds.has(unit.id)}
       onToggle={() => editor.toggleUnit(unit.id)}
     />

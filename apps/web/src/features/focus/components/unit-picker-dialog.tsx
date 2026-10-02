@@ -35,7 +35,7 @@ function UnitPickerBody({ units, files, initialUnitIds, onPick, onClose }: iUnit
             <UnitPickRow
               key={unit.id}
               unit={unit}
-              path={files.find((file) => file.id === unit.fileId)?.path}
+              file={files.find((file) => file.id === unit.fileId)}
               isPicked={picked.has(unit.id)}
               onToggle={() => toggle(unit.id)}
             />

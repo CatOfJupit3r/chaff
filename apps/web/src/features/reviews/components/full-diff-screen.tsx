@@ -14,6 +14,8 @@ import { DecisionLegend } from './decision-legend';
 import { DiffStat } from './diff-stat';
 import { DiffToolbar } from './diff-toolbar';
 import { FileDiffBody } from './file-diff-body';
+import { FilePathLabel } from './file-path-label';
+import { FileStatusBadge } from './file-status-badge';
 import { FileTreePanel } from './file-tree-panel';
 import { MarkFileButton } from './mark-file-button';
 import { ReviewTopBar } from './review-top-bar';
@@ -101,7 +103,8 @@ export function FullDiffScreen({ snapshotId }: { snapshotId: string }) {
               </>
             ) : (
               <>
-                <span className="truncate font-mono text-[13px]">{currentFile.path}</span>
+                <FileStatusBadge file={currentFile} />
+                <FilePathLabel file={currentFile} className="truncate text-[13px]" />
                 <DiffStat additions={currentFile.additions} deletions={currentFile.deletions} />
                 <Button variant="ghost" size="sm" onClick={() => openInEditor(currentFile.path)}>
                   <ExternalIcon />

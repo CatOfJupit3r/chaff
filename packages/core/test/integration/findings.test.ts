@@ -5,6 +5,7 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
 import {
   DIFF_SIDES,
+  FILE_STATUSES,
   FINDING_KINDS,
   FINDING_SCOPES,
   FINDING_SEVERITIES,
@@ -40,6 +41,7 @@ describe('findings', () => {
       expect.objectContaining({
         unitId: next.id,
         path: 'src/scheduler.ts',
+        fileStatus: FILE_STATUSES.MODIFIED,
         side: DIFF_SIDES.NEW,
         startLine: 2,
         endLine: 4,
@@ -79,6 +81,7 @@ describe('findings', () => {
       [1, 'Is this tested?'],
     ]);
     expect(findings[1]?.anchors[0]).toMatchObject({ side: DIFF_SIDES.OLD, quote: '{ "retries": 1 }' });
+    expect(findings[2]?.anchors[0]).toMatchObject({ path: 'src/backoff.ts', fileStatus: FILE_STATUSES.ADDED });
     expect(findings[0]?.anchors).toEqual([]);
     expect(await call(appRouter.findings.list, { workspaceId: workspace.id })).toHaveLength(3);
   });

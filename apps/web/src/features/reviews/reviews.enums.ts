@@ -1,4 +1,4 @@
-import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import { FILE_STATUSES, REVIEW_TARGET_KINDS, fileStatusesEnumwaii } from '@chaff/common/enums/review.enums';
 import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
@@ -66,3 +66,20 @@ export const REVIEW_TARGET_KIND_PILLS = new Map<ReviewTargetKind, string>([
   [REVIEW_TARGET_KINDS.WORKING_CHANGES, 'working changes'],
   [REVIEW_TARGET_KINDS.CUMULATIVE, 'cumulative'],
 ]);
+
+/** The one-letter mark version control tools show for each kind of file change. */
+export const FILE_STATUS_LETTERS = fileStatusesEnumwaii.derive({
+  [FILE_STATUSES.ADDED]: 'A',
+  [FILE_STATUSES.MODIFIED]: 'M',
+  [FILE_STATUSES.DELETED]: 'D',
+  [FILE_STATUSES.RENAMED]: 'R',
+  [FILE_STATUSES.TYPE_CHANGED]: 'T',
+});
+
+export const FILE_STATUS_TEXT_CLASSES = fileStatusesEnumwaii.derive({
+  [FILE_STATUSES.ADDED]: 'text-good',
+  [FILE_STATUSES.MODIFIED]: 'text-warn',
+  [FILE_STATUSES.DELETED]: 'text-bad',
+  [FILE_STATUSES.RENAMED]: 'text-info',
+  [FILE_STATUSES.TYPE_CHANGED]: 'text-warn',
+});

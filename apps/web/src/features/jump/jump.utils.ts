@@ -1,3 +1,5 @@
+import type { iFileStatusInput } from '@~/features/reviews/file-status.utils';
+
 import { jumpGroupValues } from './jump.enums';
 import type { JumpGroup } from './jump.enums';
 
@@ -7,6 +9,8 @@ export interface iJumpItem {
   label: string;
   /** Second line, such as a path or a repository; also searched. */
   detail?: string;
+  /** The changed file the result is in or is, to show how it changed. */
+  file?: iFileStatusInput;
   open: () => unknown;
 }
 

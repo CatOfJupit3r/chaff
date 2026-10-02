@@ -170,6 +170,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
           {isContextOpen ? (
             <FocusContextPanel
               cards={focus.cards}
+              files={snapshot.files}
               index={focus.index}
               progression={focus.progression}
               findings={focus.cardFindings}

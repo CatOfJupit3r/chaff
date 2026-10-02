@@ -7,6 +7,7 @@ import { ExternalIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { CopyFindingButton } from '@~/features/exports/components/copy-finding-button';
 import { PromoteFindingButton } from '@~/features/preferences/components/promote-finding-button';
+import { FileStatusBadge } from '@~/features/reviews/components/file-status-badge';
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
 import { DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import { formatRelativeTime } from '@~/utils/relative-time';
@@ -58,6 +59,7 @@ function AnchorSection({ anchor, comparison, onOpenInEditor }: iAnchorSectionPro
     <section className="flex flex-col gap-3 border-b border-line px-5 py-4">
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         <b className="font-medium text-fg">Your note</b>
+        {anchor.fileStatus ? <FileStatusBadge file={{ path: anchor.path, status: anchor.fileStatus }} /> : null}
         <span className="font-mono text-fg">{formatAnchorLocation(anchor)}</span>
         {writtenOn ? <span className="font-mono">on {writtenOn}</span> : null}
         <span className="ml-auto flex gap-1.5">

@@ -1,6 +1,8 @@
 import { UNIT_KINDS } from '@chaff/common/enums/review.enums';
 
 import { DiffStat } from '@~/features/reviews/components/diff-stat';
+import { FilePathLabel } from '@~/features/reviews/components/file-path-label';
+import { FileStatusBadge } from '@~/features/reviews/components/file-status-badge';
 import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/reviews.types';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
@@ -44,7 +46,12 @@ export function UnitCardTop({ unit, file, lastCommit }: iUnitCardTopProps) {
           {unit.title}
         </h2>
         <div className="mt-1 flex flex-wrap items-center gap-3 text-[12.5px] text-muted">
-          <span className="font-mono break-all">{file?.path}</span>
+          {file ? (
+            <span className="flex min-w-0 items-center gap-1.5">
+              <FileStatusBadge file={file} />
+              <FilePathLabel file={file} className="break-all" />
+            </span>
+          ) : null}
           <DiffStat additions={unit.additions} deletions={unit.deletions} />
         </div>
         {facts.length > 0 ? (

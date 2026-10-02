@@ -1,14 +1,18 @@
 import { useEffect, useRef } from 'react';
 
+import { FILE_STATUSES } from '@chaff/common/enums/review.enums';
+
 import { ExternalIcon } from '@~/components/icons/icons';
 import { cn } from '@~/lib/utils';
 
 import { useDiffReview } from '../diff-review.context';
+import { describeFileStatus } from '../file-status.utils';
 import { splitPath } from '../file-tree.utils';
 import { getFileDecision } from '../review-coverage.utils';
 import { FILE_DECISION_DOTS, FILE_DECISION_LABELS } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffStat } from './diff-stat';
+import { FileStatusBadge } from './file-status-badge';
 
 interface iFileTreeRowProps {
   file: iSnapshotFile;
@@ -34,16 +38,22 @@ export function FileTreeRow({ file, hasFolder = false, isCurrent, onSelect, onOp
       <button
         ref={ref}
         type="button"
-        title={file.oldPath ? `${file.oldPath} \u2192 ${file.path}` : file.path}
+        title={`${file.path}\n${describeFileStatus(file)}`}
         aria-current={isCurrent ? 'true' : undefined}
         onClick={() => onSelect(file.path)}
-        className="grid h-[30px] w-full grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-2 text-left text-[12.5px] text-muted hover:bg-hover hover:text-fg aria-current:bg-raised aria-current:text-fg"
+        className="grid h-[30px] w-full grid-cols-[10px_12px_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-2 text-left text-[12.5px] text-muted hover:bg-hover hover:text-fg aria-current:bg-raised aria-current:text-fg"
       >
         <span
           title={FILE_DECISION_LABELS(decision)}
           className={cn('size-2.5 rounded-full', FILE_DECISION_DOTS(decision))}
         />
-        <span className="truncate font-mono text-[12px]">
+        <FileStatusBadge file={file} />
+        <span
+          className={cn(
+            'truncate font-mono text-[12px]',
+            file.status === FILE_STATUSES.DELETED && 'text-faint line-through',
+          )}
+        >
           {hasFolder ? <span className="text-faint">{folder}</span> : null}
           {name}
         </span>

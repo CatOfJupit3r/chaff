@@ -29,14 +29,15 @@ export function useJumpItems(): iJumpItem[] {
   const { data: workspaces = [] } = useQuery(workspacesQueryOptions);
   const targets = useReviewTargets();
   const files = snapshot?.files ?? [];
-  const pathOf = new Map(files.map((file) => [file.id, file.path]));
+  const fileOf = new Map(files.map((file) => [file.id, file]));
   const nameOf = new Map(workspaces.map((workspace) => [workspace.id, workspace.name]));
 
   const cards = units.map((unit) => ({
     id: `unit:${unit.id}`,
     group: JUMP_GROUPS.CARD,
     label: unit.title,
-    detail: pathOf.get(unit.fileId),
+    detail: fileOf.get(unit.fileId)?.path,
+    file: fileOf.get(unit.fileId),
     open: async () => navigate({ to: '/reviews/$snapshotId', params: { snapshotId }, search: { unit: unit.id } }),
   }));
   const fileItems = files.map((file) => ({
@@ -44,6 +45,7 @@ export function useJumpItems(): iJumpItem[] {
     group: JUMP_GROUPS.FILE,
     label: file.path,
     detail: `+${file.additions} -${file.deletions}`,
+    file,
     open: async () =>
       navigate({
         to: '/reviews/$snapshotId/diff',

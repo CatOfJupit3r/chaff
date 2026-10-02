@@ -12,6 +12,8 @@ import { DigestPreview } from '@~/features/digests/components/digest-preview';
 import type { iDigest } from '@~/features/digests/digests.types';
 import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
+import { FileStatusBadge } from '@~/features/reviews/components/file-status-badge';
+import type { iSnapshotFile } from '@~/features/reviews/reviews.types';
 import { cn } from '@~/lib/utils';
 
 import { cardMark } from '../focus-cards.utils';
@@ -21,6 +23,8 @@ import { ContextFindings } from './context-findings';
 
 interface iFocusContextPanelProps {
   cards: readonly iFocusCard[];
+  /** The snapshot's changed files, to mark each card with how its file changed. */
+  files: readonly iSnapshotFile[];
   index: number;
   progression: ReviewProgression;
   findings: readonly iFinding[];
@@ -36,6 +40,7 @@ interface iFocusContextPanelProps {
 /** Opened on demand: the digest's overview, notes on this card, this branch and the rest of the stack, and every card to jump between. */
 export function FocusContextPanel({
   cards,
+  files,
   index,
   progression,
   findings,
@@ -48,6 +53,13 @@ export function FocusContextPanel({
 }: iFocusContextPanelProps) {
   const current = useRef<HTMLButtonElement>(null);
   const content = readyContent(digest);
+  const filesById = new Map(files.map((file) => [file.id, file]));
+  /** The file a card's units all come from; undefined for a change that spans several files. */
+  const cardFile = (card: iFocusCard) => {
+    const fileIds = new Set(card.units.map((unit) => unit.fileId));
+    const [fileId] = fileIds;
+    return fileIds.size === 1 && fileId !== undefined ? filesById.get(fileId) : undefined;
+  };
 
   useEffect(() => {
     current.current?.scrollIntoView({ block: 'nearest' });
@@ -79,6 +91,7 @@ export function FocusContextPanel({
         <div className="flex flex-col">
           {cards.map((card, cardIndex) => {
             const mark = cardMark(card);
+            const file = cardFile(card);
             return (
               <button
                 key={card.id}
@@ -96,6 +109,7 @@ export function FocusContextPanel({
                     mark && UNIT_MARK_SEGMENT_CLASSES(mark),
                   )}
                 />
+                {file ? <FileStatusBadge file={file} className="text-[10.5px]" /> : <span className="w-3 flex-none" />}
                 <span className={cn('min-w-0 flex-1 truncate', card.change && 'font-medium')}>{card.title}</span>
                 {card.change ? (
                   <span className="font-mono text-[11px] text-faint">{card.units.length} units</span>

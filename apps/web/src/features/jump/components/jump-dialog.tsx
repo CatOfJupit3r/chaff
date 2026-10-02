@@ -3,10 +3,11 @@ import type { RefObject } from 'react';
 
 import { SearchIcon } from '@~/components/icons/icons';
 import { Dialog, DialogContent } from '@~/components/ui/dialog';
+import { FileStatusBadge } from '@~/features/reviews/components/file-status-badge';
 import { cn } from '@~/lib/utils';
 
 import { useJumpItems } from '../hooks/use-jump-items';
-import { JUMP_GROUP_LABELS } from '../jump.enums';
+import { JUMP_GROUP_LABELS, JUMP_GROUPS } from '../jump.enums';
 import { matchJumpItems } from '../jump.utils';
 import type { iJumpItem } from '../jump.utils';
 
@@ -77,10 +78,16 @@ function JumpList({ inputRef, onDone }: iJumpListProps) {
                 index === current ? 'bg-raised text-fg' : 'text-fg-soft',
               )}
             >
+              {item.file && item.group === JUMP_GROUPS.FILE ? (
+                <FileStatusBadge file={item.file} className="self-center" />
+              ) : null}
               <span className="min-w-0 truncate">{item.label}</span>
               {item.detail ? (
-                <span className="ml-auto min-w-0 flex-none truncate font-mono text-[11.5px] text-faint">
-                  {item.detail}
+                <span className="ml-auto flex min-w-0 flex-none items-center gap-1.5 font-mono text-[11.5px] text-faint">
+                  {item.file && item.group !== JUMP_GROUPS.FILE ? (
+                    <FileStatusBadge file={item.file} className="text-[10.5px]" />
+                  ) : null}
+                  <span className="truncate">{item.detail}</span>
                 </span>
               ) : null}
             </div>

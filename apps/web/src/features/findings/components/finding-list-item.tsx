@@ -1,5 +1,6 @@
 import { FINDING_KIND_LABELS, FINDING_SCOPE_LABELS } from '@chaff/common/enums/review.enums';
 
+import { FileStatusBadge } from '@~/features/reviews/components/file-status-badge';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
 
@@ -29,7 +30,11 @@ export function FindingListItem({ finding, isSelected, onSelect }: iFindingListI
       <span className="min-w-0">
         <span className="line-clamp-2 text-[13.5px] text-fg">{findingTitle(finding)}</span>
         <span className="mt-1 block truncate font-mono text-[11.5px] text-faint">
-          {finding.branch} · {anchor ? formatAnchorLocation(anchor) : FINDING_SCOPE_LABELS(finding.scope).toLowerCase()}
+          {finding.branch} ·{' '}
+          {anchor?.fileStatus ? (
+            <FileStatusBadge file={{ path: anchor.path, status: anchor.fileStatus }} className="mr-1 text-[10.5px]" />
+          ) : null}
+          {anchor ? formatAnchorLocation(anchor) : FINDING_SCOPE_LABELS(finding.scope).toLowerCase()}
           {otherCount > 0 ? ` +${otherCount}` : ''}
         </span>
       </span>

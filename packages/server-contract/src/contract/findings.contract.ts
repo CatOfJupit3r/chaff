@@ -13,6 +13,7 @@ import {
   findingSeveritySchema,
   findingStatusSchema,
   findingTaskStateSchema,
+  fileStatusSchema,
 } from '@chaff/common/enums/review.enums';
 
 const idSchema = z.string().min(1).max(64);
@@ -100,6 +101,8 @@ export const findingAnchorSchema = z.object({
   unitId: z.string().optional(),
   fileId: z.string().optional(),
   path: z.string(),
+  /** How the anchored file changed in the snapshot the finding was written in. */
+  fileStatus: fileStatusSchema.optional(),
   side: diffSideSchema,
   /** 1-based and inclusive; absent for a whole file without text lines. */
   startLine: z.number().int().positive().optional(),
