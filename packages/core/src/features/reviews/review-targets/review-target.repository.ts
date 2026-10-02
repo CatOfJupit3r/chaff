@@ -1,6 +1,11 @@
 import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
 
-import type { iChangeRequestFields, iNewReviewTarget, iReviewTargetRecord } from './review-targets.types';
+import type {
+  iChangeRequestFields,
+  iNewReviewTarget,
+  iReviewTargetRecord,
+  iTargetArchive,
+} from './review-targets.types';
 
 export interface iReviewTargetRepository {
   list: (workspaceId?: string) => Promise<iReviewTargetRecord[]>;
@@ -14,4 +19,5 @@ export interface iReviewTargetRepository {
   create: (input: iNewReviewTarget & Partial<iChangeRequestFields>) => Promise<iReviewTargetRecord>;
   updateChange: (targetId: string, fields: iChangeRequestFields) => Promise<iReviewTargetRecord | undefined>;
   updateParent: (targetId: string, parentBranch: string) => Promise<iReviewTargetRecord | undefined>;
+  setArchive: (targetId: string, archive: iTargetArchive) => Promise<iReviewTargetRecord | undefined>;
 }

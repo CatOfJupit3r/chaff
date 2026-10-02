@@ -1,5 +1,5 @@
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
-import type { ReviewTargetKind, UnitMark } from '@chaff/common/enums/review.enums';
+import type { ArchiveReason, ReviewTargetKind, UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iNewReviewTarget } from './review-targets/review-targets.types';
 import type { iSnapshotFileSummary, iSnapshotRecord } from './snapshots/snapshots.types';
@@ -37,7 +37,16 @@ export interface iReviewTargetResponse {
   parentBranch: string;
   change?: iChangeRequestInfo;
   latestSnapshot?: iSnapshotSummary;
+  archived?: { at: Date; reason: ArchiveReason };
 }
+
+export type iReviewHistoryEntry = Omit<iReviewTargetResponse, 'latestSnapshot'> & {
+  latestSnapshot: iSnapshotSummary;
+  workspaceName: string;
+  findingCount: number;
+  activeFindingCount: number;
+  lastActivityAt: Date;
+};
 
 export type iSnapshotResponse = iSnapshotSummary &
   Pick<iSnapshotRecord, 'targetId' | 'parentBranch' | 'parentHeadSha' | 'baseSha'> & {

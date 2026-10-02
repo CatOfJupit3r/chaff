@@ -1,11 +1,15 @@
 import { container } from 'tsyringe';
 
+import { ReviewHistoryService } from '@~/features/reviews/history/review-history.service';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { UnitsService } from '@~/features/reviews/units/units.service';
 import { base, procedure } from '@~/lib/orpc';
 
 export const reviewsRouter = base.reviews.router({
   list: procedure.reviews.list.handler(async ({ input }) => container.resolve(ReviewsService).list(input.workspaceId)),
+  history: procedure.reviews.history.handler(async ({ input }) =>
+    container.resolve(ReviewHistoryService).list(input.workspaceId),
+  ),
 
   start: procedure.reviews.start.handler(async ({ input }) => container.resolve(ReviewsService).start(input)),
 

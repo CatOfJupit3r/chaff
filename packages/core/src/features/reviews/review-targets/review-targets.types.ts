@@ -12,3 +12,6 @@ export type iChangeRequestFields = Pick<
   typeof reviewTargets.$inferInsert,
   'kind' | 'parentBranch' | 'codeHost' | 'connectionId' | 'remoteProject' | 'changeNumber' | 'title' | 'webUrl'
 >;
+
+/** When and why a review moved to History; null brings it back. */
+export type iTargetArchive = Pick<typeof reviewTargets.$inferInsert, 'archivedAt' | 'archiveReason'>;

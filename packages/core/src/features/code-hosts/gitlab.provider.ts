@@ -1,7 +1,7 @@
 import { singleton } from 'tsyringe';
 import z from 'zod';
 
-import { CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
+import { CHANGE_STATES, CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { DIFF_SIDES } from '@chaff/common/enums/review.enums';
 
@@ -24,6 +24,8 @@ const mergeRequestSchema = z.object({
   iid: z.number(),
   title: z.string(),
   description: z.string().nullish(),
+  /** opened, merged, closed or locked. */
+  state: z.string().optional(),
   author: userSchema,
   source_branch: z.string(),
   target_branch: z.string(),
@@ -82,6 +84,12 @@ function notePosition(comment: iDraftComment, refs: NonNullable<iReviewDraft['re
   };
 }
 
+function changeState(state: string | undefined) {
+  if (state === 'merged') return CHANGE_STATES.MERGED;
+  if (state === 'closed') return CHANGE_STATES.CLOSED;
+  return CHANGE_STATES.OPEN;
+}
+
 function toChange(request: z.infer<typeof mergeRequestSchema>): iRemoteChange {
   return {
     number: request.iid,
@@ -94,6 +102,7 @@ function toChange(request: z.infer<typeof mergeRequestSchema>): iRemoteChange {
     headSha: request.sha ?? '',
     webUrl: request.web_url,
     isDraft: request.draft ?? request.work_in_progress ?? false,
+    state: changeState(request.state),
     updatedAt: new Date(request.updated_at),
     assigneeUsernames: (request.assignees ?? []).map((user) => user.username),
     reviewerUsernames: (request.reviewers ?? []).map((user) => user.username),

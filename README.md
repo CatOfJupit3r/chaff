@@ -347,6 +347,15 @@ Every Focus and Verify action can take another key: click it and press the new o
   <img src="docs/screenshots/settings-keyboard-light.png" alt="Keyboard map in Settings with Later moved to B" />
 </picture>
 
+### History
+
+**History** in the left rail lists every review you started, newest activity first, with its version, region progress and findings. When a local branch is deleted, or its merge request is merged or closed, the review is archived rather than lost: it moves to History with its snapshots, decisions and findings, and still opens in Focus, the Full diff and Export. A branch that comes back under the same name, or a change that reopens, brings its review back.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/history-dark.png" />
+  <img src="docs/screenshots/history-light.png" alt="History screen listing reviews, two of them archived as branch deleted and merged" />
+</picture>
+
 ### Open in your editor
 
 File names and line numbers link into VS Code, VS Code Insiders or Cursor, at the path of your local checkout.
@@ -402,6 +411,7 @@ The width you drag the Full diff's file list to is kept.
 | GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
 | GitHub pull requests, the same way | Works |
 | Linking a local branch's review to the merge request it became | Works |
+| History of every review; reviews of deleted branches and merged or closed changes archived with their findings | Works |
 | Findings posted as GitLab draft notes or a pending GitHub review | Works |
 | Replies to posted findings pulled back, a reply taken as a question's answer | Works |
 | GitLab diff version stored with each merge request snapshot | Works |

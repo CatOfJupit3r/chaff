@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as StackRouteImport } from './routes/stack';
 import { Route as SettingsRouteImport } from './routes/settings';
+import { Route as HistoryRouteImport } from './routes/history';
 import { Route as FindingsRouteImport } from './routes/findings';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
@@ -26,6 +27,11 @@ const StackRoute = StackRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any);
 const FindingsRoute = FindingsRouteImport.update({
@@ -62,6 +68,7 @@ const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/findings': typeof FindingsRoute;
+  '/history': typeof HistoryRoute;
   '/settings': typeof SettingsRoute;
   '/stack': typeof StackRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/findings': typeof FindingsRoute;
+  '/history': typeof HistoryRoute;
   '/settings': typeof SettingsRoute;
   '/stack': typeof StackRoute;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/findings': typeof FindingsRoute;
+  '/history': typeof HistoryRoute;
   '/settings': typeof SettingsRoute;
   '/stack': typeof StackRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/findings'
+    | '/history'
     | '/settings'
     | '/stack'
     | '/reviews/$snapshotId'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/findings'
+    | '/history'
     | '/settings'
     | '/stack'
     | '/reviews/$snapshotId/diff'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/findings'
+    | '/history'
     | '/settings'
     | '/stack'
     | '/reviews/$snapshotId'
@@ -124,6 +136,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   FindingsRoute: typeof FindingsRoute;
+  HistoryRoute: typeof HistoryRoute;
   SettingsRoute: typeof SettingsRoute;
   StackRoute: typeof StackRoute;
   ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRouteWithChildren;
@@ -143,6 +156,13 @@ declare module '@tanstack/react-router' {
       path: '/settings';
       fullPath: '/settings';
       preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/history': {
+      id: '/history';
+      path: '/history';
+      fullPath: '/history';
+      preLoaderRoute: typeof HistoryRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/findings': {
@@ -208,6 +228,7 @@ const ReviewsSnapshotIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FindingsRoute: FindingsRoute,
+  HistoryRoute: HistoryRoute,
   SettingsRoute: SettingsRoute,
   StackRoute: StackRoute,
   ReviewsSnapshotIdRoute: ReviewsSnapshotIdRouteWithChildren,

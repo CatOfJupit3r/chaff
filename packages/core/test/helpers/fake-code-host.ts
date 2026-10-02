@@ -16,6 +16,8 @@ export interface iFakeChange {
   assignees?: string[];
   reviewers?: string[];
   description?: string;
+  /** Defaults to open. */
+  state?: 'opened' | 'merged' | 'closed';
 }
 
 export interface iFakeIssue {
@@ -101,6 +103,10 @@ export class FakeCodeHost {
     }
   }
 
+  private openChanges() {
+    return this.changes.filter((change) => change.state === undefined || change.state === 'opened');
+  }
+
   private commits(change: iFakeChange) {
     return this.repo
       .git('rev-list', `${change.targetBranch}..${this.head(change.number)}`)
@@ -113,6 +119,7 @@ export class FakeCodeHost {
       iid: change.number,
       title: change.title,
       description: change.description ?? `Description of ${change.title}`,
+      state: change.state ?? 'opened',
       author: user(change.author),
       source_branch: change.sourceBranch,
       target_branch: change.targetBranch,
@@ -130,6 +137,8 @@ export class FakeCodeHost {
       number: change.number,
       title: change.title,
       body: change.description ?? `Description of ${change.title}`,
+      state: change.state === undefined || change.state === 'opened' ? 'open' : 'closed',
+      merged_at: change.state === 'merged' ? '2026-10-01T12:00:00Z' : null,
       user: user(change.author),
       head: { ref: change.sourceBranch, sha: this.head(change.number) },
       base: { ref: change.targetBranch },
@@ -146,7 +155,10 @@ export class FakeCodeHost {
     const routes: [RegExp, (match: RegExpExecArray) => unknown][] = [
       [/^\/api\/v[34]\/user$/, () => user(REVIEWER)],
       [/^\/api\/v4\/projects\/[^/]+$/, () => ({ http_url_to_repo: this.repo.path })],
-      [/^\/api\/v4\/projects\/[^/]+\/merge_requests$/, () => this.changes.map((change) => this.gitlabChange(change))],
+      [
+        /^\/api\/v4\/projects\/[^/]+\/merge_requests$/,
+        () => this.openChanges().map((change) => this.gitlabChange(change)),
+      ],
       [
         /^\/api\/v4\/projects\/[^/]+\/merge_requests\/(\d+)$/,
         (match) => this.mapFound(find(match[1]), (change) => this.gitlabChange(change)),
@@ -181,7 +193,7 @@ export class FakeCodeHost {
           })),
       ],
       [/^\/api\/v3\/repos\/[^/]+\/[^/]+$/, () => ({ clone_url: this.repo.path })],
-      [/^\/api\/v3\/repos\/[^/]+\/[^/]+\/pulls$/, () => this.changes.map((change) => this.githubChange(change))],
+      [/^\/api\/v3\/repos\/[^/]+\/[^/]+\/pulls$/, () => this.openChanges().map((change) => this.githubChange(change))],
       [
         /^\/api\/v3\/repos\/[^/]+\/[^/]+\/pulls\/(\d+)$/,
         (match) => this.mapFound(find(match[1]), (change) => this.githubChange(change)),

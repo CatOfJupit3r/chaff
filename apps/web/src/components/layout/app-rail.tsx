@@ -9,6 +9,7 @@ import {
   ExportIcon,
   FlagIcon,
   FocusIcon,
+  HistoryIcon,
   InboxIcon,
   SettingsIcon,
   StackIcon,
@@ -52,7 +53,7 @@ function RailLink({ to, params, search, icon: Icon, label, badge }: iRailLinkPro
   );
 }
 
-/** Screens: reviews, the stack, Focus and Full diff for the latest review, findings, export and settings. */
+/** Screens: reviews, the stack, Focus and Full diff for the latest review, findings, export, history and settings. */
 export function AppRail() {
   const { snapshotId } = useParams({ strict: false });
   const [lastSnapshotId, setLastSnapshotId] = useAtom(lastSnapshotIdAtom);
@@ -94,6 +95,7 @@ export function AppRail() {
           label="Export"
         />
       ) : null}
+      <RailLink to="/history" icon={HistoryIcon} label="History" />
       <div className="mt-auto">
         <RailLink to="/settings" icon={SettingsIcon} label="Settings" />
       </div>

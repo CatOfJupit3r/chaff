@@ -77,6 +77,10 @@ export class ReviewsService {
           parentBranch: target.parentBranch,
           change: changeInfo(target),
           latestSnapshot: latest ? await this.toSummary(latest) : undefined,
+          archived:
+            target.archivedAt && target.archiveReason
+              ? { at: target.archivedAt, reason: target.archiveReason }
+              : undefined,
         };
       }),
     );

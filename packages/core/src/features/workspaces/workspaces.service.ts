@@ -8,6 +8,8 @@ import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 import { REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { GitService } from '@~/features/git/git.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
+import { localArchiveChanges } from '@~/features/reviews/review-targets/target-archive.utils';
+import type { iArchiveChange } from '@~/features/reviews/review-targets/target-archive.utils';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 import { isDirectory, pathExists } from '@~/lib/file-system';
@@ -84,6 +86,7 @@ export class WorkspacesService {
         .map((target) => [target.branch, target.parentBranch]),
     );
     await this.rememberParents(record, branches);
+    await this.applyArchive(localArchiveChanges(targets, new Set(branches.map((branch) => branch.name))));
     return mapWithConcurrency(branches, STATUS_CONCURRENCY, async (branch) => {
       const confirmedParent = confirmedParents.get(branch.name);
       const parent = confirmedParent ?? branch.suggestedParent;
@@ -103,6 +106,21 @@ export class WorkspacesService {
         hasWorkingChanges,
       };
     });
+  }
+
+  /** Moves the repository's local reviews whose branch is gone to History, and back when the branch returns. */
+  public async syncArchive(workspaceId: string) {
+    const record = await this.getRecord(workspaceId);
+    if (!(await pathExists(path.join(record.repoPath, '.git')))) return;
+    const [output, targets] = await Promise.all([
+      this.gitService.output(record.repoPath, ['for-each-ref', '--format=%(refname:short)', 'refs/heads']),
+      this.reviewTargetRepository.list(workspaceId),
+    ]);
+    await this.applyArchive(localArchiveChanges(targets, new Set(output.split('\n').filter(Boolean))));
+  }
+
+  private async applyArchive(changes: readonly iArchiveChange[]) {
+    for (const { targetId, archive } of changes) await this.reviewTargetRepository.setArchive(targetId, archive);
   }
 
   private async rememberParents(record: iWorkspaceRecord, branches: readonly iGitBranch[]) {
