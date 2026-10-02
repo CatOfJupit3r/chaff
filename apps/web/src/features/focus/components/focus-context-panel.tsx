@@ -3,6 +3,9 @@ import { useEffect, useRef } from 'react';
 import { RightIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { SectionLabel } from '@~/components/ui/section-label';
+import { DigestOverview } from '@~/features/digests/components/digest-overview';
+import type { iDigest } from '@~/features/digests/digests.types';
+import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
 import type { iUnit } from '@~/features/reviews/reviews.types';
 import { cn } from '@~/lib/utils';
@@ -13,13 +16,15 @@ interface iFocusContextPanelProps {
   units: readonly iUnit[];
   index: number;
   findings: readonly iFinding[];
+  digest: iDigest | undefined;
   onJump: (index: number) => void;
   onClose: () => void;
 }
 
-/** Opened on demand: every unit of the review to jump between, and the notes already written on this one. */
-export function FocusContextPanel({ units, index, findings, onJump, onClose }: iFocusContextPanelProps) {
+/** Opened on demand: the digest's overview, the notes on this unit, and every unit to jump between. */
+export function FocusContextPanel({ units, index, findings, digest, onJump, onClose }: iFocusContextPanelProps) {
   const current = useRef<HTMLButtonElement>(null);
+  const content = readyContent(digest);
 
   useEffect(() => {
     current.current?.scrollIntoView({ block: 'nearest' });
@@ -33,6 +38,14 @@ export function FocusContextPanel({ units, index, findings, onJump, onClose }: i
           <RightIcon />
         </Button>
       </div>
+      {digest && content ? (
+        <DigestOverview
+          runner={digest.runner}
+          content={content}
+          currentUnitId={units[index]?.id}
+          onOpenUnit={(unitId) => onJump(units.findIndex((unit) => unit.id === unitId))}
+        />
+      ) : null}
       <section className="flex flex-col gap-2">
         <SectionLabel>Notes on this unit</SectionLabel>
         {findings.length === 0 ? <p className="m-0 text-[12.5px] text-muted">None yet.</p> : null}

@@ -16,7 +16,7 @@
 
 Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
 
-> **Status:** early. Local branch stacks, frozen snapshots, Focus review, the Full diff and findings work today. The AI digest, GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
+> **Status:** early. Local branch stacks, frozen snapshots, Focus review with the AI digest, the Full diff and findings work today. GitLab and GitHub import, the second pass and export are being built next. See [What works today](#what-works-today).
 
 ## Why Chaff
 
@@ -62,6 +62,39 @@ One unit at a time: a function, a type or a section of a file, shown whole with 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-note-dark.png" />
   <img src="docs/screenshots/focus-note-light.png" alt="Writing a concern on the unit in Focus review" />
+</picture>
+
+### AI digest
+
+Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits or inferred), the tests that cover the unit, and a diagram where one helps. The Context panel (I) lists the changes the branch is made of, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-digest-dark.png" />
+  <img src="docs/screenshots/focus-digest-light.png" alt="Focus card with the digest's summary, intent and Worth checking list above the code" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-context-dark.png" />
+  <img src="docs/screenshots/digest-context-light.png" alt="Context panel with the digest overview and the changes the branch is made of" />
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-diagram-dark.png" />
+  <img src="docs/screenshots/focus-diagram-light.png" alt="Diagram tab with a state diagram the digest drew for the unit" />
+</picture>
+
+The Tests tab keeps three facts apart: a test exists, the agent read it, and it passed. Chaff never runs tests, so a digest can't claim the third.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-dark.png" />
+  <img src="docs/screenshots/focus-tests-light.png" alt="Tests tab listing the test the digest tied to the unit, with Exists, Agent read it and Passed columns" />
+</picture>
+
+**AI digest** in the top bar starts one and says which company receives the code before anything runs.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
+  <img src="docs/screenshots/digest-dialog-light.png" alt="Write an AI digest dialog with Claude Code found and Codex not installed, and a notice about what the agent sends" />
 </picture>
 
 ### Full diff
@@ -134,13 +167,13 @@ Theme (system, dark, light), accent color and code size. Every color comes from 
 | Focus review: one unit at a time, keyboard decisions, undo, Later queue | Works |
 | Decisions on every unit, shown in Full diff with line coverage | Works |
 | Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
+| AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
 | Stack overview with parent editing and cumulative view | Planned |
 | GitLab merge requests and stacked MRs | Planned |
 | GitHub pull requests, exported as a pending review | Planned |
 | Working changes (uncommitted work) as a review target | Planned |
 | Second pass: interdiffs, re-anchored findings, Verify screen | Planned |
 | Export: Markdown and JSON packets, GitLab draft notes, agent report import | Planned |
-| Optional AI digest via your local Claude Code or Codex, read-only | Planned |
 
 ## Stack
 

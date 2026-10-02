@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
 
-import { CARD_VIEWS } from '../focus.enums';
+import { cardViewValues } from '../focus.enums';
 import type { CardView } from '../focus.enums';
 import type { CommentMark } from './use-focus-review';
 
@@ -17,7 +17,8 @@ interface iFocusKeyHandlers {
   onView: (view: CardView) => void;
 }
 
-const VIEW_KEYS: Record<string, CardView> = { '1': CARD_VIEWS.code, '2': CARD_VIEWS.usages };
+/** 1 to 4 pick the card's views in tab order. */
+const VIEW_KEYS = new Map(cardViewValues.map((view, index) => [String(index + 1), view]));
 
 function isTyping(target: EventTarget | null) {
   return (
@@ -35,11 +36,11 @@ function actionFor(key: string, handlers: iFocusKeyHandlers): (() => unknown) | 
   if (key === 'l') return handlers.onLater;
   if (key === 'c') return () => handlers.onComment(UNIT_MARKS.CONCERN);
   if (key === 'q') return () => handlers.onComment(UNIT_MARKS.QUESTION);
-  const view = VIEW_KEYS[key];
+  const view = VIEW_KEYS.get(key);
   return view ? () => handlers.onView(view) : undefined;
 }
 
-/** Focus review keys: G, C, Q, L decide; arrows or J/K move; U undoes; I opens context; 1-2 switch views. */
+/** Focus review keys: G, C, Q, L decide; arrows or J/K move; U undoes; I opens context; 1-4 switch views. */
 export function useFocusKeyboard(handlers: iFocusKeyHandlers) {
   const latest = useRef(handlers);
   useEffect(() => {

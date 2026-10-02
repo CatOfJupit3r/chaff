@@ -1,17 +1,18 @@
 import { Kbd } from '@~/components/ui/kbd';
 import { cn } from '@~/lib/utils';
 
-import { CARD_VIEW_LABELS, CARD_VIEWS, cardViewValues } from '../focus.enums';
+import { CARD_VIEW_LABELS, cardViewValues } from '../focus.enums';
 import type { CardView } from '../focus.enums';
 
 interface iUnitViewTabsProps {
   view: CardView;
-  usageCount?: number;
+  /** Shown next to a view's name: how many usages, diagrams or tests it holds. */
+  counts: ReadonlyMap<CardView, number>;
   onChange: (view: CardView) => void;
 }
 
-/** Code and Usages, switched with 1 and 2. */
-export function UnitViewTabs({ view, usageCount, onChange }: iUnitViewTabsProps) {
+/** Code, Usages, Diagram and Tests, switched with 1 to 4. */
+export function UnitViewTabs({ view, counts, onChange }: iUnitViewTabsProps) {
   return (
     <div role="tablist" className="flex gap-0.5 overflow-x-auto border-t border-line bg-canvas px-3.5">
       {cardViewValues.map((candidate, index) => (
@@ -27,8 +28,8 @@ export function UnitViewTabs({ view, usageCount, onChange }: iUnitViewTabsProps)
           )}
         >
           {CARD_VIEW_LABELS(candidate)}
-          {candidate === CARD_VIEWS.usages && usageCount !== undefined ? (
-            <span className="font-mono text-[11px] text-faint tabular-nums">{usageCount}</span>
+          {counts.has(candidate) ? (
+            <span className="font-mono text-[11px] text-faint tabular-nums">{counts.get(candidate)}</span>
           ) : null}
           <Kbd className="h-4 min-w-4 text-[10px]">{index + 1}</Kbd>
         </button>

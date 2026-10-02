@@ -80,6 +80,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                   snapshot={snapshot}
                   unit={unit}
                   findings={unitFindings}
+                  digest={focus.digest}
                   view={focus.view}
                   exit={focus.exit}
                   onViewChange={focus.setView}
@@ -119,6 +120,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
               units={focus.units}
               index={focus.index}
               findings={unitFindings}
+              digest={focus.digest}
               onJump={jump}
               onClose={() => setIsContextOpen(false)}
             />

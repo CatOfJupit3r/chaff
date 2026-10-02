@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { FINDING_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import { showToast } from '@~/components/toast/toast-store';
+import { readyContent, orderByReading } from '@~/features/digests/digests.utils';
+import { useDigest } from '@~/features/digests/hooks/use-digest';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
@@ -32,7 +34,10 @@ export type CommentMark = typeof UNIT_MARKS.CONCERN | typeof UNIT_MARKS.QUESTION
 /** The Focus review: which card is up, and the decisions that move through the cards. */
 export function useFocusReview(snapshotId: string) {
   const snapshot = useSnapshot(snapshotId);
-  const units = useUnits(snapshotId);
+  const unitsInFileOrder = useUnits(snapshotId);
+  const digest = useDigest(snapshotId);
+  const readingOrder = readyContent(digest)?.readingOrder;
+  const units = useMemo(() => orderByReading(unitsInFileOrder, readingOrder), [unitsInFileOrder, readingOrder]);
   const position = useFocusPosition();
   const setMark = useSetMark(snapshotId);
   const findings = useFindingMutations();
@@ -105,6 +110,7 @@ export function useFocusReview(snapshotId: string) {
 
   return {
     snapshot,
+    digest,
     repositoryName: workspace?.name ?? snapshot.branch,
     openInEditor,
     unitFindings,

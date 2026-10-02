@@ -67,7 +67,7 @@ Each snapshot is broken down before you read it:
 - A **unit** is something you review. Chaff parses the old and new version of each file with tree-sitter and assigns each region to the declaration that encloses it: a function, method, class or other declaration becomes a **Function** unit, shown whole. Changes outside any declaration (imports, top-level statements, config, deleted, generated or unsupported files) become **Section** units. Nothing is dropped for being small or uninteresting.
 - Supported grammars: TypeScript, TSX, JavaScript, Python, Go, Rust, Java, C#, Ruby, PHP, C++, Bash and PowerShell.
 
-Units are numbered across the snapshot in reading order, and their count shows on the Reviews screen. Reviewing them one at a time, with marks and coverage over every region, is the **planned** Focus review. **Change** units (groups of regions that make one behavior change, proposed by an optional AI digest or made by hand) are also **planned**.
+Units are numbered across the snapshot in reading order, and their count shows on the Reviews screen. Focus review walks them one at a time; a decision on a unit covers every region in it, so the Full diff can show line coverage. The AI digest groups units into the behavior changes they make up (below).
 
 ## Reading order
 
@@ -89,8 +89,17 @@ Generated files, lockfiles and very large diffs stay collapsed until you ask for
 
 `<app data>` is `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS and `~/.config/Chaff` on Linux. Development runs (`pnpm run dev`) use a separate `Chaff Dev` folder. Reviews stay on that machine; export (**planned**) is the way to move them.
 
-## Planned: GitLab, GitHub and the AI digest
+## The AI digest
+
+The digest is optional and read-only. Chaff runs the Claude Code (`claude -p`) or Codex (`codex exec`) already signed in on your machine:
+
+1. Chaff checks out the snapshot's head into a throwaway worktree of its own store, under `<app data>/digests/<id>`, never in your repository.
+2. The agent gets the branch's commit messages, the list of units with short ids (`u1`, `u2`, ...) and the diff, and may only use read and search tools. Claude Code runs with `--tools Read,Grep,Glob`, every editing, shell and web tool disallowed, and your project's settings and MCP servers ignored; Codex runs in its `read-only` sandbox.
+3. It answers in a fixed JSON schema: an overview, groups of units with before, after and intent (marked documented or inferred), a reading order, a note per unit with things worth checking and related tests, and Mermaid diagrams.
+4. Chaff checks the answer before keeping it. Unknown ids are dropped, a unit belongs to one group at most, units no group explains go to a visible "Other changes, not yet explained" group, the reading order is completed so it covers every unit once, and a test claimed to have passed is downgraded to "read", because nothing ran.
+5. The worktree is deleted. A digest that runs longer than 20 minutes, or that you stop, leaves nothing behind.
+
+## Planned: GitLab and GitHub
 
 - **GitLab merge requests** are the primary target: load an MR or a stack of MRs into the snapshot store, use MR diff versions as snapshots, and post findings back as draft notes you publish yourself.
 - **GitHub pull requests** follow the same provider interface: import PRs and stacks, and export findings as a pending review that is never submitted automatically.
-- **The AI digest** is optional and read-only. It uses the Claude Code or Codex already signed in on your machine, runs against a throwaway worktree of the snapshot in Chaff's data folder, and may only reference region ids, so it can group and explain changes but never hide one.

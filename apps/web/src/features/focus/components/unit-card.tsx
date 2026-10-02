@@ -1,4 +1,9 @@
 import { Pill } from '@~/components/ui/pill';
+import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
+import { UnitDigestNotes } from '@~/features/digests/components/unit-digest-notes';
+import { UnitTestsView } from '@~/features/digests/components/unit-tests-view';
+import type { iDigest } from '@~/features/digests/digests.types';
+import { findUnitDiagrams, findUnitGroup, findUnitNote, readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
 import type { iSnapshot, iUnit } from '@~/features/reviews/reviews.types';
 import { cn } from '@~/lib/utils';
@@ -16,17 +21,37 @@ interface iUnitCardProps {
   snapshot: iSnapshot;
   unit: iUnit;
   findings: readonly iFinding[];
+  digest: iDigest | undefined;
   view: CardView;
   exit?: CardExit;
   onViewChange: (view: CardView) => void;
   onOpenInEditor: (path: string, line?: number) => void;
 }
 
-/** One unit: what it is, the decision already made on it, and its code or usages. */
-export function UnitCard({ snapshot, unit, findings, view, exit, onViewChange, onOpenInEditor }: iUnitCardProps) {
+/** One unit: what it is, what the digest says, the decision already made on it, and one of its views. */
+export function UnitCard({
+  snapshot,
+  unit,
+  findings,
+  digest,
+  view,
+  exit,
+  onViewChange,
+  onOpenInEditor,
+}: iUnitCardProps) {
   const file = snapshot.files.find((candidate) => candidate.id === unit.fileId);
   const { data: detail } = useUnitDetail(snapshot.id, unit.id);
   const { data: usages } = useUnitUsages(snapshot.id, unit.id);
+  const content = readyContent(digest);
+  const note = findUnitNote(content, unit.id);
+  const diagrams = findUnitDiagrams(content, unit.id);
+  const tests = note?.tests ?? [];
+  const counts = new Map<CardView, number>();
+  if (usages?.symbol) counts.set(CARD_VIEWS.usages, usages.usages.length);
+  if (content) {
+    counts.set(CARD_VIEWS.diagram, diagrams.length);
+    counts.set(CARD_VIEWS.tests, tests.length);
+  }
 
   return (
     <article
@@ -38,6 +63,9 @@ export function UnitCard({ snapshot, unit, findings, view, exit, onViewChange, o
       )}
     >
       <UnitCardTop unit={unit} file={file} lastCommit={detail?.lastCommit} />
+      {digest && content ? (
+        <UnitDigestNotes runner={digest.runner} note={note} group={findUnitGroup(content, unit.id)} />
+      ) : null}
       {unit.mark ? (
         <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-canvas px-[22px] py-[9px] text-[12.5px] text-muted">
           <Pill variant="neutral">{UNIT_MARK_LABELS(unit.mark)}</Pill>
@@ -57,11 +85,7 @@ export function UnitCard({ snapshot, unit, findings, view, exit, onViewChange, o
           <span className="min-w-0 flex-1 whitespace-pre-wrap text-fg-soft">{finding.body}</span>
         </div>
       ))}
-      <UnitViewTabs
-        view={view}
-        usageCount={usages?.symbol ? usages.usages.length : undefined}
-        onChange={onViewChange}
-      />
+      <UnitViewTabs view={view} counts={counts} onChange={onViewChange} />
       {view === CARD_VIEWS.code && file ? (
         <UnitCodeView
           snapshotId={snapshot.id}
@@ -74,6 +98,21 @@ export function UnitCard({ snapshot, unit, findings, view, exit, onViewChange, o
       {view === CARD_VIEWS.usages ? (
         <div className="border-t border-line">
           <UnitUsagesView usages={usages} onOpenInEditor={onOpenInEditor} />
+        </div>
+      ) : null}
+      {view === CARD_VIEWS.diagram ? (
+        <div className="border-t border-line">
+          <UnitDiagramView diagrams={diagrams} hasDigest={content !== undefined} />
+        </div>
+      ) : null}
+      {view === CARD_VIEWS.tests ? (
+        <div className="border-t border-line">
+          <UnitTestsView
+            tests={tests}
+            headSha={snapshot.headSha}
+            hasDigest={content !== undefined}
+            onOpenInEditor={onOpenInEditor}
+          />
         </div>
       ) : null}
     </article>

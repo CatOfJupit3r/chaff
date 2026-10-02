@@ -14,7 +14,7 @@ import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
 // Card views and queues are lowercase because they appear in the URL.
-export const cardViewsEnumwaii = new Enumwaii('CardView', ['code', 'usages']);
+export const cardViewsEnumwaii = new Enumwaii('CardView', ['code', 'usages', 'diagram', 'tests']);
 
 export const CARD_VIEWS = cardViewsEnumwaii.enum;
 export type CardView = InferEnumwaii<typeof cardViewsEnumwaii>;
@@ -23,6 +23,8 @@ export const cardViewValues = cardViewsEnumwaii.values;
 export const CARD_VIEW_LABELS = cardViewsEnumwaii.derive({
   [CARD_VIEWS.code]: 'Code',
   [CARD_VIEWS.usages]: 'Usages',
+  [CARD_VIEWS.diagram]: 'Diagram',
+  [CARD_VIEWS.tests]: 'Tests',
 });
 
 /** Which units Next walks through: the ones without a decision, or the ones put off with Later. */
