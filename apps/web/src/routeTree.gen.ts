@@ -15,6 +15,7 @@ import { Route as FindingsRouteImport } from './routes/findings';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
 import { Route as ReviewsSnapshotIdIndexRouteImport } from './routes/reviews.$snapshotId.index';
+import { Route as ReviewsSnapshotIdExportRouteImport } from './routes/reviews.$snapshotId.export';
 import { Route as ReviewsSnapshotIdDiffRouteImport } from './routes/reviews.$snapshotId.diff';
 
 const StackRoute = StackRouteImport.update({
@@ -47,6 +48,11 @@ const ReviewsSnapshotIdIndexRoute = ReviewsSnapshotIdIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ReviewsSnapshotIdRoute,
 } as any);
+const ReviewsSnapshotIdExportRoute = ReviewsSnapshotIdExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
 const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
   id: '/diff',
   path: '/diff',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/stack': typeof StackRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
   '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesByTo {
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute;
   '/stack': typeof StackRoute;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesById {
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/stack': typeof StackRoute;
   '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
   '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
   '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRouteTypes {
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/stack'
     | '/reviews/$snapshotId'
     | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
     | '/reviews/$snapshotId/';
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stack'
     | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
     | '/reviews/$snapshotId';
   id:
     | '__root__'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/stack'
     | '/reviews/$snapshotId'
     | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
     | '/reviews/$snapshotId/';
   fileRoutesById: FileRoutesById;
 }
@@ -161,6 +173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewsSnapshotIdIndexRouteImport;
       parentRoute: typeof ReviewsSnapshotIdRoute;
     };
+    '/reviews/$snapshotId/export': {
+      id: '/reviews/$snapshotId/export';
+      path: '/export';
+      fullPath: '/reviews/$snapshotId/export';
+      preLoaderRoute: typeof ReviewsSnapshotIdExportRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
     '/reviews/$snapshotId/diff': {
       id: '/reviews/$snapshotId/diff';
       path: '/diff';
@@ -173,11 +192,13 @@ declare module '@tanstack/react-router' {
 
 interface ReviewsSnapshotIdRouteChildren {
   ReviewsSnapshotIdDiffRoute: typeof ReviewsSnapshotIdDiffRoute;
+  ReviewsSnapshotIdExportRoute: typeof ReviewsSnapshotIdExportRoute;
   ReviewsSnapshotIdIndexRoute: typeof ReviewsSnapshotIdIndexRoute;
 }
 
 const ReviewsSnapshotIdRouteChildren: ReviewsSnapshotIdRouteChildren = {
   ReviewsSnapshotIdDiffRoute: ReviewsSnapshotIdDiffRoute,
+  ReviewsSnapshotIdExportRoute: ReviewsSnapshotIdExportRoute,
   ReviewsSnapshotIdIndexRoute: ReviewsSnapshotIdIndexRoute,
 };
 

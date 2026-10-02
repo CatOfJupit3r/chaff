@@ -138,6 +138,14 @@ export const FlagIcon = createIcon(
     <path d="M5 4h11l-2 4 2 4H5" />
   </>,
 );
+export const ExportIcon = createIcon(
+  'ExportIcon',
+  <>
+    <path d="M12 15V4" />
+    <path d="M7.5 8.5L12 4l4.5 4.5" />
+    <path d="M5 13v6h14v-6" />
+  </>,
+);
 export const SparkIcon = createIcon(
   'SparkIcon',
   <>

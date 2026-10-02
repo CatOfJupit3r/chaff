@@ -5,6 +5,7 @@ import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { ExternalIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
+import { CopyFindingButton } from '@~/features/exports/components/copy-finding-button';
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
 import { DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import { formatRelativeTime } from '@~/utils/relative-time';
@@ -13,6 +14,7 @@ import type { iAnchorComparison, iFinding, iFindingAnchor } from '../findings.ty
 import { findingTitle, formatAnchorLocation } from '../findings.utils';
 import { useFindingComparison } from '../hooks/use-finding-comparison';
 import { FindingActions } from './finding-actions';
+import { FindingAgentNote } from './finding-agent-note';
 import { FindingAnchorChange } from './finding-anchor-change';
 import { FindingBadges } from './finding-badges';
 import { FindingLifecycle } from './finding-lifecycle';
@@ -102,9 +104,12 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
           </span>
         </div>
         <h2 className="m-0 text-[17px] font-semibold tracking-[-0.01em] text-balance">{findingTitle(finding)}</h2>
-        <p className="m-0 font-mono text-[12px] text-muted">
-          {finding.branch} onto {finding.parentBranch}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="m-0 font-mono text-[12px] text-muted">
+            {finding.branch} onto {finding.parentBranch}
+          </p>
+          <CopyFindingButton finding={finding} />
+        </div>
       </header>
       {finding.anchors.map((anchor) => (
         <AnchorSection
@@ -124,6 +129,7 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
           </div>
         ) : null}
       </section>
+      <FindingAgentNote finding={finding} />
       <FindingActions finding={finding} isPending={isPending} onSetStatus={onSetStatus} />
     </article>
   );
