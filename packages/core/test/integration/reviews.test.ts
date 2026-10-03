@@ -1,10 +1,10 @@
 import { call } from '@orpc/server';
-import { chmodSync, existsSync, readdirSync, statSync, symlinkSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { FILE_KINDS, FILE_STATUSES } from '@chaff/common/enums/review.enums';
+import { DIFF_SIDES, FILE_KINDS, FILE_STATUSES } from '@chaff/common/enums/review.enums';
 
 import { createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
@@ -128,6 +128,7 @@ describe('reviews', () => {
 
   it('accounts for renames, deletions, binaries, mode and type changes', async () => {
     const repo = createTestGitRepo();
+    repo.git('config', 'core.fileMode', 'false');
     repo.commitFiles('base', {
       'docs/guide.md': 'Read me first.\nSecond line.\nThird line.\n',
       'scripts/run.sh': 'echo run\n',
@@ -138,7 +139,7 @@ describe('reviews', () => {
     });
     repo.branch('cleanup');
     repo.git('mv', 'docs/guide.md', 'docs/handbook.md');
-    chmodSync(path.join(repo.path, 'scripts/run.sh'), 0o755);
+    repo.git('update-index', '--chmod=+x', '--', 'scripts/run.sh');
     repo.git('rm', '--quiet', 'pointer.txt');
     symlinkSync('link-target.txt', path.join(repo.path, 'pointer.txt'));
     repo.commitFiles('cleanup', { 'assets/logo.bin': Buffer.from([0, 1, 2, 4]), 'src/gone.ts': null });
@@ -168,6 +169,7 @@ describe('reviews', () => {
     const unchanged = await call(appRouter.reviews.refresh, { targetId });
 
     expect(status).toEqual({
+      isWatched: true,
       isBranchMissing: false,
       newCommitCount: 1,
       isBranchRewritten: false,
@@ -181,6 +183,50 @@ describe('reviews', () => {
     expect(unchanged).toEqual({ ...refreshed, isNew: false });
     const latest = await call(appRouter.reviews.snapshot, { snapshotId: refreshed.snapshotId });
     expect(latest).toMatchObject({ version: 2, latestVersion: 2, headSha: repo.git('rev-parse', 'feature') });
+  });
+
+  it('pushes an event each time a branch moves, and stops when the watcher is cancelled', async () => {
+    const repo = createFeatureRepo();
+    const { snapshotId } = await startFeatureReview(repo);
+    const controller = new AbortController();
+    const events = await call(appRouter.reviews.watch, { snapshotId }, { signal: controller.signal });
+    const settle = async () => new Promise((resolve) => setTimeout(resolve, 500));
+    const first = events.next();
+    // The watchers start when the stream is first read.
+    await settle();
+
+    const before = repo.git('rev-parse', 'feature');
+    repo.commitFiles('follow-up', { 'src/backoff.ts': 'export function backoff() {\n  return 1;\n}\n' });
+    await expect(first).resolves.toMatchObject({ done: false, value: { changedAt: expect.any(Number) } });
+    const second = events.next();
+    repo.git('update-ref', 'refs/heads/feature', before);
+    await expect(second).resolves.toMatchObject({ done: false });
+    const third = events.next();
+    repo.git('branch', 'nested/new-folder');
+    await expect(third).resolves.toMatchObject({ done: false });
+    await settle();
+    const fourth = events.next();
+    repo.git('update-ref', 'refs/heads/nested/new-folder', 'main');
+    await expect(fourth).resolves.toMatchObject({ done: false });
+
+    const last = events.next();
+    controller.abort();
+    await expect(last).resolves.toMatchObject({ done: true });
+  });
+
+  it('searches the changed lines of every file, ignoring case and unchanged context', async () => {
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    const changed = await call(appRouter.reviews.searchDiff, { snapshotId, query: 'ATTEMPT *' });
+    const context = await call(appRouter.reviews.searchDiff, { snapshotId, query: 'next(attempt' });
+
+    expect(changed.isTruncated).toBe(false);
+    expect(changed.files.map((file) => [file.path, file.matchCount])).toEqual([['src/scheduler.ts', 2]]);
+    expect(changed.files[0]?.matches).toEqual([
+      { side: DIFF_SIDES.OLD, line: 3, text: '    return attempt * 2;' },
+      { side: DIFF_SIDES.NEW, line: 3, text: '    return attempt * 3;' },
+    ]);
+    expect(context.files).toEqual([]);
   });
 
   it('keeps a snapshot readable after the branch is rewritten and its commits are pruned', async () => {

@@ -4,6 +4,7 @@ import { Button } from '@~/components/ui/button';
 import { ListRow } from '@~/components/ui/list';
 import { Pill } from '@~/components/ui/pill';
 import type { iReviewTarget } from '@~/features/reviews/reviews.types';
+import { pluralize } from '@~/utils/pluralize';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
 import type { iInboxProject, iRemoteChange } from '../code-hosts.types';
@@ -42,6 +43,9 @@ export function ChangeRow({ project, change, below, targets }: iChangeRowProps) 
           <span className="font-mono text-[12.5px] text-muted">{changeLabel(project.host, change.number)}</span>
           <span className="truncate">{change.title}</span>
           {change.isDraft ? <Pill variant="out">draft</Pill> : null}
+          {own && own.activeFindingCount > 0 ? (
+            <Pill variant="open">{pluralize(own.activeFindingCount, 'open finding')}</Pill>
+          ) : null}
           {below ? <Pill variant="neutral">on {changeLabel(project.host, below.number)}</Pill> : null}
         </div>
         <div className="mt-[3px] flex flex-wrap gap-x-3.5 text-[12.5px] text-muted">

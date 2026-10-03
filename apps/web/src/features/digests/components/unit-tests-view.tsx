@@ -21,7 +21,7 @@ export function UnitTestsView({ tests, headSha, hasDigest, onOpenInEditor }: iUn
       <p className="m-0 px-[22px] py-5 text-[13px] text-muted">
         {hasDigest
           ? 'The digest found no test that covers this unit.'
-          : 'Tests are found by the AI digest. Write one from the top bar.'}
+          : 'No test file mentions this code by name. The AI digest looks further; write one from the top bar.'}
       </p>
     );
   }

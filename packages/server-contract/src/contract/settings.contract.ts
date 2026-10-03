@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import z from 'zod';
 
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
+import { MAX_ONBOARDING_ENTRIES } from '@chaff/common/constants/onboarding.constants';
 import {
   accentSchema,
   codeFontSchema,
@@ -14,8 +15,20 @@ import {
 import { diffContextSchema, diffLayoutSchema, inlineDiffSchema } from '@chaff/common/enums/diff.enums';
 import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { editorSchema } from '@chaff/common/enums/editors.enums';
+import {
+  onboardingHintSchema,
+  onboardingItemSchema,
+  onboardingStatusSchema,
+} from '@chaff/common/enums/onboarding.enums';
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
 import { shortcutActionSchema } from '@chaff/common/enums/shortcuts.enums';
+
+/** The getting-started checklist: whether it is open, the items the user has done, and the screen hints already shown. */
+export const onboardingSchema = z.object({
+  status: onboardingStatusSchema,
+  completedItems: z.array(onboardingItemSchema).max(MAX_ONBOARDING_ENTRIES),
+  shownHints: z.array(onboardingHintSchema).max(MAX_ONBOARDING_ENTRIES),
+});
 
 /** A lower-cased `KeyboardEvent.key`: one printable character other than a space or a capital letter. */
 export const shortcutKeySchema = z.string().regex(/^[!-@[-~]$/);
@@ -61,6 +74,7 @@ export const settingsSchema = z.object({
   /** Where to find each coding agent when it is not the usual command on PATH. */
   agentCommands: agentCommandsSchema,
   shortcuts: shortcutBindingsSchema,
+  onboarding: onboardingSchema,
 });
 
 export const settingsContract = oc.router({
@@ -78,6 +92,22 @@ export const settingsContract = oc.router({
       description:
         'Updates the given preferences and returns the full settings. A theme change also restyles the window. Agent commands and shortcuts replace the stored maps whole; two actions on one screen cannot share a key.',
     })
-    .input(settingsSchema.partial())
+    .input(settingsSchema.omit({ onboarding: true }).partial())
     .output(settingsSchema),
+
+  updateOnboarding: oc
+    .route({
+      summary: 'Save onboarding progress',
+      description:
+        'Stores the checklist on this computer: its status, the items done and the screen hints already shown. Repeated entries are kept once. Completed and skipped guides stay closed.',
+    })
+    .input(onboardingSchema)
+    .output(onboardingSchema),
+
+  replayOnboarding: oc
+    .route({
+      summary: 'Replay onboarding guide',
+      description: 'Opens the checklist again with no items done and no hints shown, preserving app preferences.',
+    })
+    .output(onboardingSchema),
 });

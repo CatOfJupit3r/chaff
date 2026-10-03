@@ -10,7 +10,7 @@ import { DiscussionThread } from '@~/features/code-hosts/components/discussion-t
 import { buildNoteAnnotations, draftFromSelection } from '../diff-annotations.utils';
 import type { iDiffNote } from '../diff-annotations.utils';
 import { useOptionalDiffReview } from '../diff-review.context';
-import { DIFF_THEME_NAME } from '../diff-theme';
+import { DIFF_THEME_NAME, UNIFIED_LINE_NUMBERS_CSS } from '../diff-theme';
 import { useDiffPreferences } from '../hooks/use-diff-preferences';
 import { useLoadDiffFiles } from '../hooks/use-load-diff-files';
 import { buildDecisionGutterCss } from '../review-coverage.utils';
@@ -24,6 +24,8 @@ interface iPatchViewProps {
   patch: string;
   layout: DiffLayout;
   isWrapped: boolean;
+  /** Shows every unchanged line of the file, whatever the diff settings say. */
+  isExpanded?: boolean;
 }
 
 /**
@@ -31,7 +33,7 @@ interface iPatchViewProps {
  * diff, lines show the decision on their unit, findings and merge request threads sit under the lines they
  * point at, and the + beside a line, or a picked range, opens a note.
  */
-export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatchViewProps) {
+export function PatchView({ snapshotId, file, patch, layout, isWrapped, isExpanded = false }: iPatchViewProps) {
   const isDark = useIsDarkMode();
   const { viewerOptions } = useDiffPreferences();
   const loadDiffFiles = useLoadDiffFiles(snapshotId, file);
@@ -58,13 +60,13 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped }: iPatch
       loadDiffFiles,
       diffIndicators: 'classic' as const,
       lineDiffType: viewerOptions.lineDiffType,
-      expandUnchanged: viewerOptions.expandUnchanged,
-      unsafeCSS: gutterCss,
+      expandUnchanged: isExpanded || viewerOptions.expandUnchanged,
+      unsafeCSS: [UNIFIED_LINE_NUMBERS_CSS, gutterCss].filter(Boolean).join('\n'),
       enableLineSelection: startDraft !== undefined,
       enableGutterUtility: startDraft !== undefined,
       onGutterUtilityClick: (range: SelectedLineRange) => startDraft?.(draftFromSelection(file.id, range)),
     }),
-    [isDark, layout, isWrapped, loadDiffFiles, viewerOptions, gutterCss, startDraft, file.id],
+    [isDark, layout, isWrapped, isExpanded, loadDiffFiles, viewerOptions, gutterCss, startDraft, file.id],
   );
 
   return (

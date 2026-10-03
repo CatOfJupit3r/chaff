@@ -1,4 +1,4 @@
-import type { CodeHost } from '@chaff/common/enums/code-host.enums';
+import type { ChangeState, CodeHost } from '@chaff/common/enums/code-host.enums';
 import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import type { connections } from '@~/db/schema/connections.schema';
@@ -27,6 +27,7 @@ export interface iRemoteChange {
   headSha: string;
   webUrl: string;
   isDraft: boolean;
+  state: ChangeState;
   updatedAt: Date;
   assigneeUsernames: string[];
   reviewerUsernames: string[];
@@ -37,6 +38,13 @@ export interface iRemoteNote {
   authorName: string;
   body: string;
   createdAt: Date;
+}
+
+/** An issue a change links to. */
+export interface iRemoteIssue {
+  number: number;
+  title: string;
+  description: string;
 }
 
 /** A thread on a change. Threads without a path are about the change as a whole. */
@@ -93,6 +101,7 @@ export interface iCodeHostProvider {
   currentUser: (access: iCodeHostAccess) => Promise<{ username: string }>;
   listChanges: (access: iCodeHostAccess, project: string) => Promise<iRemoteChange[]>;
   getChange: (access: iCodeHostAccess, project: string, changeNumber: number) => Promise<iRemoteChange | undefined>;
+  getIssue: (access: iCodeHostAccess, project: string, issueNumber: number) => Promise<iRemoteIssue | undefined>;
   /** Commit shas of the change, newest first. */
   listChangeCommits: (access: iCodeHostAccess, project: string, changeNumber: number) => Promise<string[]>;
   branchHead: (access: iCodeHostAccess, project: string, branch: string) => Promise<string | undefined>;

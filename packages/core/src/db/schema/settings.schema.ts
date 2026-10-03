@@ -1,6 +1,8 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import type z from 'zod';
 
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
+import { INITIAL_ONBOARDING } from '@chaff/common/constants/onboarding.constants';
 import { CODE_FONTS, CODE_LINE_HEIGHTS, DENSITIES, SYNTAX_THEMES } from '@chaff/common/enums/appearance.enums';
 import type {
   Accent,
@@ -19,6 +21,7 @@ import type { Editor } from '@chaff/common/enums/editors.enums';
 import { REVIEW_PROGRESSIONS } from '@chaff/common/enums/review.enums';
 import type { ReviewProgression } from '@chaff/common/enums/review.enums';
 import type { iShortcutBinding } from '@chaff/common/helpers/shortcuts.helper';
+import type { onboardingSchema } from '@chaff/server-contract/contract/settings.contract';
 
 import { timestampColumn } from '../schema.helpers';
 
@@ -55,6 +58,10 @@ export const settings = sqliteTable('settings', {
     .default([]),
   /** Keys the user rebound; other actions keep their default key. */
   shortcuts: text('shortcuts', { mode: 'json' }).$type<iShortcutBinding[]>().notNull().default([]),
+  onboarding: text('onboarding', { mode: 'json' })
+    .$type<z.infer<typeof onboardingSchema>>()
+    .notNull()
+    .default(INITIAL_ONBOARDING),
   updatedAt: timestampColumn('updated_at')
     .notNull()
     .$defaultFn(() => new Date())

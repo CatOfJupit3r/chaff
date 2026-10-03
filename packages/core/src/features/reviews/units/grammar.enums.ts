@@ -16,6 +16,7 @@ export const grammarsEnumwaii = new Enumwaii('Grammar', [
   'CPP',
   'BASH',
   'POWERSHELL',
+  'KOTLIN',
 ]);
 
 export const GRAMMARS = grammarsEnumwaii.enum;
@@ -35,4 +36,10 @@ export const GRAMMAR_FILES = grammarsEnumwaii.derive({
   [GRAMMARS.CPP]: 'tree-sitter-cpp.wasm',
   [GRAMMARS.BASH]: 'tree-sitter-bash.wasm',
   [GRAMMARS.POWERSHELL]: 'tree-sitter-powershell.wasm',
+  [GRAMMARS.KOTLIN]: 'tree-sitter-kotlin.wasm',
 });
+
+/** Grammars shipped in their own package rather than in `@vscode/tree-sitter-wasm`; the app copies them next to the runtime. */
+export const SEPARATE_GRAMMAR_PACKAGES: ReadonlyMap<Grammar, string> = new Map([
+  [GRAMMARS.KOTLIN, '@tree-sitter-grammars/tree-sitter-kotlin'],
+]);

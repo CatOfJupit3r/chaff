@@ -117,6 +117,14 @@ export const ClockIcon = createIcon(
     <path d="M12 7v5l3 2" />
   </>,
 );
+export const HistoryIcon = createIcon(
+  'HistoryIcon',
+  <>
+    <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+    <path d="M3.5 4.5v4h4" />
+    <path d="M12 8v4.2l2.8 1.8" />
+  </>,
+);
 export const PanelIcon = createIcon(
   'PanelIcon',
   <>
@@ -183,5 +191,20 @@ export const SkipIcon = createIcon(
   <>
     <path d="M6 6l7 6-7 6z" />
     <path d="M17 6v12" />
+  </>,
+);
+export const LinkIcon = createIcon(
+  'LinkIcon',
+  <>
+    <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+    <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+  </>,
+);
+export const MoreIcon = createIcon(
+  'MoreIcon',
+  <>
+    <circle cx="6" cy="12" r="0.8" />
+    <circle cx="12" cy="12" r="0.8" />
+    <circle cx="18" cy="12" r="0.8" />
   </>,
 );

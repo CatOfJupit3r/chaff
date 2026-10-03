@@ -53,6 +53,13 @@ export function anchorLocation(anchor: iPacketAnchor) {
   return `\`${anchor.path}${lineRange(lines)}\`${unit} @ ${short(lines.headSha)}`;
 }
 
+/** The code at the location `anchorLocation` names: where it is now, or as raised when it could not be found. */
+function quotedCode(anchor: iPacketAnchor) {
+  const { current } = anchor;
+  const currentQuote = current?.match === ANCHOR_MATCHES.UNMATCHED ? undefined : current?.quote;
+  return { path: anchor.path, text: currentQuote ?? anchor.original.quote };
+}
+
 function fenceLanguage(path: string) {
   const extension = /\.([\w]+)$/.exec(path)?.[1];
   return extension ?? '';
@@ -106,9 +113,9 @@ function findingMarkdown({ finding, anchors }: iPacketFinding, shouldQuoteCode: 
     if (task.verify) lines.push(indent(`Verify: ${task.verify}`));
   }
   if (shouldQuoteCode) {
-    for (const anchor of anchors.filter((candidate) => candidate.original.quote !== '')) {
-      const marker = fence(anchor.original.quote);
-      lines.push('', `  ${marker}${fenceLanguage(anchor.path)}`, indent(anchor.original.quote), `  ${marker}`);
+    for (const code of anchors.map(quotedCode).filter((candidate) => candidate.text !== '')) {
+      const marker = fence(code.text);
+      lines.push('', `  ${marker}${fenceLanguage(code.path)}`, indent(code.text), `  ${marker}`);
     }
   }
   if (finding.answer) lines.push('', indent(`Answer: ${finding.answer}`));

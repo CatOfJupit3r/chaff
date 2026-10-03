@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 import { REVIEW_PROGRESSIONS } from '@chaff/common/enums/review.enums';
 import type { ReviewProgression } from '@chaff/common/enums/review.enums';
 
@@ -7,6 +8,7 @@ import { EditIcon, RightIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { DigestOverview } from '@~/features/digests/components/digest-overview';
+import { DigestPreview } from '@~/features/digests/components/digest-preview';
 import type { iDigest } from '@~/features/digests/digests.types';
 import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
@@ -60,6 +62,7 @@ export function FocusContextPanel({
         </Button>
       </div>
       {digest && content ? <DigestOverview runner={digest.runner} content={content} /> : null}
+      {digest?.status === DIGEST_STATUSES.RUNNING ? <DigestPreview digest={digest} /> : null}
       <ContextFindings title="Notes on this card" findings={findings} empty="None yet." />
       <ContextFindings title="Notes on this branch" findings={branchFindings} />
       <ContextFindings title="From the rest of the stack" findings={stackFindings} shouldShowBranch />

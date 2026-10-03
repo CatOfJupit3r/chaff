@@ -2,7 +2,6 @@ import { Pill } from '@~/components/ui/pill';
 import { UnitDiscussions } from '@~/features/code-hosts/components/unit-discussions';
 import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
 import { UnitDigestNotes } from '@~/features/digests/components/unit-digest-notes';
-import { UnitTestsView } from '@~/features/digests/components/unit-tests-view';
 import type { iDigest } from '@~/features/digests/digests.types';
 import { findUnitDiagrams, findUnitGroup, findUnitNote, readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
@@ -10,9 +9,11 @@ import type { iSnapshot, iUnit } from '@~/features/reviews/reviews.types';
 
 import { CARD_VIEWS, UNIT_MARK_LABELS } from '../focus.enums';
 import type { CardExit, CardView } from '../focus.enums';
+import { useFoundTests } from '../hooks/use-found-tests';
 import { useUnitDetail } from '../hooks/use-unit-detail';
 import { useUnitUsages } from '../hooks/use-unit-usages';
 import { CardFindings } from './card-findings';
+import { CardTestsView } from './card-tests-view';
 import { FocusCardShell } from './focus-card-shell';
 import { UnitCardTop } from './unit-card-top';
 import { UnitCodeView } from './unit-code-view';
@@ -29,6 +30,7 @@ interface iUnitCardProps {
   exit?: CardExit;
   onViewChange: (view: CardView) => void;
   onOpenInEditor: (path: string, line?: number) => void;
+  onOpenUnit: (unitId: string) => void;
   /** A finger or pen let go of the card past the edge: right means Looks good, left means Concern. */
   onSwipe?: (exit: CardExit) => unknown;
 }
@@ -43,6 +45,7 @@ export function UnitCard({
   exit,
   onViewChange,
   onOpenInEditor,
+  onOpenUnit,
   onSwipe,
 }: iUnitCardProps) {
   const file = snapshot.files.find((candidate) => candidate.id === unit.fileId);
@@ -52,12 +55,12 @@ export function UnitCard({
   const note = findUnitNote(content, unit.id);
   const diagrams = findUnitDiagrams(content, unit.id);
   const tests = note?.tests ?? [];
+  const found = useFoundTests(snapshot.id, [unit.id]);
+  const testCount = tests.length > 0 ? tests.length : found.length;
   const counts = new Map<CardView, number>();
   if (usages?.symbol) counts.set(CARD_VIEWS.usages, usages.usages.length);
-  if (content) {
-    counts.set(CARD_VIEWS.diagram, diagrams.length);
-    counts.set(CARD_VIEWS.tests, tests.length);
-  }
+  if (content) counts.set(CARD_VIEWS.diagram, diagrams.length);
+  if (content || testCount > 0) counts.set(CARD_VIEWS.tests, testCount);
 
   return (
     <FocusCardShell label={unit.title} exit={exit} onSwipe={onSwipe}>
@@ -98,18 +101,23 @@ export function UnitCard({
       ) : null}
       {view === CARD_VIEWS.diagram ? (
         <div className="border-t border-line">
-          <UnitDiagramView diagrams={diagrams} hasDigest={content !== undefined} />
+          <UnitDiagramView
+            snapshotId={snapshot.id}
+            diagrams={diagrams}
+            hasDigest={content !== undefined}
+            currentUnitIds={new Set([unit.id])}
+            onOpenUnit={onOpenUnit}
+          />
         </div>
       ) : null}
       {view === CARD_VIEWS.tests ? (
-        <div className="border-t border-line">
-          <UnitTestsView
-            tests={tests}
-            headSha={snapshot.headSha}
-            hasDigest={content !== undefined}
-            onOpenInEditor={onOpenInEditor}
-          />
-        </div>
+        <CardTestsView
+          tests={tests}
+          found={found}
+          headSha={snapshot.headSha}
+          hasDigest={content !== undefined}
+          onOpenInEditor={onOpenInEditor}
+        />
       ) : null}
     </FocusCardShell>
   );

@@ -1,5 +1,5 @@
 import { call } from '@orpc/server';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -23,6 +23,7 @@ async function waitForStatus(snapshotId: string, status: string) {
 describe('digests', () => {
   afterEach(() => {
     delete process.env.FAKE_AGENT_MODE;
+    delete process.env.FAKE_AGENT_PROMPT_FILE;
   });
 
   it('reports which coding agents are installed', async () => {
@@ -65,7 +66,16 @@ describe('digests', () => {
         tests: [{ path: 'src/backoff.test.ts', line: 1, tier: TEST_TIERS.INSPECTED, note: 'Covers growth.' }],
       }),
     ]);
-    expect(content.diagrams).toEqual([expect.objectContaining({ id: 'd1', title: 'Retry', unitIds: [unitIds[0]] })]);
+    expect(content.diagrams).toEqual([
+      expect.objectContaining({
+        id: 'd1',
+        title: 'Retry',
+        unitIds: [unitIds[0]],
+        nodeUnits: [{ node: 'u1', unitId: unitIds[0] }],
+      }),
+    ]);
+    expect(content.outlinedPaths).toEqual([]);
+    expect(digest.preview).toBeUndefined();
 
     // The checkout is removed right after the digest is kept.
     await vi.waitFor(() => {
@@ -73,6 +83,49 @@ describe('digests', () => {
     }, WAIT);
     expect(repo.git('worktree', 'list').split('\n')).toHaveLength(1);
     expect(repo.git('status', '--porcelain')).toBe('');
+  });
+
+  it('shows what has arrived of the digest while the agent is still writing it', async () => {
+    process.env.FAKE_AGENT_MODE = 'stream-hang';
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+    const units = await call(appRouter.reviews.units, { snapshotId });
+
+    const started = await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    const running = await vi.waitFor(async () => {
+      const digest = await call(appRouter.digests.get, { snapshotId });
+      if (!digest?.preview?.groupTitles.includes('Same unit again')) throw new Error('No groups yet');
+      return digest;
+    }, WAIT);
+
+    expect(running.status).toBe(DIGEST_STATUSES.RUNNING);
+    expect(running.preview).toEqual({
+      overview: 'Backoff grows faster. Read from the checkout.',
+      groupTitles: ['Faster backoff', 'Same unit again'],
+      noteCount: 0,
+      unitCount: units.length,
+      diagramCount: 0,
+    });
+    const cancelled = await call(appRouter.digests.cancel, { digestId: started.id });
+    expect(cancelled.preview).toBeUndefined();
+  });
+
+  it('outlines files that do not fit in the prompt and lets the agent read them in the checkout', async () => {
+    const promptFile = path.join(testDataDir, 'digest-prompt.txt');
+    process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+    const repo = createFeatureRepo();
+    repo.commitFiles('generated table', {
+      'src/table.ts': Array.from({ length: 6000 }, (_, index) => `export const row${index} = ${index};`).join('\n'),
+    });
+    const { snapshotId } = await startFeatureReview(repo);
+
+    await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    const digest = await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    expect(digest.content?.outlinedPaths).toEqual(['src/table.ts']);
+    const prompt = readFileSync(promptFile, 'utf8');
+    expect(prompt).toContain('- src/table.ts (+6000 -0)\n    @@ -0,0 +1,6000 @@');
+    expect(prompt).not.toContain('export const row5999');
+    expect(prompt).toContain('+    return attempt * 3;');
   });
 
   it('marks the digest failed with what the agent said', async () => {

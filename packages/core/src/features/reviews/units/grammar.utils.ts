@@ -31,6 +31,8 @@ const GRAMMARS_BY_EXTENSION: Record<string, Grammar> = {
   '.bash': GRAMMARS.BASH,
   '.ps1': GRAMMARS.POWERSHELL,
   '.psm1': GRAMMARS.POWERSHELL,
+  '.kt': GRAMMARS.KOTLIN,
+  '.kts': GRAMMARS.KOTLIN,
 };
 
 /** The grammar for a file path, or undefined when Chaff cannot parse that language. */

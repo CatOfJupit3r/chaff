@@ -1,5 +1,7 @@
 import { ExternalIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
+import { HighlightedLine } from '@~/features/reviews/components/highlighted-line';
+import { useHighlightedLines } from '@~/features/reviews/hooks/use-highlighted-lines';
 import type { iUnitUsage, iUnitUsages } from '@~/features/reviews/reviews.types';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
@@ -10,6 +12,8 @@ interface iUsageBlockProps {
 }
 
 function UsageBlock({ usage, onOpenInEditor }: iUsageBlockProps) {
+  const tokens = useHighlightedLines(usage.path, usage.code);
+
   return (
     <div className="flex-none overflow-hidden rounded-md border border-line">
       <header className="flex items-center gap-2 border-b border-line bg-canvas py-1.5 pr-1.5 pl-3 text-[12px]">
@@ -35,7 +39,7 @@ function UsageBlock({ usage, onOpenInEditor }: iUsageBlockProps) {
           return (
             <div key={lineNumber} className={cn('flex', lineNumber === usage.line && 'bg-accent-soft')}>
               <span className="w-12 flex-none pr-3 text-right text-faint select-none">{lineNumber}</span>
-              <span className="pr-4 whitespace-pre text-fg-code">{text}</span>
+              <HighlightedLine text={text} tokens={tokens?.[offset]} />
             </div>
           );
         })}

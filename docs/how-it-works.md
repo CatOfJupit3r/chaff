@@ -73,7 +73,7 @@ Starting a review freezes a **snapshot** of one branch against its parent:
 2. It records three commits: the branch head, the parent head and their merge base. The diff is always merge base to branch head.
 3. It pins those commits under `refs/chaff/snapshots/<snapshot id>/{head,parent,base}` in the store, so rebasing, force-updating or deleting the branch in your repository never breaks a review, and git's garbage collection can't remove them.
 
-While you review, Chaff compares the snapshot with your repository and reports what moved: new commits on the branch, a rewritten branch (its old head is no longer in its history), a parent that moved, or a deleted branch. Nothing under the review changes until you press **Update**, which freezes a new snapshot of the same target. The [second pass](#the-second-pass) then compares the two snapshots.
+While you review, Chaff compares the snapshot with your repository and reports what moved: new commits on the branch, a rewritten branch (its old head is no longer in its history), a parent that moved, or a deleted branch. It watches the repository's refs (`refs/` and `packed-refs`, read only), so a commit, rebase or branch deletion shows up as it happens; uncommitted work is checked every 30 seconds and whenever the window gains focus. Nothing under the review changes until you press **Update**, which freezes a new snapshot of the same target. The [second pass](#the-second-pass) then compares the two snapshots.
 
 ## Regions and units
 
@@ -81,7 +81,7 @@ Each snapshot is broken down before you read it:
 
 - A **region** is one contiguous changed range in one file, with a content hash. Every changed line belongs to exactly one region. Changes without line content (binary files, renames, mode changes) get one file-level region, so they are counted too.
 - A **unit** is something you review. Chaff parses the old and new version of each file with tree-sitter and assigns each region to the declaration that encloses it: a function, method, class or other declaration becomes a **Function** unit, shown whole. Changes outside any declaration (imports, top-level statements, config, deleted, generated or unsupported files) become **Section** units. Nothing is dropped for being small or uninteresting.
-- Supported grammars: TypeScript, TSX, JavaScript, Python, Go, Rust, Java, C#, Ruby, PHP, C++, Bash and PowerShell.
+- Supported grammars: TypeScript, TSX, JavaScript, Python, Go, Rust, Java, Kotlin, C#, Ruby, PHP, C++, Bash and PowerShell.
 
 Units are numbered across the snapshot in reading order, and their count shows on the Reviews screen. Focus review walks them one at a time; a decision on a unit covers every region in it, so the Full diff can show line coverage. A **Change** unit groups Function and Section units into one behavior or design change, possibly across files. The AI digest proposes them (below) and you can make, split, merge, rename, reorder or ungroup them; a unit is in one Change unit at most, and units in none get a card of their own, so every region stays reachable. Deciding on a Change unit marks each of its units, so coverage is still counted over regions. A unit can also be **skipped** with a reason; a review is complete when every region belongs to a unit that is decided on or skipped, which is the count the Reviews and Stack screens show. When a review gets a new version, Change units follow their units to it.
 
@@ -131,6 +131,10 @@ A preference is a rule you state for one repository, often promoted from a findi
 - **Keys.** Settings stores only the keys you changed. Each screen (Focus, Verify) resolves its actions against the defaults; the core refuses a map where two actions on one screen share a key or an action takes 1 to 4 in Focus. Arrows always move, whatever the map says.
 - **Swipe.** A touch or pen drag on the Focus card moves it with a CSS transform only, so nothing around it shifts. Mostly vertical drags scroll the page as usual.
 
+## History and archiving
+
+A review is never deleted along with its branch. Each time Chaff lists a repository's branches (Reviews, Stack, History), a local review whose branch no longer exists gets `archived_at` and the reason `BRANCH_DELETED`; if a branch of that name appears again, the mark is cleared. A repository whose folder is gone is skipped, so unplugging a drive archives nothing. Archived reviews keep working because their snapshots are pinned in Chaff's store, not in your repository: Focus, the Full diff, findings and export all read from there.
+
 ## Where data lives
 
 | What | Where |
@@ -147,8 +151,8 @@ A preference is a rule you state for one repository, often promoted from a findi
 The digest is optional and read-only. Chaff runs the Claude Code (`claude -p`) or Codex (`codex exec`) already signed in on your machine:
 
 1. Chaff checks out the snapshot's head into a throwaway worktree of its own store, under `<app data>/digests/<id>`, never in your repository.
-2. The agent gets the branch's commit messages, the list of units with short ids (`u1`, `u2`, ...) and the diff, and may only use read and search tools. Claude Code runs with `--tools Read,Grep,Glob`, every editing, shell and web tool disallowed, and your project's settings and MCP servers ignored; Codex runs in its `read-only` sandbox.
-3. It answers in a fixed JSON schema: an overview, groups of units with before, after and intent (marked documented or inferred), a reading order, a note per unit with things worth checking and related tests, and Mermaid diagrams.
+2. The agent gets the branch's commit messages, the list of units with short ids (`u1`, `u2`, ...) and the diff, and may only use read and search tools. For a merge or pull request it also gets the title, the description and up to three issues the description mentions (`#12`, `Closes #12`), fetched from the host; a reason stated there counts as documented intent. A diff over the prompt budget is cut at whole files: the rest goes as an outline of paths, line counts and hunk headers, which the agent reads in the checkout, and the digest notes which files went that way. Claude Code runs with `--tools Read,Grep,Glob`, every editing, shell and web tool disallowed, and your project's settings and MCP servers ignored; Codex runs in its `read-only` sandbox.
+3. It answers in a fixed JSON schema: an overview, groups of units with before, after and intent (marked documented or inferred), a reading order, a note per unit with things worth checking and related tests, and Mermaid diagrams whose nodes are named by unit id, so Chaff can link a box to its unit. Claude Code runs with `--include-partial-messages`; Chaff parses the half-written answer as it streams and saves a preview (overview, group titles, how many unit notes are done) at most twice a second. Codex returns its answer only at the end.
 4. Chaff checks the answer before keeping it. Unknown ids are dropped, a unit belongs to one group at most, units no group explains go to a visible "Other changes, not yet explained" group, the reading order is completed so it covers every unit once, and a test claimed to have passed is downgraded to "read", because nothing ran.
 5. The worktree is deleted. A digest that runs longer than 20 minutes, or that you stop, leaves nothing behind.
 
@@ -163,6 +167,7 @@ GitLab merge requests and GitHub pull requests are read through one provider int
 - **New versions.** The snapshot chip asks the host for the change's head and the target branch's tip (at most every 30 seconds) and counts new commits from the change's commit list. **Update** freezes a new snapshot as with local branches.
 - **Discussions** are read from the host and shown read-only on the lines and units they are about. Threads written against another commit are marked as such and stay out of the Full diff.
 - **Linking.** A local branch's review can be moved onto the merge request it was pushed as. The review keeps its snapshots, decisions and findings; its next update reads from the host.
+- **Archiving.** A change's review is archived as merged or closed when the host says so, whenever the review checks the host for new commits or History is opened. A change that reopens is restored. A host that can't be reached changes nothing.
 
 - **Posting.** Findings go back as GitLab draft notes or one pending GitHub review, never published or submitted by Chaff. See [Export and posting](#export-and-posting).
 

@@ -1,7 +1,7 @@
 import { singleton } from 'tsyringe';
 
 import { digestRunnerSchema, digestStatusSchema } from '@chaff/common/enums/digest.enums';
-import { digestContentSchema } from '@chaff/server-contract/contract/digests.contract';
+import { digestContentSchema, digestPreviewSchema } from '@chaff/server-contract/contract/digests.contract';
 
 import type { digests } from '@~/db/schema/digests.schema';
 import { createRowResolver } from '@~/lib/row-resolver';
@@ -18,6 +18,7 @@ export class DigestResolver {
       runner: digestRunnerSchema.parse(row.runner),
       status: digestStatusSchema.parse(row.status),
       content: row.content === null ? undefined : digestContentSchema.parse(JSON.parse(row.content)),
+      preview: row.preview === null ? undefined : digestPreviewSchema.parse(JSON.parse(row.preview)),
     }),
   });
 }

@@ -8,6 +8,8 @@ export interface iUnitMarkRepository {
   countByMark: (snapshotId: string) => Promise<Map<UnitMark, number>>;
   /** Regions in units decided on or skipped on purpose. */
   countAccountedRegions: (snapshotId: string) => Promise<number>;
+  /** When the newest decision in the snapshot was made; undefined before the first one. */
+  lastMarkedAt: (snapshotId: string) => Promise<Date | undefined>;
   /** Copies marks to units of the newer snapshot whose key and content did not change. */
   carryOver: (fromSnapshotId: string, toSnapshotId: string) => Promise<number>;
 }

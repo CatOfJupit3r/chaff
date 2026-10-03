@@ -127,6 +127,34 @@
       "when": 1790941579068,
       "tag": "0017_equal_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1790942669679,
+      "tag": "0018_dear_black_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790943962209,
+      "tag": "0019_bored_sharon_ventura",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790950796797,
+      "tag": "0020_sticky_thunderbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790955490938,
+      "tag": "0021_safe_zemo",
+      "breakpoints": true
     }
   ]
 }

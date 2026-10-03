@@ -1,8 +1,9 @@
-import { oc } from '@orpc/contract';
+import { eventIterator, oc } from '@orpc/contract';
 import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
 import {
+  archiveReasonSchema,
   diffSideSchema,
   fileKindSchema,
   fileStatusSchema,
@@ -56,6 +57,19 @@ export const reviewTargetSchema = z.object({
   change: changeRequestInfoSchema.optional(),
   /** Missing until a review is started; a branch target with only a confirmed parent has none. */
   latestSnapshot: snapshotSummarySchema.optional(),
+  findingCount: z.number().int().nonnegative(),
+  /** Findings still open or waiting on a fix or a check. */
+  activeFindingCount: z.number().int().nonnegative(),
+  /** Set once the review moved to History. */
+  archived: z.object({ at: z.date(), reason: archiveReasonSchema }).optional(),
+});
+
+/** A started review as History lists it. */
+export const reviewHistoryEntrySchema = reviewTargetSchema.extend({
+  latestSnapshot: snapshotSummarySchema,
+  workspaceName: z.string(),
+  /** The newest snapshot, decision or finding change. */
+  lastActivityAt: z.date(),
 });
 
 export const snapshotFileSchema = z.object({
@@ -97,6 +111,8 @@ export const snapshotSchema = snapshotSummarySchema.extend({
 });
 
 export const snapshotLiveStatusSchema = z.object({
+  /** Branch moves are pushed through `watch`; otherwise re-read the status on a timer. */
+  isWatched: z.boolean(),
   /** The branch no longer exists in the repository. */
   isBranchMissing: z.boolean(),
   /** Commits on the branch since the snapshot; zero when the branch was rewritten. */
@@ -169,12 +185,27 @@ export const unitUsageSchema = z.object({
   code: z.array(z.string()),
   /** The file is part of the changes under review. */
   isInReview: z.boolean(),
+  /** The file is a test by its name (`*.test.ts`, `test_*.py`, `tests/`). */
+  isInTest: z.boolean(),
 });
 
 const snapshotIdInput = z.object({ snapshotId: idSchema });
 const unitInput = z.object({ snapshotId: idSchema, unitId: idSchema });
 const fileInput = z.object({ snapshotId: idSchema, fileId: idSchema });
 const MAX_CONTEXT_LINES = 50;
+
+export const setMarksInputSchema = snapshotIdInput.extend({
+  marks: z
+    .array(
+      z.object({
+        unitId: idSchema,
+        mark: unitMarkSchema.optional(),
+        skipReason: z.string().trim().min(1).max(200).optional(),
+      }),
+    )
+    .min(1)
+    .max(5000),
+});
 
 export const reviewsContract = oc.router({
   list: oc
@@ -184,6 +215,15 @@ export const reviewsContract = oc.router({
     })
     .input(z.object({ workspaceId: idSchema.optional() }))
     .output(z.array(reviewTargetSchema)),
+
+  history: oc
+    .route({
+      summary: 'List review history',
+      description:
+        'Returns every started review, newest activity first, after moving reviews whose branch is gone or whose change was merged or closed to History. A host that cannot be reached leaves its reviews as they were.',
+    })
+    .input(z.object({ workspaceId: idSchema.optional() }))
+    .output(z.array(reviewHistoryEntrySchema)),
 
   start: oc
     .route({
@@ -235,6 +275,37 @@ export const reviewsContract = oc.router({
     })
     .input(snapshotIdInput)
     .output(snapshotLiveStatusSchema),
+
+  searchDiff: oc
+    .route({
+      summary: 'Search the changed code',
+      description:
+        'Finds the added and deleted lines of a snapshot that contain the query, ignoring case, grouped by file in reading order. Files too large to keep are not searched.',
+    })
+    .input(z.object({ snapshotId: idSchema, query: z.string().trim().min(2).max(200) }))
+    .output(
+      z.object({
+        files: z.array(
+          z.object({
+            fileId: z.string(),
+            path: z.string(),
+            matchCount: z.number().int().positive(),
+            matches: z.array(z.object({ side: diffSideSchema, line: z.number().int().positive(), text: z.string() })),
+          }),
+        ),
+        /** The search stopped early; refine the query to see the rest. */
+        isTruncated: z.boolean(),
+      }),
+    ),
+
+  watch: oc
+    .route({
+      summary: 'Watch the repository of a review',
+      description:
+        'Sends an event each time a branch may have moved in the repository a local review reads, so the live status can be read again. Ends at once for merge and pull requests.',
+    })
+    .input(snapshotIdInput)
+    .output(eventIterator(z.object({ changedAt: z.number() }))),
 
   fileDiff: oc
     .route({
@@ -309,20 +380,7 @@ export const reviewsContract = oc.router({
       description:
         'Records a decision on each unit in this snapshot, or clears it when no mark is given. A Change unit is decided by marking all of its units at once. A Skipped mark carries the reason.',
     })
-    .input(
-      snapshotIdInput.extend({
-        marks: z
-          .array(
-            z.object({
-              unitId: idSchema,
-              mark: unitMarkSchema.optional(),
-              skipReason: z.string().trim().min(1).max(200).optional(),
-            }),
-          )
-          .min(1)
-          .max(5000),
-      }),
-    )
+    .input(setMarksInputSchema)
     .output(
       z.array(z.object({ unitId: z.string(), mark: unitMarkSchema.optional(), skipReason: z.string().optional() })),
     ),
