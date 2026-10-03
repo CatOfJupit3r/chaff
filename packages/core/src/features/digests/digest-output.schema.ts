@@ -1,6 +1,6 @@
 import z from 'zod';
 
-import { diagramKindSchema, intentSourceSchema, testTierSchema } from '@chaff/common/enums/digest.enums';
+import { diagramKindsEnumwaii, intentSourcesEnumwaii, testTiersEnumwaii } from '@chaff/common/enums/digest.enums';
 
 /*
  * What the agent must answer with. Every field is required and objects are closed, because Codex's
@@ -11,7 +11,7 @@ import { diagramKindSchema, intentSourceSchema, testTierSchema } from '@chaff/co
 const agentTestSchema = z.strictObject({
   path: z.string(),
   line: z.number().int().nullable(),
-  tier: testTierSchema,
+  tier: z.literal(testTiersEnumwaii.rawValues).transform((value) => testTiersEnumwaii.parse(value)),
   note: z.string(),
 });
 
@@ -27,13 +27,13 @@ const agentGroupSchema = z.strictObject({
   before: z.string(),
   after: z.string(),
   intent: z.string(),
-  intentSource: intentSourceSchema,
+  intentSource: z.literal(intentSourcesEnumwaii.rawValues).transform((value) => intentSourcesEnumwaii.parse(value)),
   units: z.array(z.string()),
 });
 
 const agentDiagramSchema = z.strictObject({
   title: z.string(),
-  kind: diagramKindSchema,
+  kind: z.literal(diagramKindsEnumwaii.rawValues).transform((value) => diagramKindsEnumwaii.parse(value)),
   mermaid: z.string(),
   units: z.array(z.string()),
   isSuggestion: z.boolean(),
@@ -50,4 +50,4 @@ export const agentDigestSchema = z.strictObject({
 export type iAgentDigest = z.infer<typeof agentDigestSchema>;
 
 /** The JSON schema handed to the agent CLIs. */
-export const AGENT_DIGEST_JSON_SCHEMA = z.toJSONSchema(agentDigestSchema, { target: 'draft-7' });
+export const AGENT_DIGEST_JSON_SCHEMA = z.toJSONSchema(agentDigestSchema, { target: 'draft-7', io: 'input' });

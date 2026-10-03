@@ -460,7 +460,7 @@ The width you drag the Full diff's file list to is kept.
 - **Desktop:** Electron 44 with a sandboxed renderer, a strict CSP and typed oRPC calls over a `MessagePort`. Packaged with electron-builder.
 - **Core (`@chaff/core`):** a plain TypeScript library bundled into the Electron main process, with no Electron imports so a web mode stays possible later. Drizzle ORM on Node's built-in `node:sqlite`, tsyringe, Zod, and tree-sitter compiled to WASM (`@vscode/tree-sitter-wasm`, no native modules). Git access goes through the `git` on your PATH.
 - **Renderer (`apps/web`):** React 19 single-page app with Vite, TanStack Router and Query, Base UI, Tailwind CSS theme tokens, and [`@pierre/diffs`](https://www.npmjs.com/package/@pierre/diffs) for diff rendering.
-- **Shared:** `@chaff/server-contract` (API contracts), `@chaff/common` (shared helpers and enums), `@chaff/enumwaii` (typed closed string sets and their ESLint rules).
+- **Shared:** `@chaff/server-contract` (API contracts), `@chaff/common` (shared helpers and enums), `enumwaii` and `eslint-plugin-enumwaii` from npm (typed closed string sets and their ESLint rules).
 
 ## Getting started
 

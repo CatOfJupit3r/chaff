@@ -5,7 +5,7 @@ import type { Editor } from '@chaff/common/enums/editors.enums';
 export function buildEditorFolderUrl(editor: Editor, absolutePath: string) {
   const forwardSlashes = absolutePath.replaceAll('\\', '/');
   const rooted = forwardSlashes.startsWith('/') ? forwardSlashes : `/${forwardSlashes}`;
-  return `${EDITOR_URL_SCHEMES(editor)}://file${encodeURI(rooted)}`;
+  return `${EDITOR_URL_SCHEMES.get(editor)}://file${encodeURI(rooted)}`;
 }
 
 /**

@@ -11,12 +11,12 @@ import type { iExportPacket } from './exports.types';
 
 /** The statuses the chosen Include groups stand for. */
 export function statusesFor(filters: readonly FindingFilter[]) {
-  return [...new Set(filters.flatMap((filter) => FINDING_FILTER_STATUSES(filter) ?? []))];
+  return [...new Set(filters.flatMap((filter) => FINDING_FILTER_STATUSES.get(filter) ?? []))];
 }
 
 /** How many findings in scope fall under an Include group. */
 export function countForFilter(statusCounts: iExportPacket['statusCounts'], filter: FindingFilter) {
-  const statuses = new Set<FindingStatus>(FINDING_FILTER_STATUSES(filter) ?? []);
+  const statuses = new Set<FindingStatus>(FINDING_FILTER_STATUSES.get(filter) ?? []);
   return statusCounts.reduce((total, entry) => (statuses.has(entry.status) ? total + entry.count : total), 0);
 }
 
@@ -36,8 +36,8 @@ export function toggleFilter(
 export function exportTabLabel(tab: ExportTab, host: CodeHost | undefined) {
   if (tab === EXPORT_TABS.json) return 'JSON';
   if (tab === EXPORT_TABS['agent-prompt']) return 'Agent prompt';
-  if (tab === EXPORT_TABS.post) return host ? `${CODE_HOST_LABELS(host)} drafts` : 'Drafts';
-  if (tab === EXPORT_TABS.cli) return CODE_HOST_CLIS(host ?? CODE_HOSTS.GITLAB);
+  if (tab === EXPORT_TABS.post) return host ? `${CODE_HOST_LABELS.get(host)} drafts` : 'Drafts';
+  if (tab === EXPORT_TABS.cli) return CODE_HOST_CLIS.get(host ?? CODE_HOSTS.GITLAB);
   if (tab === EXPORT_TABS.curl) return 'curl';
   return 'Markdown';
 }

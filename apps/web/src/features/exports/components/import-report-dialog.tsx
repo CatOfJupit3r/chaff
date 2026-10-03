@@ -11,25 +11,25 @@ import { getErrorMessage } from '@~/utils/rpc-errors';
 import type { iReportResult } from '../exports.types';
 import { useImportReport } from '../hooks/use-import-report';
 
-const SKIP_REASON_LABELS = reportSkipReasonsEnumwaii.derive({
-  [REPORT_SKIP_REASONS.UNSUPPORTED_STATUS]: 'the status is not fix_proposed or answered',
-  [REPORT_SKIP_REASONS.WRONG_KIND]: 'fixes are for concerns, answers for questions',
-  [REPORT_SKIP_REASONS.NOT_ACTIVE]: 'it is verified, closed or withdrawn',
-  [REPORT_SKIP_REASONS.ALREADY_SET]: 'it already has that status',
-  [REPORT_SKIP_REASONS.MISSING_NOTE]: 'an answer needs a note',
-});
+const SKIP_REASON_LABELS = reportSkipReasonsEnumwaii.derive(
+  [REPORT_SKIP_REASONS.UNSUPPORTED_STATUS, 'the status is not fix_proposed or answered'],
+  [REPORT_SKIP_REASONS.WRONG_KIND, 'fixes are for concerns, answers for questions'],
+  [REPORT_SKIP_REASONS.NOT_ACTIVE, 'it is verified, closed or withdrawn'],
+  [REPORT_SKIP_REASONS.ALREADY_SET, 'it already has that status'],
+  [REPORT_SKIP_REASONS.MISSING_NOTE, 'an answer needs a note'],
+);
 
 function ReportResult({ result }: { result: iReportResult }) {
   return (
     <div className="flex flex-col gap-2 text-[13px]">
       {result.applied.map((item) => (
         <p key={item.findingId} className="m-0 text-fg">
-          <span className="font-mono text-muted">F-{item.number}</span> is now {FINDING_STATUS_LABELS(item.status)}
+          <span className="font-mono text-muted">F-{item.number}</span> is now {FINDING_STATUS_LABELS.get(item.status)}
         </p>
       ))}
       {result.skipped.map((item) => (
         <p key={`${item.findingId}-${item.reason}`} className="m-0 text-muted">
-          <span className="font-mono">F-{item.number}</span> left as it was: {SKIP_REASON_LABELS(item.reason)}
+          <span className="font-mono">F-{item.number}</span> left as it was: {SKIP_REASON_LABELS.get(item.reason)}
         </p>
       ))}
       {result.unknown.length > 0 ? (

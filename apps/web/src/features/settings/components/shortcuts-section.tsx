@@ -40,10 +40,10 @@ export function ShortcutsSection() {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
         {shortcutScreenValues.map((screen) => (
           <div key={screen} className="flex flex-col gap-2">
-            <span className="text-[12.5px] font-medium text-fg-soft">{SHORTCUT_SCREEN_LABELS(screen)}</span>
+            <span className="text-[12.5px] font-medium text-fg-soft">{SHORTCUT_SCREEN_LABELS.get(screen)}</span>
             <List>
               {shortcutActionValues
-                .filter((action) => SHORTCUT_ACTION_SCREENS(action) === screen)
+                .filter((action) => SHORTCUT_ACTION_SCREENS.get(action) === screen)
                 .map((action) => (
                   <ShortcutRow
                     key={action}

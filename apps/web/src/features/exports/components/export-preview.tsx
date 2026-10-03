@@ -34,9 +34,9 @@ export function ExportPreview({ snapshot, packet, statuses, tab, onTab }: iExpor
   const copy = useCopyText();
   const host = snapshot.change?.host;
   const tabs = exportTabsEnumwaii.values
-    .filter((value) => host !== undefined || !IS_POSTING_TAB(value))
+    .filter((value) => host !== undefined || !IS_POSTING_TAB.get(value))
     .map((value) => ({ value, label: exportTabLabel(value, host) }));
-  const isPosting = host !== undefined && IS_POSTING_TAB(tab);
+  const isPosting = host !== undefined && IS_POSTING_TAB.get(tab);
   const text = packetText(packet, tab);
 
   return (
@@ -62,7 +62,7 @@ export function ExportPreview({ snapshot, packet, statuses, tab, onTab }: iExpor
       {!isPosting && packet?.findingCount === 0 ? (
         <p className="m-0 border-t border-line px-5 py-3 text-[12.5px] text-muted">
           No findings match. Include more statuses, or widen the scope
-          {host ? ` beyond this ${CHANGE_REQUEST_NOUNS(host)}` : ''}.
+          {host ? ` beyond this ${CHANGE_REQUEST_NOUNS.get(host)}` : ''}.
         </p>
       ) : null}
     </section>

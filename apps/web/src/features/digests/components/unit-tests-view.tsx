@@ -61,7 +61,7 @@ export function UnitTestsView({ tests, headSha, hasDigest, onOpenInEditor }: iUn
                 ) : null}
               </td>
               <td className="py-2 text-center">{YES}</td>
-              <td className="py-2 text-center">{TEST_TIER_IS_READ(test.tier) ? YES : NO}</td>
+              <td className="py-2 text-center">{TEST_TIER_IS_READ.get(test.tier) ? YES : NO}</td>
               <td className="py-2 text-center">{NO}</td>
             </tr>
           ))}

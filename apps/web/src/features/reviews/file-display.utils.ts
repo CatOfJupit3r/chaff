@@ -8,7 +8,7 @@ export type iFileStatusFile = Pick<iSnapshotFile, 'status' | 'oldPath'>;
 
 /** Hover text for a file's status, with the previous path of a renamed file. */
 export function fileStatusTitle({ status, oldPath }: iFileStatusFile) {
-  return oldPath ? `${FILE_STATUS_LABELS(status)} from ${oldPath}` : FILE_STATUS_LABELS(status);
+  return oldPath ? `${FILE_STATUS_LABELS.get(status)} from ${oldPath}` : FILE_STATUS_LABELS.get(status);
 }
 
 /** Diffs with more changed lines than this stay collapsed until asked for. */

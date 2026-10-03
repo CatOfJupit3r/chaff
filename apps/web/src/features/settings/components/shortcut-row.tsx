@@ -26,7 +26,7 @@ const MODIFIER_KEYS = new Set(['shift', 'control', 'alt', 'meta', 'capslock']);
 export function ShortcutRow({ action, keys, isCustom, onChange }: iShortcutRowProps) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [problem, setProblem] = useState<string>();
-  const label = SHORTCUT_ACTION_LABELS(action);
+  const label = SHORTCUT_ACTION_LABELS.get(action);
 
   const stop = () => {
     setIsCapturing(false);

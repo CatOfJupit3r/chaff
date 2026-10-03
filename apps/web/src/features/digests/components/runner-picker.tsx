@@ -31,8 +31,8 @@ export function RunnerPicker({ runners, isPending, runner, onPick }: iRunnerPick
               'disabled:pointer-events-none disabled:opacity-55 aria-checked:border-accent-line aria-checked:bg-accent-soft',
             )}
           >
-            <span className="text-[13px] font-medium text-fg">{DIGEST_RUNNER_LABELS(candidate.runner)}</span>
-            <span className="text-[12px] text-muted">{DIGEST_RUNNER_PROVIDERS(candidate.runner)}</span>
+            <span className="text-[13px] font-medium text-fg">{DIGEST_RUNNER_LABELS.get(candidate.runner)}</span>
+            <span className="text-[12px] text-muted">{DIGEST_RUNNER_PROVIDERS.get(candidate.runner)}</span>
             <span className="ml-auto truncate font-mono text-[11.5px] text-faint">
               {candidate.isAvailable ? candidate.path : 'not found on this computer'}
             </span>

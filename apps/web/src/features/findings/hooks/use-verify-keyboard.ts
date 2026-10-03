@@ -32,7 +32,7 @@ function actionFor(
   if (action === SHORTCUT_ACTIONS.VERIFY_PREVIOUS) return () => onMove(-1);
   if (!selected || !action) return undefined;
   const status = manualFindingStatuses(selected.kind, selected.status).find(
-    (candidate) => FINDING_ACTION_SHORTCUTS(candidate) === action,
+    (candidate) => FINDING_ACTION_SHORTCUTS.get(candidate) === action,
   );
   return status ? () => onSetStatus(status) : undefined;
 }

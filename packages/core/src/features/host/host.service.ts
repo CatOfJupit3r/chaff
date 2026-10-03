@@ -10,7 +10,7 @@ import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
 /** Links the renderer may hand to the OS: web pages and the editors Chaff supports. */
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set([
   'https:',
-  ...editorValues.map((editor) => `${EDITOR_URL_SCHEMES(editor)}:`),
+  ...editorValues.map((editor) => `${EDITOR_URL_SCHEMES.get(editor)}:`),
 ]);
 
 function parseUrl(url: string) {

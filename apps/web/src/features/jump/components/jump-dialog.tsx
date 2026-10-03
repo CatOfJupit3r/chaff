@@ -61,7 +61,7 @@ function JumpList({ inputRef, onDone }: iJumpListProps) {
           <div key={item.id}>
             {item.group === matches[index - 1]?.group ? null : (
               <div className="px-2.5 pt-2.5 pb-1 text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
-                {JUMP_GROUP_LABELS(item.group)}
+                {JUMP_GROUP_LABELS.get(item.group)}
               </div>
             )}
             <div

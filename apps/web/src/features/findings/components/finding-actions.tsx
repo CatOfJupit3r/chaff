@@ -65,7 +65,7 @@ export function FindingActions({ finding, isPending, onSetStatus }: iFindingActi
   );
   const statuses = manualFindingStatuses(finding.kind, finding.status);
   const moves = statuses.filter((status) => status !== FINDING_STATUSES.ANSWERED);
-  const isOpenQuestion = finding.kind === FINDING_KINDS.QUESTION && IS_ACTIVE_FINDING_STATUS(finding.status);
+  const isOpenQuestion = finding.kind === FINDING_KINDS.QUESTION && IS_ACTIVE_FINDING_STATUS.get(finding.status);
 
   return (
     <footer className="flex flex-col gap-3 border-t border-line px-5 py-3.5">
@@ -74,7 +74,7 @@ export function FindingActions({ finding, isPending, onSetStatus }: iFindingActi
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {moves.map((status) => {
-          const shortcut = FINDING_ACTION_SHORTCUTS(status);
+          const shortcut = FINDING_ACTION_SHORTCUTS.get(status);
           const key = shortcut ? keys.get(shortcut) : undefined;
           return (
             <Button

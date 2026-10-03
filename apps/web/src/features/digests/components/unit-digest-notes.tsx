@@ -23,7 +23,7 @@ export function UnitDigestNotes({ runner, note, group }: iUnitDigestNotesProps) 
       <div>
         <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11.5px] text-faint">
           <SparkIcon className="size-[13px]" />
-          Digest · {DIGEST_RUNNER_LABELS(runner)}, read-only
+          Digest · {DIGEST_RUNNER_LABELS.get(runner)}, read-only
         </div>
         {note?.summary ? (
           <p className="m-0 max-w-[62ch] text-[13.5px] leading-[1.6] text-fg-soft">
@@ -40,7 +40,7 @@ export function UnitDigestNotes({ runner, note, group }: iUnitDigestNotesProps) 
                   : 'ml-1.5 rounded-[4px] border border-line px-[5px] text-[10.5px] text-faint'
               }
             >
-              {INTENT_SOURCE_LABELS(intent.intentSource)}
+              {INTENT_SOURCE_LABELS.get(intent.intentSource)}
             </span>
           </p>
         ) : null}

@@ -44,7 +44,7 @@ export class DrizzleUnitMarkRepository implements iUnitMarkRepository {
   }
 
   public async countAccountedRegions(snapshotId: string) {
-    const accounted = unitMarkValues.filter((mark) => IS_ACCOUNTED_MARK(mark));
+    const accounted = unitMarkValues.filter((mark) => IS_ACCOUNTED_MARK.get(mark));
     const row = this.databaseService
       .getDb()
       .select({ total: count() })

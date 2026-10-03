@@ -68,7 +68,7 @@ function calculateTotal(items: Item[]) {
 
 ### No `enum`, No `z.enum`, Prefer `Enumwaii`
 
-Use `Enumwaii` from `@chaff/enumwaii/enumwaii` for every reusable closed set. It keeps members as plain strings at runtime while rejecting raw literals and values from unrelated enums at the type level. See the **enumwaii** skill — mandatory reading before touching any enum-like value. Internal values MUST be `CONSTANT_CASE`.
+Use `Enumwaii` from `enumwaii` for every reusable closed set. It keeps members as plain strings at runtime while rejecting raw literals and values from unrelated enums at the type level. See the **enumwaii** skill — mandatory reading before touching any enum-like value. Internal values MUST be `CONSTANT_CASE`.
 
 **Bad:**
 
@@ -91,14 +91,15 @@ export const themeModeSchema = z.enum(['SYSTEM', 'DARK', 'LIGHT']);
 **Good:**
 
 ```typescript
+import { emToZodSchema } from 'enumwaii/zod';
 // packages/common/src/enums/appearance.enums.ts
-import { Enumwaii } from '@chaff/enumwaii/enumwaii';
-import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
+import { em } from 'enumwaii';
+import type { InferEnumwaii } from 'enumwaii';
 
-export const themeModesEnumwaii = new Enumwaii('ThemeMode', ['SYSTEM', 'DARK', 'LIGHT']);
+export const themeModesEnumwaii = em(['SYSTEM', 'DARK', 'LIGHT']);
 export const THEME_MODES = themeModesEnumwaii.enum;
 export type ThemeMode = InferEnumwaii<typeof themeModesEnumwaii>;
-export const themeModeSchema = themeModesEnumwaii.schema;
+export const themeModeSchema = emToZodSchema(themeModesEnumwaii);
 
 // Usage
 if (settings.theme === THEME_MODES.DARK) { ... }
@@ -273,16 +274,17 @@ All error codes must be members of the `errorCodes` Enumwaii in `packages/common
 **Good:**
 
 ```typescript
+import { em } from 'enumwaii';
 // In errors.enums.ts: add the code to the Enumwaii list, then its message
-const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
+const errorCodesEnumwaii = em([
   // ...
   'WORKSPACE_NOT_FOUND',
 ]);
 
-export const errorMessages = errorCodesEnumwaii.derive({
+export const errorMessages = errorCodesEnumwaii.derive(
   // ...
-  [errorCodes.WORKSPACE_NOT_FOUND]: 'Repository not found',
-});
+  [errorCodes.WORKSPACE_NOT_FOUND, 'Repository not found'],
+);
 
 // In the service
 import { errorCodes } from '@chaff/common/enums/errors.enums';
@@ -1126,10 +1128,11 @@ const type = 'notification';
 **Good:**
 
 ```typescript
-const statusEnumwaii = new Enumwaii('Status', ['PENDING', 'COMPLETED', 'FAILED']);
+import { em } from 'enumwaii';
+const statusEnumwaii = em(['PENDING', 'COMPLETED', 'FAILED']);
 export const STATUS = statusEnumwaii.enum;
 
-const typeEnumwaii = new Enumwaii('NotificationType', ['NOTIFICATION', 'ALERT', 'MESSAGE']);
+const typeEnumwaii = em(['NOTIFICATION', 'ALERT', 'MESSAGE']);
 export const TYPES = typeEnumwaii.enum;
 
 if (status === STATUS.PENDING) { ... }

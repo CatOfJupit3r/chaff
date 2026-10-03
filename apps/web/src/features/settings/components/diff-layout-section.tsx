@@ -41,7 +41,7 @@ export function DiffLayoutSection() {
         <Field label="Full diff opens in">
           <SegmentedControl
             label="Full diff opens in"
-            options={optionsOf(diffLayoutValues, DIFF_LAYOUT_LABELS)}
+            options={optionsOf(diffLayoutValues, DIFF_LAYOUT_LABELS.get)}
             value={settings.diffLayout}
             onChange={(diffLayout) => updateSettings({ diffLayout })}
           />
@@ -49,7 +49,7 @@ export function DiffLayoutSection() {
         <Field label="Context around changes">
           <SegmentedControl
             label="Context around changes"
-            options={optionsOf(diffContextValues, DIFF_CONTEXT_LABELS)}
+            options={optionsOf(diffContextValues, DIFF_CONTEXT_LABELS.get)}
             value={settings.diffContext}
             onChange={(diffContext) => updateSettings({ diffContext })}
           />
@@ -57,7 +57,7 @@ export function DiffLayoutSection() {
         <Field label="Whitespace-only changes" hint="Ignored changes still count toward the review.">
           <SegmentedControl
             label="Whitespace-only changes"
-            options={optionsOf(whitespaceChoiceValues, WHITESPACE_CHOICE_LABELS)}
+            options={optionsOf(whitespaceChoiceValues, WHITESPACE_CHOICE_LABELS.get)}
             value={settings.isWhitespaceIgnored ? WHITESPACE_CHOICES.IGNORE : WHITESPACE_CHOICES.SHOW}
             onChange={(choice) => updateSettings({ isWhitespaceIgnored: choice === WHITESPACE_CHOICES.IGNORE })}
           />
@@ -65,7 +65,7 @@ export function DiffLayoutSection() {
         <Field label="Changes inside a line">
           <SegmentedControl
             label="Changes inside a line"
-            options={optionsOf(inlineDiffValues, INLINE_DIFF_LABELS)}
+            options={optionsOf(inlineDiffValues, INLINE_DIFF_LABELS.get)}
             value={settings.inlineDiff}
             onChange={(inlineDiff) => updateSettings({ inlineDiff })}
           />
@@ -73,7 +73,7 @@ export function DiffLayoutSection() {
         <Field label="Focus starts with">
           <SegmentedControl
             label="Focus starts with"
-            options={optionsOf(reviewProgressionValues, REVIEW_PROGRESSION_LABELS)}
+            options={optionsOf(reviewProgressionValues, REVIEW_PROGRESSION_LABELS.get)}
             value={settings.defaultProgression}
             onChange={(defaultProgression) => updateSettings({ defaultProgression })}
           />
@@ -81,7 +81,7 @@ export function DiffLayoutSection() {
         <Field label="Focus context panel">
           <SegmentedControl
             label="Focus context panel"
-            options={optionsOf(contextPanelChoiceValues, CONTEXT_PANEL_CHOICE_LABELS)}
+            options={optionsOf(contextPanelChoiceValues, CONTEXT_PANEL_CHOICE_LABELS.get)}
             value={settings.isContextPanelPinned ? CONTEXT_PANEL_CHOICES.PINNED : CONTEXT_PANEL_CHOICES.ON_DEMAND}
             onChange={(choice) => updateSettings({ isContextPanelPinned: choice === CONTEXT_PANEL_CHOICES.PINNED })}
           />

@@ -44,7 +44,7 @@ export class ConnectionsService {
   /** Adds an account, or replaces the token of the one already added for the same address. */
   public async add(input: { host: CodeHost; baseUrl?: string; token: string }) {
     if (!this.host.secrets.isAvailable()) throw ORPCUnprocessableContentError(errorCodes.SECRETS_UNAVAILABLE);
-    const baseUrl = normalizeBaseUrl(input.baseUrl?.trim() ? input.baseUrl : CODE_HOST_DEFAULT_URLS(input.host));
+    const baseUrl = normalizeBaseUrl(input.baseUrl?.trim() ? input.baseUrl : CODE_HOST_DEFAULT_URLS.get(input.host));
     const token = input.token.trim();
     const { username } = await this.providerFor(input.host).currentUser({ baseUrl, token });
     if (!username) throw ORPCUnprocessableContentError(errorCodes.CONNECTION_REJECTED);

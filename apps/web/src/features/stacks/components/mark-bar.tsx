@@ -18,7 +18,7 @@ export function MarkBar({ summary }: { summary: iSnapshotSummary | undefined }) 
       {segments.flatMap((segment) => {
         const className = cn(
           'basis-0 rounded-full',
-          segment.mark ? UNIT_MARK_SEGMENT_CLASSES(segment.mark) : 'bg-raised',
+          segment.mark ? UNIT_MARK_SEGMENT_CLASSES.get(segment.mark) : 'bg-raised',
         );
         const key = segment.mark ?? 'undecided';
         if (!isPerUnit) return [<span key={key} style={{ flexGrow: segment.count }} className={className} />];

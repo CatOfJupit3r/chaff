@@ -13,9 +13,9 @@ export function FileStatusLetter({ file, className }: { file: iFileStatusFile; c
     <span
       title={fileStatusTitle(file)}
       aria-label={fileStatusTitle(file)}
-      className={cn('font-mono text-[11px] font-semibold', FILE_STATUS_TONES(file.status), className)}
+      className={cn('font-mono text-[11px] font-semibold', FILE_STATUS_TONES.get(file.status), className)}
     >
-      {FILE_STATUS_LETTERS(file.status)}
+      {FILE_STATUS_LETTERS.get(file.status)}
     </span>
   );
 }
@@ -29,8 +29,9 @@ export function FileStatusSummary({ files }: { files: readonly iFileStatusFile[]
   return (
     <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 font-mono text-[11px] text-faint tabular-nums">
       {counts.map(({ status, count }) => (
-        <span key={status} title={`${count} ${FILE_STATUS_LABELS(status).toLowerCase()}`}>
-          <span className={cn('font-semibold', FILE_STATUS_TONES(status))}>{FILE_STATUS_LETTERS(status)}</span> {count}
+        <span key={status} title={`${count} ${FILE_STATUS_LABELS.get(status).toLowerCase()}`}>
+          <span className={cn('font-semibold', FILE_STATUS_TONES.get(status))}>{FILE_STATUS_LETTERS.get(status)}</span>{' '}
+          {count}
         </span>
       ))}
     </span>
@@ -46,10 +47,10 @@ export function FileStatusBadge({ file }: { file: iFileStatusFile }) {
       title={fileStatusTitle(file)}
       className={cn(
         'inline-flex h-[19px] items-center rounded-[4px] border px-1.5 text-[11px] font-medium whitespace-nowrap',
-        FILE_STATUS_BADGES(file.status),
+        FILE_STATUS_BADGES.get(file.status),
       )}
     >
-      {FILE_STATUS_LABELS(file.status)}
+      {FILE_STATUS_LABELS.get(file.status)}
     </span>
   );
 }

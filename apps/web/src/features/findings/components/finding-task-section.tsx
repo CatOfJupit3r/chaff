@@ -55,13 +55,13 @@ export function FindingTaskSection({ finding }: { finding: iFinding }) {
             Suggest a task
           </Button>
           <span className="text-[12px] text-faint">
-            {DIGEST_RUNNER_LABELS(digestRunner)} restates your comment for a coding agent, no wider than you wrote it.
-            The comment and quoted code go to {DIGEST_RUNNER_PROVIDERS(digestRunner)}.
+            {DIGEST_RUNNER_LABELS.get(digestRunner)} restates your comment for a coding agent, no wider than you wrote
+            it. The comment and quoted code go to {DIGEST_RUNNER_PROVIDERS.get(digestRunner)}.
           </span>
         </div>
       )}
       {task?.state === FINDING_TASK_STATES.WRITING ? (
-        <p className="m-0 text-[13px] text-muted">{DIGEST_RUNNER_LABELS(task.runner)} is writing the task…</p>
+        <p className="m-0 text-[13px] text-muted">{DIGEST_RUNNER_LABELS.get(task.runner)} is writing the task…</p>
       ) : null}
       {task?.state === FINDING_TASK_STATES.FAILED ? (
         <p className="m-0 text-[13px] text-bad">Could not write a task: {task.error}</p>

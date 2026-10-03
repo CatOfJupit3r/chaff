@@ -43,8 +43,8 @@ export function FileTreeRow({ file, hasFolder = false, isCurrent, onSelect, onOp
         className="grid h-[30px] w-full grid-cols-[10px_minmax(0,1fr)_auto_10px] items-center gap-2 rounded-sm px-2 text-left text-[12.5px] text-muted hover:bg-hover hover:text-fg aria-current:bg-raised aria-current:text-fg"
       >
         <span
-          title={FILE_DECISION_LABELS(decision)}
-          className={cn('size-2.5 rounded-full', FILE_DECISION_DOTS(decision))}
+          title={FILE_DECISION_LABELS.get(decision)}
+          className={cn('size-2.5 rounded-full', FILE_DECISION_DOTS.get(decision))}
         />
         <span
           className={cn(

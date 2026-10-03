@@ -54,13 +54,13 @@ export interface iBuiltUnit {
   regions: iBuiltRegion[];
 }
 
-const FILE_STATUS_VERBS = fileStatusesEnumwaii.derive({
-  [FILE_STATUSES.ADDED]: 'added',
-  [FILE_STATUSES.MODIFIED]: 'changed',
-  [FILE_STATUSES.DELETED]: 'deleted',
-  [FILE_STATUSES.RENAMED]: 'changed',
-  [FILE_STATUSES.TYPE_CHANGED]: 'changed',
-});
+const FILE_STATUS_VERBS = fileStatusesEnumwaii.derive(
+  [FILE_STATUSES.ADDED, 'added'],
+  [FILE_STATUSES.MODIFIED, 'changed'],
+  [FILE_STATUSES.DELETED, 'deleted'],
+  [FILE_STATUSES.RENAMED, 'changed'],
+  [FILE_STATUSES.TYPE_CHANGED, 'changed'],
+);
 
 /** Config and docs files with at most this many changed lines are one unit. */
 const SMALL_TEXT_CHANGE_LINES = 120;
@@ -92,7 +92,7 @@ function isChanged(line: iDiffLine | undefined) {
 }
 
 function hashLines(lines: readonly iDiffLine[], prefix = '') {
-  return hash(`${prefix}\0${lines.map((line) => `${DIFF_LINE_MARKERS(line.type)}${line.text}`).join('\n')}`);
+  return hash(`${prefix}\0${lines.map((line) => `${DIFF_LINE_MARKERS.get(line.type)}${line.text}`).join('\n')}`);
 }
 
 function countLines(lines: readonly iDiffLine[]) {
@@ -181,7 +181,7 @@ function finishUnit(lines: readonly iDiffLine[], draft: iUnitDraft): iBuiltUnit 
 }
 
 function fileLevelTitle(input: iUnitBuildInput, changedCount: number) {
-  const verb = FILE_STATUS_VERBS(input.status);
+  const verb = FILE_STATUS_VERBS.get(input.status);
   if (input.isBinary) return `Binary file ${verb}`;
   if (input.kind === FILE_KINDS.GENERATED) return 'Generated file';
   if (changedCount > 0) return 'Large change';

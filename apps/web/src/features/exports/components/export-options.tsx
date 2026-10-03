@@ -55,7 +55,7 @@ export function ExportOptionsPanel({ options, reviewName, statusCounts, onUpdate
         <SectionLabel className="mb-1.5">Scope</SectionLabel>
         {exportScopeValues.map((scope) => (
           <OptionRow key={scope} type="radio" isChecked={options.scope === scope} onChange={() => onUpdate({ scope })}>
-            {EXPORT_SCOPE_LABELS(scope)}
+            {EXPORT_SCOPE_LABELS.get(scope)}
             {scope === EXPORT_SCOPES.review ? (
               <span className="ml-1.5 font-mono text-[12px] text-muted">{reviewName}</span>
             ) : null}
@@ -72,7 +72,7 @@ export function ExportOptionsPanel({ options, reviewName, statusCounts, onUpdate
             onChange={() => onToggle(filter)}
             count={countForFilter(statusCounts, filter)}
           >
-            {FINDING_FILTER_LABELS(filter)}
+            {FINDING_FILTER_LABELS.get(filter)}
           </OptionRow>
         ))}
       </fieldset>

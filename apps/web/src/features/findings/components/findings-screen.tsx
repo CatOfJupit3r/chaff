@@ -33,7 +33,7 @@ export function FindingsScreen() {
     value,
     label: (
       <>
-        {FINDING_FILTER_LABELS(value)}
+        {FINDING_FILTER_LABELS.get(value)}
         <span className="ml-1.5 text-faint">{counts.get(value) ?? 0}</span>
       </>
     ),

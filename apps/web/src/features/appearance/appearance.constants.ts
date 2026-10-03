@@ -17,32 +17,35 @@ import {
   themeModeValues,
 } from '@chaff/common/enums/appearance.enums';
 
-export const THEME_MODE_OPTIONS = themeModeValues.map((value) => ({ value, label: THEME_MODE_LABELS(value) }));
+export const THEME_MODE_OPTIONS = themeModeValues.map((value) => ({ value, label: THEME_MODE_LABELS.get(value) }));
 
-export const CODE_SIZE_OPTIONS = codeSizeValues.map((value) => ({ value, label: CODE_SIZE_LABELS(value) }));
+export const CODE_SIZE_OPTIONS = codeSizeValues.map((value) => ({ value, label: CODE_SIZE_LABELS.get(value) }));
 
-export const CODE_FONT_OPTIONS = codeFontValues.map((value) => ({ value, label: CODE_FONT_LABELS(value) }));
+export const CODE_FONT_OPTIONS = codeFontValues.map((value) => ({ value, label: CODE_FONT_LABELS.get(value) }));
 
 export const CODE_LINE_HEIGHT_OPTIONS = codeLineHeightValues.map((value) => ({
   value,
-  label: CODE_LINE_HEIGHT_LABELS(value),
+  label: CODE_LINE_HEIGHT_LABELS.get(value),
 }));
 
-export const DENSITY_OPTIONS = densityValues.map((value) => ({ value, label: DENSITY_LABELS(value) }));
+export const DENSITY_OPTIONS = densityValues.map((value) => ({ value, label: DENSITY_LABELS.get(value) }));
 
-export const SYNTAX_THEME_OPTIONS = syntaxThemeValues.map((value) => ({ value, label: SYNTAX_THEME_LABELS(value) }));
+export const SYNTAX_THEME_OPTIONS = syntaxThemeValues.map((value) => ({
+  value,
+  label: SYNTAX_THEME_LABELS.get(value),
+}));
 
-const ACCENT_SWATCH_CLASSES = accentsEnumwaii.derive({
-  [ACCENTS.DEFAULT]: 'bg-accent-default',
-  [ACCENTS.VIOLET]: 'bg-accent-violet',
-  [ACCENTS.TEAL]: 'bg-accent-teal',
-  [ACCENTS.ORANGE]: 'bg-accent-orange',
-});
+const ACCENT_SWATCH_CLASSES = accentsEnumwaii.derive(
+  [ACCENTS.DEFAULT, 'bg-accent-default'],
+  [ACCENTS.VIOLET, 'bg-accent-violet'],
+  [ACCENTS.TEAL, 'bg-accent-teal'],
+  [ACCENTS.ORANGE, 'bg-accent-orange'],
+);
 
 export const ACCENT_OPTIONS = accentValues.map((value) => ({
   value,
-  label: ACCENT_LABELS(value),
-  swatchClassName: ACCENT_SWATCH_CLASSES(value),
+  label: ACCENT_LABELS.get(value),
+  swatchClassName: ACCENT_SWATCH_CLASSES.get(value),
 }));
 
 /** The tokens the Appearance dialog shows, with the Tailwind class each one is used through. */

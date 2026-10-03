@@ -5,7 +5,7 @@ import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { SEVERITY_CHOICE_LABELS, severityChoiceValues } from '../findings.enums';
 import { choiceFromSeverity, severityFromChoice } from '../findings.utils';
 
-const OPTIONS = severityChoiceValues.map((choice) => ({ value: choice, label: SEVERITY_CHOICE_LABELS(choice) }));
+const OPTIONS = severityChoiceValues.map((choice) => ({ value: choice, label: SEVERITY_CHOICE_LABELS.get(choice) }));
 
 interface iSeverityPickerProps {
   severity: FindingSeverity | undefined;

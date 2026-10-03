@@ -9,7 +9,7 @@ import { SegmentedControl } from '@~/components/ui/segmented-control';
 
 import { useDiffReview } from '../diff-review.context';
 
-const KIND_OPTIONS = findingKindsEnumwaii.values.map((value) => ({ value, label: FINDING_KIND_LABELS(value) }));
+const KIND_OPTIONS = findingKindsEnumwaii.values.map((value) => ({ value, label: FINDING_KIND_LABELS.get(value) }));
 
 /** Writes a finding on the picked lines: Enter saves, Shift+Enter adds a line, Escape cancels. */
 export function DiffNoteComposer() {

@@ -41,6 +41,7 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@chaff/common": "workspace:*",
+    "enumwaii": "1.2.0",
     "zod": "catalog:"
   }
 }

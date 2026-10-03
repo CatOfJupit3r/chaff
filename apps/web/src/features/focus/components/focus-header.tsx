@@ -42,7 +42,7 @@ export function FocusHeader({
   onProgression,
 }: iFocusHeaderProps) {
   const position = Math.min(index + 1, cards.length);
-  const queuePill = FOCUS_QUEUE_PILLS(queue);
+  const queuePill = FOCUS_QUEUE_PILLS.get(queue);
 
   return (
     <div className="mb-[18px] flex w-full max-w-[920px] flex-wrap items-center gap-3.5">
@@ -63,7 +63,7 @@ export function FocusHeader({
       ) : null}
       <SegmentedControl
         label="Progression"
-        options={reviewProgressionValues.map((value) => ({ value, label: REVIEW_PROGRESSION_LABELS(value) }))}
+        options={reviewProgressionValues.map((value) => ({ value, label: REVIEW_PROGRESSION_LABELS.get(value) }))}
         value={progression}
         onChange={onProgression}
         className="self-center"

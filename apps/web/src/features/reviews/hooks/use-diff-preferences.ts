@@ -5,19 +5,19 @@ import { DIFF_CONTEXT_LINES, DIFF_CONTEXTS, INLINE_DIFFS, inlineDiffsEnumwaii } 
 import { useSettings } from '@~/features/settings/hooks/use-settings';
 
 /** How the diff viewer marks changes inside a changed line, for each setting. */
-const LINE_DIFF_TYPES = inlineDiffsEnumwaii.derive({
-  [INLINE_DIFFS.WORD]: 'word-alt' as const,
-  [INLINE_DIFFS.CHARACTER]: 'char' as const,
-  [INLINE_DIFFS.NONE]: 'none' as const,
-});
+const LINE_DIFF_TYPES = inlineDiffsEnumwaii.derive(
+  [INLINE_DIFFS.WORD, 'word-alt' as const],
+  [INLINE_DIFFS.CHARACTER, 'char' as const],
+  [INLINE_DIFFS.NONE, 'none' as const],
+);
 
 /** The diff settings as the diff viewer and the patch query take them. */
 export function useDiffPreferences() {
   const { diffContext, isWhitespaceIgnored, inlineDiff } = useSettings();
-  const contextLines = DIFF_CONTEXT_LINES(diffContext);
+  const contextLines = DIFF_CONTEXT_LINES.get(diffContext);
   const viewerOptions = useMemo(
     () => ({
-      lineDiffType: LINE_DIFF_TYPES(inlineDiff),
+      lineDiffType: LINE_DIFF_TYPES.get(inlineDiff),
       expandUnchanged: diffContext === DIFF_CONTEXTS.WHOLE_FILE,
       parseDiffOptions: { context: contextLines, ignoreWhitespace: isWhitespaceIgnored },
     }),

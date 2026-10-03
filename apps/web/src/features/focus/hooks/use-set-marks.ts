@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { input } from 'zod';
 
 import { UNIT_MARKS, unitMarkSchema } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
+import type { setMarksInputSchema } from '@chaff/server-contract/contract/reviews.contract';
 
 import type { iUnit } from '@~/features/reviews/reviews.types';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
@@ -23,8 +25,7 @@ export function useSetMarks(snapshotId: string) {
   const queryClient = useQueryClient();
   const { queryKey } = unitsQueryOptions(snapshotId);
 
-  // Mutation input carries plain strings; they are parsed back into marks for the cache.
-  const writeMarks = (marks: readonly { unitId: string; mark?: string; skipReason?: string }[]) => {
+  const writeMarks = (marks: Readonly<input<typeof setMarksInputSchema>['marks']>) => {
     const byUnit = new Map(marks.map((change) => [change.unitId, change]));
     queryClient.setQueryData<iUnit[]>(queryKey, (units) =>
       units?.map((unit) => {

@@ -237,7 +237,7 @@ export class FixesService {
     try {
       await mkdir(scratchDir, { recursive: true });
       await this.snapshotStoreService.addBranchWorktree(workspaceId, fix.branch, fix.baseSha, checkout);
-      onProgress(`Starting ${DIGEST_RUNNER_LABELS(fix.runner)}`);
+      onProgress(`Starting ${DIGEST_RUNNER_LABELS.get(fix.runner)}`);
       summary = await this.adapterFor(fix.runner).run(command, {
         cwd: checkout,
         scratchDir,
@@ -254,7 +254,7 @@ export class FixesService {
       const labels = numbers.map((number) => `F-${number}`).join(', ');
       const headSha = await this.snapshotStoreService.commitAll(
         checkout,
-        `Address review findings ${labels}\n\nWritten by ${DIGEST_RUNNER_LABELS(fix.runner)} in a Chaff fix hand-off.`,
+        `Address review findings ${labels}\n\nWritten by ${DIGEST_RUNNER_LABELS.get(fix.runner)} in a Chaff fix hand-off.`,
       );
       outcome = {
         headSha,

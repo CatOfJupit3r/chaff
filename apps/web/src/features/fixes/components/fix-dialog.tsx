@@ -43,10 +43,10 @@ export function FixWithAgentButton({ snapshot }: { snapshot: iSnapshot }) {
           <DialogBody>
             <RunnerPicker runners={runners} isPending={isPending} runner={runner} onPick={setPicked} />
             <Callout variant="warn">
-              Unlike a digest, {DIGEST_RUNNER_LABELS(runner)} can edit files here. It works in a new checkout of the
+              Unlike a digest, {DIGEST_RUNNER_LABELS.get(runner)} can edit files here. It works in a new checkout of the
               newest snapshot of {snapshot.branch}, on a new branch in Chaff&apos;s own store, and sends what it reads
-              to {DIGEST_RUNNER_PROVIDERS(runner)}. Your repository and your branch are not touched; you bring the fix
-              over yourself if you want it.
+              to {DIGEST_RUNNER_PROVIDERS.get(runner)}. Your repository and your branch are not touched; you bring the
+              fix over yourself if you want it.
             </Callout>
             <label className="flex cursor-pointer items-center gap-2.5 text-[13px] text-fg">
               <input

@@ -27,7 +27,7 @@ export function UnitViewTabs({ view, counts, onChange }: iUnitViewTabsProps) {
             'aria-selected:border-fg aria-selected:text-fg',
           )}
         >
-          {CARD_VIEW_LABELS(candidate)}
+          {CARD_VIEW_LABELS.get(candidate)}
           {counts.has(candidate) ? (
             <span className="font-mono text-[11px] text-faint tabular-nums">{counts.get(candidate)}</span>
           ) : null}

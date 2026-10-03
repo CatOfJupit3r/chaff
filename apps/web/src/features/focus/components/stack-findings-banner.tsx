@@ -17,7 +17,7 @@ function headline(findings: readonly iFinding[]) {
   if (findings.length > 1 || !only) {
     return `${pluralize(findings.length, 'finding')} from the rest of the stack affect this branch`;
   }
-  const kind = FINDING_KIND_LABELS(only.kind);
+  const kind = FINDING_KIND_LABELS.get(only.kind);
   return only.scope === FINDING_SCOPES.STACK
     ? `${kind} on the whole stack, from ${only.branch}`
     : `${kind} on ${only.branch} affects this branch`;

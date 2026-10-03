@@ -35,7 +35,7 @@ export function FocusCardShell({ label, exit, onSwipe, children }: iFocusCardShe
         'transition-[translate,rotate,scale,opacity,border-color] duration-280 ease-[cubic-bezier(.3,.7,.3,1)]',
         swipe.isDragging && 'transition-[border-color] duration-150',
         SWIPE_BORDER_CLASSES.get(swipeExit(swipe.offset)),
-        exit && CARD_EXIT_CLASSES(exit),
+        exit && CARD_EXIT_CLASSES.get(exit),
       )}
     >
       {children}

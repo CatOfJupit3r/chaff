@@ -21,12 +21,12 @@ function MemberTitle({ unit }: { unit: iUnit }) {
       <span
         className={cn(
           'size-2 flex-none rounded-full bg-line-strong',
-          unit.mark && UNIT_MARK_SEGMENT_CLASSES(unit.mark),
+          unit.mark && UNIT_MARK_SEGMENT_CLASSES.get(unit.mark),
         )}
       />
-      <span className="text-faint">{UNIT_KIND_LABELS(unit.kind)}</span>
+      <span className="text-faint">{UNIT_KIND_LABELS.get(unit.kind)}</span>
       <span className="min-w-0 truncate font-mono text-fg">{unit.title}</span>
-      {unit.mark ? <span className="ml-auto flex-none text-muted">{UNIT_MARK_LABELS(unit.mark)}</span> : null}
+      {unit.mark ? <span className="ml-auto flex-none text-muted">{UNIT_MARK_LABELS.get(unit.mark)}</span> : null}
     </div>
   );
 }

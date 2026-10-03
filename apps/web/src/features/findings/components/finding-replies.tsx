@@ -30,7 +30,7 @@ export function FindingReplies({ finding, isPending, onSetStatus }: iFindingRepl
     <section className="flex flex-col gap-2.5 border-t border-line px-5 py-4 text-[13px]">
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         <span>
-          Posted to {CODE_HOST_LABELS(post.host)} as a draft {formatRelativeTime(post.createdAt)}
+          Posted to {CODE_HOST_LABELS.get(post.host)} as a draft {formatRelativeTime(post.createdAt)}
         </span>
         <span className="ml-auto flex gap-1.5">
           {post.url ? (

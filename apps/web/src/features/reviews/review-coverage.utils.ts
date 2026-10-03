@@ -5,8 +5,8 @@ import { FILE_DECISIONS } from './reviews.enums';
 import type { FileDecision } from './reviews.enums';
 import type { iUnit } from './reviews.types';
 
-const isDecided = (unit: iUnit) => unit.mark !== undefined && IS_INSPECTED_MARK(unit.mark);
-const isAccounted = (unit: iUnit) => unit.mark !== undefined && IS_ACCOUNTED_MARK(unit.mark);
+const isDecided = (unit: iUnit) => unit.mark !== undefined && IS_INSPECTED_MARK.get(unit.mark);
+const isAccounted = (unit: iUnit) => unit.mark !== undefined && IS_ACCOUNTED_MARK.get(unit.mark);
 const isComment = (mark: UnitMark | undefined) => mark === UNIT_MARKS.CONCERN || mark === UNIT_MARKS.QUESTION;
 
 export function groupUnitsByFile(units: readonly iUnit[]) {
@@ -40,13 +40,13 @@ export function countCoveredLines(units: readonly iUnit[]) {
 }
 
 /** CSS color of the bar beside lines of a unit with each mark. */
-const MARK_GUTTER_COLORS = unitMarksEnumwaii.derive({
-  [UNIT_MARKS.LOOKS_GOOD]: 'var(--good)',
-  [UNIT_MARKS.CONCERN]: 'var(--warn)',
-  [UNIT_MARKS.QUESTION]: 'var(--accent)',
-  [UNIT_MARKS.LATER]: 'var(--faint)',
-  [UNIT_MARKS.SKIPPED]: 'var(--skip)',
-});
+const MARK_GUTTER_COLORS = unitMarksEnumwaii.derive(
+  [UNIT_MARKS.LOOKS_GOOD, 'var(--good)'],
+  [UNIT_MARKS.CONCERN, 'var(--warn)'],
+  [UNIT_MARKS.QUESTION, 'var(--accent)'],
+  [UNIT_MARKS.LATER, 'var(--faint)'],
+  [UNIT_MARKS.SKIPPED, 'var(--skip)'],
+);
 
 function lineSelectors(lineType: string, start: number | undefined, end: number | undefined) {
   if (start === undefined || end === undefined) return [];
@@ -70,7 +70,7 @@ export function buildDecisionGutterCss(units: readonly iUnit[]) {
       ...lineSelectors('change-deletion', unit.oldStartLine, unit.oldEndLine),
     ];
     if (selectors.length === 0) return [];
-    return [`${selectors.join(',\n')} { box-shadow: inset 3px 0 0 ${MARK_GUTTER_COLORS(unit.mark)}; }`];
+    return [`${selectors.join(',\n')} { box-shadow: inset 3px 0 0 ${MARK_GUTTER_COLORS.get(unit.mark)}; }`];
   });
   return [undecided, ...decided].join('\n');
 }

@@ -23,9 +23,9 @@ function lineSpan(unit: iUnit) {
 /** What the unit is, where it lives, and who last touched it. */
 export function UnitCardTop({ unit, file, lastCommit }: iUnitCardTopProps) {
   const facts = [
-    unit.symbolKind ? SYMBOL_KIND_LABELS(unit.symbolKind) : undefined,
+    unit.symbolKind ? SYMBOL_KIND_LABELS.get(unit.symbolKind) : undefined,
     unit.isExported ? 'exported' : undefined,
-    file ? FILE_KIND_FACTS(file.kind) : undefined,
+    file ? FILE_KIND_FACTS.get(file.kind) : undefined,
     lineSpan(unit),
   ].filter((fact): fact is string => fact !== undefined);
 
@@ -33,7 +33,7 @@ export function UnitCardTop({ unit, file, lastCommit }: iUnitCardTopProps) {
     <div className="flex items-start gap-3 px-[22px] pt-5 pb-4">
       <div className="min-w-0">
         <span className="rounded-[4px] border border-line-strong px-1.5 py-0.5 font-mono text-[10.5px] font-medium tracking-[0.06em] text-muted uppercase">
-          {UNIT_KIND_LABELS(unit.kind)} · {UNIT_CHANGE_LABELS(unit.change)}
+          {UNIT_KIND_LABELS.get(unit.kind)} · {UNIT_CHANGE_LABELS.get(unit.change)}
         </span>
         <h2
           className={

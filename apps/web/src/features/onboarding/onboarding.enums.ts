@@ -1,7 +1,8 @@
-import { Enumwaii } from '@chaff/enumwaii/enumwaii';
-import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
+import { em } from 'enumwaii';
+import type { InferEnumwaii } from 'enumwaii';
+import { emToZodSchema } from 'enumwaii/zod';
 
-const onboardingScreenEnumwaii = new Enumwaii('OnboardingScreen', [
+const onboardingScreenEnumwaii = em([
   'REVIEWS',
   'REVIEW',
   'STACK',
@@ -13,14 +14,9 @@ const onboardingScreenEnumwaii = new Enumwaii('OnboardingScreen', [
 ]);
 export const ONBOARDING_SCREENS = onboardingScreenEnumwaii.enum;
 export type OnboardingScreen = InferEnumwaii<typeof onboardingScreenEnumwaii>;
-export const onboardingScreenSchema = onboardingScreenEnumwaii.schema;
+export const onboardingScreenSchema = emToZodSchema(onboardingScreenEnumwaii);
 
-const onboardingMutationStatusEnumwaii = new Enumwaii('OnboardingMutationStatus', [
-  'idle',
-  'pending',
-  'success',
-  'error',
-]);
+const onboardingMutationStatusEnumwaii = em(['idle', 'pending', 'success', 'error']);
 export const ONBOARDING_MUTATION_STATUSES = onboardingMutationStatusEnumwaii.enum;
 export type OnboardingMutationStatus = InferEnumwaii<typeof onboardingMutationStatusEnumwaii>;
-export const onboardingMutationStatusSchema = onboardingMutationStatusEnumwaii.schema;
+export const onboardingMutationStatusSchema = emToZodSchema(onboardingMutationStatusEnumwaii);

@@ -45,7 +45,7 @@ export function findingsFromStack(links: readonly iStackLink[], index: number, f
   const others = targetIdsOf(links.filter((_, position) => position !== index));
   return findings.filter(
     (finding) =>
-      IS_ACTIVE_FINDING_STATUS(finding.status) &&
+      IS_ACTIVE_FINDING_STATUS.get(finding.status) &&
       ((finding.kind === FINDING_KINDS.CONCERN && below.has(finding.targetId)) ||
         (finding.scope === FINDING_SCOPES.STACK && others.has(finding.targetId))),
   );

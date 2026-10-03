@@ -35,7 +35,7 @@ export function PostingList({ snapshot, preview, statuses }: iPostingListProps) 
   const post = usePostFindings();
   const openLink = useOpenLink();
   const { host } = preview;
-  const noun = CHANGE_REQUEST_NOUNS(host);
+  const noun = CHANGE_REQUEST_NOUNS.get(host);
   const change = changeLabel(host, preview.changeNumber);
   const pending = preview.items.filter((item) => !item.isPosted);
   const draftNoun = host === CODE_HOSTS.GITLAB ? pluralize(pending.length, 'draft note') : 'a pending review';
@@ -46,7 +46,7 @@ export function PostingList({ snapshot, preview, statuses }: iPostingListProps) 
         onSuccess: (result) => {
           setIsConfirming(false);
           showToast(
-            `Posted ${pluralize(result.postedCount, 'finding')} to ${change}. Publish them on ${CODE_HOST_LABELS(host)}.`,
+            `Posted ${pluralize(result.postedCount, 'finding')} to ${change}. Publish them on ${CODE_HOST_LABELS.get(host)}.`,
           );
         },
       },
@@ -61,15 +61,15 @@ export function PostingList({ snapshot, preview, statuses }: iPostingListProps) 
       </p>
       {preview.isSnapshotOnHost ? null : (
         <Callout variant="warn">
-          {CODE_HOST_LABELS(host)} has no version of this {noun} at the reviewed commit, so comments go on the {noun} as
-          a whole. Update the review to place them on lines.
+          {CODE_HOST_LABELS.get(host)} has no version of this {noun} at the reviewed commit, so comments go on the{' '}
+          {noun} as a whole. Update the review to place them on lines.
         </Callout>
       )}
       <ul className="m-0 flex list-none flex-col divide-y divide-line rounded-md border border-line p-0">
         {preview.items.map((item) => (
           <li key={item.findingId} className="flex items-center gap-3 px-3 py-2 text-[13px]">
             <span className="font-mono text-muted">F-{item.number}</span>
-            <span className="text-fg">{FINDING_KIND_LABELS(item.kind)}</span>
+            <span className="text-fg">{FINDING_KIND_LABELS.get(item.kind)}</span>
             <span className="ml-auto truncate font-mono text-[12px] text-muted">{itemPlace(item, noun)}</span>
           </li>
         ))}
@@ -92,7 +92,7 @@ export function PostingList({ snapshot, preview, statuses }: iPostingListProps) 
         <DialogContent>
           <DialogHeader
             title={`Post ${pluralize(pending.length, 'finding')} to ${change}?`}
-            description={`Chaff creates ${draftNoun} with your token. Nothing is published or submitted; you do that on ${CODE_HOST_LABELS(host)}.`}
+            description={`Chaff creates ${draftNoun} with your token. Nothing is published or submitted; you do that on ${CODE_HOST_LABELS.get(host)}.`}
           />
           <DialogBody>
             <DialogFooter>

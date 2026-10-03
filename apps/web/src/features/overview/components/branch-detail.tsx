@@ -40,7 +40,7 @@ export function BranchDetail({ stack, branch }: Pick<iStackNavigation, 'stack' |
           <p className="mt-2 font-mono text-sm wrap-anywhere text-muted">{branch.name}</p>
           <dl className="mt-6 grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-4 text-sm">
             <dt className="text-muted capitalize">
-              {branch.change ? CHANGE_REQUEST_NOUNS(branch.change.host) : 'Source'}
+              {branch.change ? CHANGE_REQUEST_NOUNS.get(branch.change.host) : 'Source'}
             </dt>
             <dd className="m-0 min-w-0">
               {branch.change ? (

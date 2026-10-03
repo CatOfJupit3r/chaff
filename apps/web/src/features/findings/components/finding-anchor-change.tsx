@@ -47,7 +47,7 @@ function ProposedFix({ comparison, after }: { comparison: iAnchorComparison; aft
         <SegmentedControl
           label="Layout"
           className="ml-auto"
-          options={diffLayoutValues.map((value) => ({ value, label: DIFF_LAYOUT_LABELS(value) }))}
+          options={diffLayoutValues.map((value) => ({ value, label: DIFF_LAYOUT_LABELS.get(value) }))}
           value={layout}
           onChange={setLayout}
         />

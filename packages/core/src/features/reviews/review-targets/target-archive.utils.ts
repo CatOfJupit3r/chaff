@@ -38,13 +38,13 @@ export function localArchiveChanges(
   });
 }
 
-const STATE_ARCHIVE_REASONS = changeStatesEnumwaii.derive<ArchiveReason | null>({
-  [CHANGE_STATES.OPEN]: null,
-  [CHANGE_STATES.MERGED]: ARCHIVE_REASONS.MERGED,
-  [CHANGE_STATES.CLOSED]: ARCHIVE_REASONS.CLOSED,
-});
+const STATE_ARCHIVE_REASONS = changeStatesEnumwaii.derive<ArchiveReason | null>()(
+  [CHANGE_STATES.OPEN, null],
+  [CHANGE_STATES.MERGED, ARCHIVE_REASONS.MERGED],
+  [CHANGE_STATES.CLOSED, ARCHIVE_REASONS.CLOSED],
+);
 
 /** The archive change a merge or pull request target needs once its host reports the change's state. */
 export function changeArchiveChange(target: iArchivable, state: ChangeState, now = new Date()) {
-  return archiveFor(target, STATE_ARCHIVE_REASONS(state), now);
+  return archiveFor(target, STATE_ARCHIVE_REASONS.get(state), now);
 }

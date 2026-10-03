@@ -16,7 +16,7 @@ interface iDigestOverviewProps {
 export function DigestOverview({ runner, content }: iDigestOverviewProps) {
   return (
     <section className="flex flex-col gap-2">
-      <SectionLabel>Digest · {DIGEST_RUNNER_LABELS(runner)}</SectionLabel>
+      <SectionLabel>Digest · {DIGEST_RUNNER_LABELS.get(runner)}</SectionLabel>
       <p className="m-0 text-[12.5px] leading-[1.6] text-fg-soft">
         <InlineCodeText text={content.overview} />
       </p>

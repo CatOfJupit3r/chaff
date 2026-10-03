@@ -10,7 +10,7 @@ export function readyContent(digest: iDigest | null | undefined): iDigestContent
 
 /** The agent that writes the digest, with the model it was asked to use. */
 export function describeDigestRunner({ runner, model }: Pick<iDigest, 'runner' | 'model'>) {
-  return model ? `${DIGEST_RUNNER_LABELS(runner)} · ${model}` : DIGEST_RUNNER_LABELS(runner);
+  return model ? `${DIGEST_RUNNER_LABELS.get(runner)} · ${model}` : DIGEST_RUNNER_LABELS.get(runner);
 }
 
 /** The remembered models with this runner's replaced by `model`, or dropped when it is empty. */

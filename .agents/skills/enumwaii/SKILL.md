@@ -1,154 +1,96 @@
 ---
 name: enumwaii
 description: >
-  Mandatory: declare and consume closed sets of string values (statuses, roles, modes,
-  kinds, event types) with `@chaff/enumwaii`, never `z.enum` or raw string unions.
-  Read before writing, editing, or reviewing any enum-like value.
+  Mandatory: declare and consume closed sets of string values with the npm
+  package enumwaii, never z.enum or raw string unions. Read before working on enums.
 ---
 
 # Enumwaii
 
-`@chaff/enumwaii` (`packages/enumwaii`) is this repository's only convention for closed sets of string values. It keeps members as ordinary strings at runtime while making raw literals and values from unrelated enums fail type checking. This skill is mandatory reading before declaring, comparing, or reviewing any enum-like value — do not use `z.enum`, TypeScript `enum`, or a plain `as const` object for this purpose.
+Use the npm package `enumwaii` for closed sets of string values. Keep genuinely open-ended data as `string`. The shared ESLint configuration uses the npm package `eslint-plugin-enumwaii`.
 
-Use it for domain values that cross layers or drive behavior: statuses, kinds, modes, roles, event types, sources, actions, and tabs. Keep genuinely open-ended data as `string`.
+## Declarations and boundaries
 
-## Naming convention
-
-Internal enum values MUST use `CONSTANT_CASE` (for example, `READY_TO_CREATE`, `CHARACTER_SPRITE`). Keep kebab-case or snake_case only when the value is an external wire contract or an intentional exception — web URL/query-facing values, tool names, compatibility-layer values, provider IDs, environment values, model/message roles, or similar. Exceptions still require a named schema and exported accessor; do not scatter raw strings.
-
-## The standard shape
-
-Declare an enum once, then export its members, type, and schema from the same module.
+Declare enums with `em`, then export the member accessor, inferred type, and a Zod adapter when a contract or form needs one. Shared enums belong in `packages/common/src/enums/<name>.enums.ts`; feature-local enums stay with their feature.
 
 ```ts
-import { Enumwaii, type InferEnumwaii } from '@chaff/enumwaii/enumwaii';
+import { em, type InferEnumwaii } from "enumwaii";
+import { emToZodSchema } from "enumwaii/zod";
 
-const storyStageModesEnumwaii = new Enumwaii('StoryStageMode', ['REGULAR', 'READER', 'CINEMATIC']);
-
+const storyStageModesEnumwaii = em(["REGULAR", "READER", "CINEMATIC"]);
 export const STORY_STAGE_MODES = storyStageModesEnumwaii.enum;
 export type StoryStageMode = InferEnumwaii<typeof storyStageModesEnumwaii>;
-export const storyStageModeSchema = storyStageModesEnumwaii.schema;
+export const storyStageModeSchema = emToZodSchema(storyStageModesEnumwaii);
 ```
 
-`new Enumwaii(...)` is the only declaration form. Use a unique, stable PascalCase enum name; it is part of the type identity. Place shared, non-sensitive enums in `packages/common/src/enums/<name>.enums.ts` and import them from `@chaff/common/enums/<name>.enums`; feature-local values stay with their feature.
+Internal values use `CONSTANT_CASE`. Preserve the spelling of external wire contracts, URL values, provider IDs, and other intentional exceptions. Do not rename persisted values as part of a dependency migration.
 
-## Use members, never raw values
-
-Use the exported member accessor everywhere a known value is required: defaults, comparisons, function arguments, test fixtures, and object construction. Do not use `schema.enum.VALUE` at call sites — import and use the exported accessor (`STORY_STAGE_MODES.REGULAR`).
+Use exported accessor members for defaults, comparisons, payloads, and fixtures. Never use raw strings or `schema.enum.VALUE` at call sites. Validate unknown data with the Zod schema or the declaration's `parse`, `safeParse`, or `is` methods. The declaration itself implements Standard Schema for consumers that support it.
 
 ```ts
-const defaultMode = STORY_STAGE_MODES.REGULAR;
-
-if (stage.mode === STORY_STAGE_MODES.CINEMATIC) {
-  enableCinematicLayout();
+const mode = storyStageModesEnumwaii.parse(input);
+if (mode === STORY_STAGE_MODES.READER) {
+  enableReaderLayout();
 }
 ```
 
+The package derives type identity from the complete set of raw values. Declarations with equal sets are compatible; a declaration name is not an identity boundary. `pick`, `omit`, and `extend` preserve the parent identity; `em.combine` derives identity from the resulting set. Members remain strings at runtime.
+
+## Exhaustive metadata
+
+Use `derive` with tuple entries and read mappings through `.get`. Use its curried generic overload to contextually type object or function values.
+
 ```ts
-// Does not type check: raw values cannot enter an enum-typed position.
-const defaultMode: StoryStageMode = 'REGULAR';
+const STORY_STAGE_MODE_LABELS = storyStageModesEnumwaii.derive(
+  [STORY_STAGE_MODES.REGULAR, "Regular"],
+  [STORY_STAGE_MODES.READER, "Reader"],
+  [STORY_STAGE_MODES.CINEMATIC, "Cinematic"],
+);
+const label = STORY_STAGE_MODE_LABELS.get(mode);
+
+const NOTES = storyStageModesEnumwaii.derive<string | undefined>()(
+  [STORY_STAGE_MODES.REGULAR, undefined],
+  [STORY_STAGE_MODES.READER, "Reading layout"],
+  [STORY_STAGE_MODES.CINEMATIC, "Full screen"],
+);
 ```
 
-This also prevents accidental interchange between independent domains that happen to share a literal (two different `Enumwaii` instances with a `"READY"` member are not interchangeable).
+Use `derive((member) => ...)` when every value is computed by the same function. Use `.record` only for raw-keyed object iteration or interoperability. A derived mapping is not callable. Do not add wrappers for the former API.
 
-## Validate at boundaries
-
-Use the schema in contracts and forms. Use `parse`, `safeParse`, or `is` when accepting unknown data from a database, JSON, query parameter, provider, or external API.
+## Composition
 
 ```ts
-export const updateStageSchema = z.object({
-  mode: storyStageModeSchema,
-});
-```
-
-```ts
-const mode = storyStageModesEnumwaii.parse(requestedMode);
-
-if (storyStageModesEnumwaii.is(value)) {
-  // value is StoryStageMode here
-}
-```
-
-## Derive exhaustive metadata
-
-Use `derive` for a value required for every enum member (labels, icons, permissions, routes). Always use computed member keys — it rejects missing and unknown keys at runtime.
-
-```ts
-const STORY_STAGE_MODE_LABELS = storyStageModesEnumwaii.derive({
-  [STORY_STAGE_MODES.REGULAR]: 'Regular',
-  [STORY_STAGE_MODES.READER]: 'Reader',
-  [STORY_STAGE_MODES.CINEMATIC]: 'Cinematic',
-});
-
-const label = STORY_STAGE_MODE_LABELS(stage.mode);
-```
-
-Use `deriveWith` when every value can be built from the member itself: `storyStageModesEnumwaii.deriveWith((mode) => mode.toLowerCase())`.
-
-Use the callable table (`LABELS(value)`) or `.get(value)` for lookup; branded values cannot safely bracket-index a record. Use `.record` only when plain-object iteration or interop is necessary.
-
-## Compose related enums deliberately
-
-Use `extend` for a true superset, and `pick` or `omit` for a runtime subset — all three preserve the parent enum identity.
-
-```ts
-const generatedAssetTypesEnumwaii = storyStageAssetTypesEnumwaii.pick('GeneratedAssetType', [
-  STORY_STAGE_ASSET_TYPES.BACKGROUND,
-  STORY_STAGE_ASSET_TYPES.CHARACTER_SPRITE,
+const readingModes = storyStageModesEnumwaii.pick([
+  STORY_STAGE_MODES.READER,
+  STORY_STAGE_MODES.CINEMATIC,
 ]);
 ```
 
-Do not create a second enum merely because it happens to have the same values — compose it from the owning enum when it represents the same domain. Independently declare similar-looking values when they represent different domains; enumwaii keeps them separate.
+Use `pick`, `omit`, `extend`, or `em.combine` when composing related domains. Do not duplicate member lists merely to create a subset.
 
-## Enforce with lint
+## ESLint
 
-Enable both bundled ESLint rules in every config that touches enum values:
+Keep both existing rules enabled in the shared configuration:
 
 ```js
-import { noRawEnumComparisonRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-comparison';
-import { noRawEnumMemberRule } from '@chaff/enumwaii/eslint-rules/no-raw-enum-member';
+import {
+  noRawEnumComparisonRule,
+  noRawEnumMemberRule,
+} from "eslint-plugin-enumwaii";
 
-export default [
-  {
-    plugins: { enumwaii: { rules: { 'no-raw-enum-comparison': noRawEnumComparisonRule, 'no-raw-enum-member': noRawEnumMemberRule } } },
-    rules: {
-      'enumwaii/no-raw-enum-comparison': 'error',
-      'enumwaii/no-raw-enum-member': 'error',
-    },
-  },
-];
+const rules = {
+  "no-raw-enum-comparison": noRawEnumComparisonRule,
+  "no-raw-enum-member": noRawEnumMemberRule,
+};
 ```
 
-`no-raw-enum-comparison` reports raw `===`/`switch` literals against a branded value; `no-raw-enum-member` reports raw string keys in a `derive` mapping.
+Register those under the `enumwaii` plugin name and set `enumwaii/no-raw-enum-comparison` and `enumwaii/no-raw-enum-member` to `error`. Use owned members in tuple keys, subset operations, comparisons, and switch cases.
 
-## Drizzle, DTOs, and serialization
+## Drizzle, contracts, and serialization
 
-Enumwaii values are plain strings at runtime, so JSON and oRPC transport preserve them without ceremony, but neither can prove a string was valid before it reached the process.
+- Use exported Zod adapter schemas in oRPC contracts and forms. For agent JSON Schema exports, validate representable input and brand it with the declaration: `z.literal(declaration.rawValues).transform((value) => declaration.parse(value))`, then export with `io: "input"`. This retains the allowed values and branded parsing without allowing unrepresentable schemas as unconstrained JSON.
+- SQLite columns use `.$type<T>()` for their branded application type. This is compile-time only; parse database strings in resolver overrides before returning them.
+- JSON transports preserve string values but cannot prove their validity. Validate at input boundaries.
+- Output contracts type responses but do not validate runtime outputs in this repository (`initialOutputValidationIndex: Number.NaN`).
 
-- For oRPC, use the enum's `schema` in both input and output contracts. Input validation promotes an incoming string to the branded type. Outputs are not validated at runtime (`initialOutputValidationIndex: Number.NaN` in `packages/core/src/lib/orpc.ts`), so the output schema only types the result.
-- For Drizzle, map the column with `.$type<T>()` for the branded application type, but that is compile-time only. SQLite has no enum type, so parse the field in the resolver's `overrides` before it leaves the repository (or add a `CHECK` constraint when the table needs a durable invariant):
-
-```ts
-// packages/core/src/features/settings/settings.resolver.ts
-public toSettingsResponse = createRowResolver<SettingsRow, iSettingsResponse>({
-  omit: ['id', 'updatedAt'],
-  overrides: (row) => ({
-    editor: editorSchema.parse(row.editor),
-    theme: themeModeSchema.parse(row.theme),
-    accent: accentSchema.parse(row.accent),
-    codeSize: codeSizeSchema.parse(row.codeSize),
-  }),
-});
-```
-
-## Checklist
-
-- Declare a named `Enumwaii` object and export its member accessor, inferred type, and schema — never `z.enum`, TypeScript `enum`, or `as const`.
-- Internal values are `CONSTANT_CASE`; external wire-facing exceptions still go through a named schema and accessor.
-- Use enum members for known values; parse or validate unknown values at boundaries.
-- Use `derive`/`deriveWith` for metadata that must cover all members; use computed member keys.
-- Use `pick`, `omit`, or `extend` for related domains instead of duplicating value lists.
-- Enable both enumwaii ESLint rules wherever enums are consumed.
-- Keep enum names unique and stable — the name is part of the type identity.
-
-See [`packages/enumwaii/README.md`](../../../packages/enumwaii/README.md) for the full reference.
+See the [published API documentation](https://catofjupit3r.github.io/enumwaii/docs/api/enumwaii/) for the full reference.

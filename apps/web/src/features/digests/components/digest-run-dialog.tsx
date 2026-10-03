@@ -33,9 +33,9 @@ export function DigestRunDialog({ isOpen, onOpenChange, onStart }: iDigestRunDia
           <RunnerPicker runners={runners} isPending={isPending} runner={runner} onPick={setPicked} />
           <DigestOptionsFields runner={runner} {...fields} />
           <Callout variant="warn">
-            {DIGEST_RUNNER_LABELS(runner)} sends the code it reads from this branch to {DIGEST_RUNNER_PROVIDERS(runner)}
-            , under your own account and its settings. It works in a throwaway copy of the snapshot and can only read
-            and search files: no edits, no commands, no network tools.
+            {DIGEST_RUNNER_LABELS.get(runner)} sends the code it reads from this branch to{' '}
+            {DIGEST_RUNNER_PROVIDERS.get(runner)}, under your own account and its settings. It works in a throwaway copy
+            of the snapshot and can only read and search files: no edits, no commands, no network tools.
           </Callout>
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>

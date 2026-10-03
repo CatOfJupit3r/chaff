@@ -22,12 +22,12 @@ export function BranchUnits({ snapshotId }: { snapshotId: string }) {
               aria-hidden="true"
               className={cn(
                 'size-2 flex-none rounded-[2px] bg-line-strong',
-                unit.mark && UNIT_MARK_SEGMENT_CLASSES(unit.mark),
+                unit.mark && UNIT_MARK_SEGMENT_CLASSES.get(unit.mark),
               )}
             />
             <span className="min-w-0 flex-1 truncate text-fg">{unit.title}</span>
             <span className="font-mono text-[11.5px] text-faint">
-              {unit.mark ? UNIT_MARK_LABELS(unit.mark).toLowerCase() : 'not reviewed'}
+              {unit.mark ? UNIT_MARK_LABELS.get(unit.mark).toLowerCase() : 'not reviewed'}
             </span>
           </li>
         ))}

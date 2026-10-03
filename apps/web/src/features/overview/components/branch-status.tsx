@@ -9,7 +9,7 @@ export function BranchStatus({ branch, isCompact = false }: { branch: iOverviewB
   const status = branchProgress(branch);
   const isReviewed = status === OVERVIEW_REVIEW_PROGRESS.REVIEWED;
   const isStarted = status === OVERVIEW_REVIEW_PROGRESS.IN_PROGRESS;
-  const label = OVERVIEW_PROGRESS_LABELS(status);
+  const label = OVERVIEW_PROGRESS_LABELS.get(status);
   let color = 'text-muted';
   if (isReviewed) color = 'text-good';
   else if (isStarted) color = 'text-warn';

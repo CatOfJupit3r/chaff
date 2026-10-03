@@ -188,7 +188,7 @@ export class DigestsService {
         diffDirectory,
         instructions,
       );
-      onProgress(`Starting ${DIGEST_RUNNER_LABELS(runner)}`);
+      onProgress(`Starting ${DIGEST_RUNNER_LABELS.get(runner)}`);
       const answer = await this.adapterFor(runner).run(command, {
         cwd: checkout,
         scratchDir,

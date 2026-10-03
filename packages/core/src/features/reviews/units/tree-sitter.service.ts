@@ -74,7 +74,7 @@ export class TreeSitterService {
     const directory =
       this.options.treeSitterDir ??
       (separatePackage ? path.dirname(require.resolve(`${separatePackage}/package.json`)) : this.directory);
-    return path.join(directory, GRAMMAR_FILES(grammar));
+    return path.join(directory, GRAMMAR_FILES.get(grammar));
   }
 
   private async loadRuntime() {
