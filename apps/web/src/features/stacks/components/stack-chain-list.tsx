@@ -8,6 +8,7 @@ import { DiffStat } from '@~/features/reviews/components/diff-stat';
 import { isReviewComplete } from '@~/features/reviews/review-progress.utils';
 import type { iSnapshotSummary } from '@~/features/reviews/reviews.types';
 import type { iStackLink } from '@~/features/reviews/stack-review.utils';
+import { RemoteBranchPill } from '@~/features/workspaces/components/remote-branch-pill';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
@@ -83,6 +84,7 @@ function StackChainItem({ workspaceId, link, findings, fromStack, isSelected, on
       >
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[13px] font-medium break-all text-fg">{link.branch.name}</span>
+          <RemoteBranchPill branch={link.branch} />
           {link.branch.hasWorkingChanges ? <Pill variant="open">uncommitted</Pill> : null}
           {link.branch.isParentConfirmed ? null : <Pill variant="out">parent suggested</Pill>}
           {link.branch.isParentMoved ? (

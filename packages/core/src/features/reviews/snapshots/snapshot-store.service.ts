@@ -7,6 +7,7 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 
 import type { iCoreOptions } from '@~/core.types';
 import { CORE_OPTIONS_TOKEN } from '@~/di/tokens';
+import { BranchRefsService } from '@~/features/git/branch-refs.service';
 import { GitService } from '@~/features/git/git.service';
 import { KeyedMutex } from '@~/lib/concurrency';
 import { pathExists } from '@~/lib/file-system';
@@ -64,33 +65,34 @@ export class SnapshotStoreService {
   constructor(
     @inject(CORE_OPTIONS_TOKEN) private readonly options: iCoreOptions,
     private readonly gitService: GitService,
+    private readonly branchRefsService: BranchRefsService,
   ) {}
 
   public storePath(workspaceId: string) {
     return path.join(this.options.dataDir, STORES_DIRECTORY, `${workspaceId}.git`);
   }
 
-  /** Current tip of a local branch in the user's repository, or undefined when there is no such branch. */
+  /**
+   * Current tip of a branch in the user's repository: the local branch, else a remote-tracking branch of that
+   * name. Undefined when there is neither.
+   */
   public async resolveBranch(repoPath: string, branch: string) {
-    const { stdout, exitCode } = await this.gitService.run(
-      repoPath,
-      ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}^{commit}`],
-      { allowFailure: true },
-    );
-    return exitCode === 0 ? stdout.trim() : undefined;
+    return (await this.branchRefsService.resolve(repoPath, branch))?.sha;
   }
 
-  /** Copies a branch and its parent into the store and returns the tips that were copied. */
+  /** Copies a branch and its parent, local or remote-tracking, into the store and returns the tips that were copied. */
   public async fetchHeads(
     workspace: { id: string; repoPath: string },
     branch: string,
     parentBranch: string,
   ): Promise<iSnapshotHeads> {
-    for (const name of [branch, parentBranch]) {
-      if (!(await this.resolveBranch(workspace.repoPath, name))) {
-        throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
-      }
-    }
+    const [headRef, parentRef] = await Promise.all(
+      [branch, parentBranch].map(async (name) => {
+        const resolved = await this.branchRefsService.resolve(workspace.repoPath, name);
+        if (!resolved) throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
+        return resolved.ref;
+      }),
+    );
 
     return this.mutex.run(workspace.id, async () => {
       const storePath = await this.ensureStore(workspace);
@@ -101,8 +103,8 @@ export class SnapshotStoreService {
         '--no-write-fetch-head',
         '--no-recurse-submodules',
         workspace.repoPath,
-        `+refs/heads/${branch}:${FETCH_REF_PREFIX}/head`,
-        `+refs/heads/${parentBranch}:${FETCH_REF_PREFIX}/parent`,
+        `+${headRef}:${FETCH_REF_PREFIX}/head`,
+        `+${parentRef}:${FETCH_REF_PREFIX}/parent`,
       ]);
       const output = await this.gitService.output(storePath, [
         'rev-parse',
@@ -127,11 +129,14 @@ export class SnapshotStoreService {
     return this.mutex.run(workspace.id, async () => {
       const storePath = await this.ensureStore(workspace);
       const fetchOptions = ['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', '--no-recurse-submodules'];
-      await this.gitService.run(
-        storePath,
-        [...fetchOptions, workspace.repoPath, `+refs/heads/${remote.parentBranch}:${FETCH_REF_PREFIX}/local`],
-        { allowFailure: true },
-      );
+      const localParent = await this.branchRefsService.resolve(workspace.repoPath, remote.parentBranch);
+      if (localParent) {
+        await this.gitService.run(
+          storePath,
+          [...fetchOptions, workspace.repoPath, `+${localParent.ref}:${FETCH_REF_PREFIX}/local`],
+          { allowFailure: true },
+        );
+      }
       await this.gitService.run(
         storePath,
         [
