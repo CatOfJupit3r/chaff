@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router';
+
 import { Button } from '@~/components/ui/button';
 import { ListRow } from '@~/components/ui/list';
 import { Pill } from '@~/components/ui/pill';
@@ -29,8 +31,15 @@ export function StackRow({ stack, reviewTargets }: iStackRowProps) {
     <ListRow>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2 font-medium">
-          <span className="truncate">{tip.name}</span>
+          <Link
+            to="/stack"
+            search={{ workspace: workspace.id, branch: tip.name }}
+            className="truncate hover:text-accent hover:underline"
+          >
+            {tip.name}
+          </Link>
           <Pill variant="neutral">local</Pill>
+          {branches.some((branch) => branch.hasWorkingChanges) ? <Pill variant="open">uncommitted</Pill> : null}
         </div>
         <div className="mt-[3px] flex flex-wrap gap-x-3.5 text-[12.5px] text-muted">
           <span>{workspace.name}</span>
@@ -56,9 +65,21 @@ export function StackRow({ stack, reviewTargets }: iStackRowProps) {
       </div>
       <div className="flex items-center gap-4">
         {review.isStarted ? (
-          <div className="flex items-center gap-2 font-mono text-[12px] text-muted tabular-nums" title="Units reviewed">
-            <span>0 / {review.unitCount}</span>
-            <span aria-hidden="true" className="h-1 w-14 rounded-full bg-raised" />
+          <div
+            className="flex items-center gap-2 font-mono text-[12px] text-muted tabular-nums"
+            title="Regions decided on or skipped"
+          >
+            <span>
+              {review.accountedRegionCount} / {review.regionCount}
+            </span>
+            <span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-raised">
+              <span
+                className="block h-full bg-good"
+                style={{
+                  width: `${review.regionCount === 0 ? 0 : (review.accountedRegionCount / review.regionCount) * 100}%`,
+                }}
+              />
+            </span>
           </div>
         ) : null}
         <Button

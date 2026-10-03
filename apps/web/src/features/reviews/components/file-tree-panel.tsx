@@ -4,7 +4,9 @@ import { SearchIcon } from '@~/components/icons/icons';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
+import { useDiffReview } from '../diff-review.context';
 import { buildFileTree, filterFiles } from '../file-tree.utils';
+import { countCoveredLines } from '../review-coverage.utils';
 import { FILE_TREE_VIEWS, FILE_TREE_VIEW_LABELS, fileTreeViewValues } from '../reviews.enums';
 import type { FileTreeView } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
@@ -26,6 +28,7 @@ export function FileTreePanel({ files, currentPath, onSelect, onOpenInEditor }: 
   const [view, setView] = useState<FileTreeView>(FILE_TREE_VIEWS.tree);
   const matches = filterFiles(files, query);
   const rowProps = { currentPath, onSelect, onOpenInEditor };
+  const coverage = countCoveredLines([...useDiffReview().unitsByFile.values()].flat());
 
   return (
     <div className="flex flex-col gap-0.5 px-2.5 py-3.5">
@@ -60,6 +63,10 @@ export function FileTreePanel({ files, currentPath, onSelect, onOpenInEditor }: 
               <FileTreeRow key={file.id} file={file} hasFolder isCurrent={file.path === currentPath} {...rowProps} />
             ))
         : null}
+      <p className="m-0 px-2 pt-4 text-[12.5px] leading-normal text-faint">
+        {coverage.covered} of {coverage.total} changed lines are covered by a decision. Opening or scrolling past a file
+        never counts.
+      </p>
     </div>
   );
 }

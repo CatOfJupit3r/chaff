@@ -1,3 +1,5 @@
+import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+
 import type { iBranch, iLocalStack } from '@~/features/workspaces/workspaces.types';
 
 import type { iReviewTarget } from './reviews.types';
@@ -15,7 +17,9 @@ export interface iStackLink {
  */
 export function summarizeStackReview(stack: iLocalStack, targets: readonly iReviewTarget[]) {
   const targetsByBranch = new Map(
-    targets.filter((target) => target.workspaceId === stack.workspace.id).map((target) => [target.branch, target]),
+    targets
+      .filter((target) => target.workspaceId === stack.workspace.id && target.kind === REVIEW_TARGET_KINDS.BRANCH)
+      .map((target) => [target.branch, target]),
   );
   const links: iStackLink[] = stack.branches.map((branch, index) => ({
     branch,
@@ -34,6 +38,10 @@ export function summarizeStackReview(stack: iLocalStack, targets: readonly iRevi
     links,
     next: lastStarted ?? links[0],
     isStarted: started.length > 0,
-    unitCount: started.reduce((total, link) => total + (link.target?.latestSnapshot?.unitCount ?? 0), 0),
+    regionCount: started.reduce((total, link) => total + (link.target?.latestSnapshot?.regionCount ?? 0), 0),
+    accountedRegionCount: started.reduce(
+      (total, link) => total + (link.target?.latestSnapshot?.accountedRegionCount ?? 0),
+      0,
+    ),
   };
 }

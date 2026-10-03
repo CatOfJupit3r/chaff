@@ -1,0 +1,1 @@
+ALTER TABLE `workspaces` ADD `known_parents` text DEFAULT '[]' NOT NULL;

@@ -1,7 +1,9 @@
+import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
 import { Enumwaii } from '@chaff/enumwaii/enumwaii';
 import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
-// Diff mode, layout and tree view values are lowercase because they appear in the URL.
+// Diff mode and tree view values are lowercase because they appear in the URL.
 export const diffModesEnumwaii = new Enumwaii('DiffMode', ['file', 'all']);
 
 export const DIFF_MODES = diffModesEnumwaii.enum;
@@ -11,17 +13,6 @@ export const diffModeValues = diffModesEnumwaii.values;
 export const DIFF_MODE_LABELS = diffModesEnumwaii.derive({
   [DIFF_MODES.file]: 'One file',
   [DIFF_MODES.all]: 'All files',
-});
-
-export const diffLayoutsEnumwaii = new Enumwaii('DiffLayout', ['unified', 'split']);
-
-export const DIFF_LAYOUTS = diffLayoutsEnumwaii.enum;
-export type DiffLayout = InferEnumwaii<typeof diffLayoutsEnumwaii>;
-export const diffLayoutValues = diffLayoutsEnumwaii.values;
-
-export const DIFF_LAYOUT_LABELS = diffLayoutsEnumwaii.derive({
-  [DIFF_LAYOUTS.unified]: 'Unified',
-  [DIFF_LAYOUTS.split]: 'Split',
 });
 
 export const fileTreeViewsEnumwaii = new Enumwaii('FileTreeView', ['tree', 'list']);
@@ -49,3 +40,29 @@ export const fileDisplaysEnumwaii = new Enumwaii('FileDisplay', [
 
 export const FILE_DISPLAYS = fileDisplaysEnumwaii.enum;
 export type FileDisplay = InferEnumwaii<typeof fileDisplaysEnumwaii>;
+
+/** How far the reviewer got through a file's units. */
+export const fileDecisionsEnumwaii = new Enumwaii('FileDecision', ['NONE', 'PARTIAL', 'LOOKS_GOOD', 'CONCERN']);
+
+export const FILE_DECISIONS = fileDecisionsEnumwaii.enum;
+export type FileDecision = InferEnumwaii<typeof fileDecisionsEnumwaii>;
+
+export const FILE_DECISION_LABELS = fileDecisionsEnumwaii.derive({
+  [FILE_DECISIONS.NONE]: 'Not reviewed',
+  [FILE_DECISIONS.PARTIAL]: 'Partly reviewed',
+  [FILE_DECISIONS.LOOKS_GOOD]: 'Looks good',
+  [FILE_DECISIONS.CONCERN]: 'Has a concern or question',
+});
+
+export const FILE_DECISION_DOTS = fileDecisionsEnumwaii.derive({
+  [FILE_DECISIONS.NONE]: 'border-[1.5px] border-faint',
+  [FILE_DECISIONS.PARTIAL]: 'border-[1.5px] border-good',
+  [FILE_DECISIONS.LOOKS_GOOD]: 'bg-good',
+  [FILE_DECISIONS.CONCERN]: 'bg-warn',
+});
+
+/** Marks a review that is not a branch's own changes. */
+export const REVIEW_TARGET_KIND_PILLS = new Map<ReviewTargetKind, string>([
+  [REVIEW_TARGET_KINDS.WORKING_CHANGES, 'working changes'],
+  [REVIEW_TARGET_KINDS.CUMULATIVE, 'cumulative'],
+]);

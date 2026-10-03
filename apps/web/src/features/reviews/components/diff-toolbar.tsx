@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 
+import { DIFF_LAYOUT_LABELS, diffLayoutValues } from '@chaff/common/enums/diff.enums';
+import type { DiffLayout } from '@chaff/common/enums/diff.enums';
+
 import { SidebarIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
-import { DIFF_LAYOUT_LABELS, DIFF_MODE_LABELS, diffLayoutValues, diffModeValues } from '../reviews.enums';
-import type { DiffLayout, DiffMode } from '../reviews.enums';
+import { DIFF_MODE_LABELS, diffModeValues } from '../reviews.enums';
+import type { DiffMode } from '../reviews.enums';
 
 const MODE_OPTIONS = diffModeValues.map((value) => ({ value, label: DIFF_MODE_LABELS(value) }));
 const LAYOUT_OPTIONS = diffLayoutValues.map((value) => ({ value, label: DIFF_LAYOUT_LABELS(value) }));
@@ -21,6 +24,8 @@ interface iDiffToolbarProps {
   onToggleWrap: () => void;
   /** What is shown: the file's path and stats, or the snapshot's totals. */
   children: ReactNode;
+  /** Controls after the layout switches. */
+  end?: ReactNode;
 }
 
 export function DiffToolbar({
@@ -33,6 +38,7 @@ export function DiffToolbar({
   isWrapped,
   onToggleWrap,
   children,
+  end,
 }: iDiffToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2.5 border-b border-line px-4 py-2.5">
@@ -52,6 +58,7 @@ export function DiffToolbar({
         <Button variant="ghost" size="sm" aria-pressed={isWrapped} onClick={onToggleWrap}>
           Wrap
         </Button>
+        {end}
       </div>
     </div>
   );

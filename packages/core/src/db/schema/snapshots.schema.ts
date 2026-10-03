@@ -1,6 +1,13 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-import type { FileKind, FileStatus, SymbolKind, UnitChange, UnitKind } from '@chaff/common/enums/review.enums';
+import type {
+  FileKind,
+  FileStatus,
+  SymbolKind,
+  UnitChange,
+  UnitKind,
+  UnitRevision,
+} from '@chaff/common/enums/review.enums';
 
 import { idPrimaryKey, timestampColumn } from '../schema.helpers';
 import { reviewTargets } from './review-targets.schema';
@@ -24,6 +31,11 @@ export const snapshots = sqliteTable(
     deletions: integer('deletions').notNull(),
     regionCount: integer('region_count').notNull(),
     unitCount: integer('unit_count').notNull(),
+    /** For working changes: a fingerprint of `git status` and the changed files, to notice later edits. */
+    workingFingerprint: text('working_fingerprint'),
+    /** For merge requests: the host's diff version whose head is this snapshot's head, by id and by number. */
+    remoteVersionId: text('remote_version_id'),
+    remoteVersion: integer('remote_version'),
     createdAt: timestampColumn('created_at')
       .notNull()
       .$defaultFn(() => new Date()),
@@ -86,6 +98,10 @@ export const units = sqliteTable(
     additions: integer('additions').notNull(),
     deletions: integer('deletions').notNull(),
     contentHash: text('content_hash').notNull(),
+    /** How the unit compares with the previous snapshot; null in a review's first snapshot. */
+    revision: text('revision').$type<UnitRevision>(),
+    /** The same unit in the previous snapshot, when it was there. */
+    previousUnitId: text('previous_unit_id'),
   },
   (table) => [index('units_snapshot_ordinal_idx').on(table.snapshotId, table.ordinal)],
 );

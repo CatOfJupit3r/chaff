@@ -6,7 +6,7 @@ import { workspaces } from '@~/db/schema/workspaces.schema';
 
 import type { iWorkspaceRepository } from './workspace.repository';
 import { WorkspaceResolver } from './workspace.resolver';
-import type { iNewWorkspace } from './workspaces.types';
+import type { iNewWorkspace, iWorkspaceRecord } from './workspaces.types';
 
 @singleton()
 export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
@@ -33,6 +33,24 @@ export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
   public async create(input: iNewWorkspace) {
     const row = this.databaseService.getDb().insert(workspaces).values(input).returning().get();
     return this.workspaceResolver.toWorkspaceRecord(row);
+  }
+
+  public async updateRemote(
+    workspaceId: string,
+    remote: Pick<iWorkspaceRecord, 'remoteConnectionId' | 'remoteProject'>,
+  ) {
+    const row = this.databaseService
+      .getDb()
+      .update(workspaces)
+      .set(remote)
+      .where(eq(workspaces.id, workspaceId))
+      .returning()
+      .get();
+    return row ? this.workspaceResolver.toWorkspaceRecord(row) : undefined;
+  }
+
+  public async updateKnownParents(workspaceId: string, knownParents: iWorkspaceRecord['knownParents']) {
+    this.databaseService.getDb().update(workspaces).set({ knownParents }).where(eq(workspaces.id, workspaceId)).run();
   }
 
   public async delete(workspaceId: string) {

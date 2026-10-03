@@ -1,12 +1,13 @@
-import { and, asc, count, desc, eq, getTableColumns } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, sql } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
 import { DatabaseService } from '@~/db/database.service';
 import { regions, snapshotFiles, snapshots, units } from '@~/db/schema/snapshots.schema';
+import { unitMarks } from '@~/db/schema/unit-marks.schema';
 
 import type { iSnapshotRepository } from './snapshot.repository';
 import { SnapshotResolver } from './snapshot.resolver';
-import type { iNewSnapshot, iSnapshotContent } from './snapshots.types';
+import type { iNewSnapshot, iSnapshotContent, iUnitRevisionUpdate } from './snapshots.types';
 
 /** Rows per insert statement, well under SQLite's bound-parameter limit. */
 const INSERT_CHUNK_SIZE = 400;
@@ -20,6 +21,13 @@ function chunk<TItem>(items: readonly TItem[]) {
 }
 
 const { patch: _patch, ...fileColumns } = getTableColumns(snapshotFiles);
+const unitWithMarkColumns = {
+  ...getTableColumns(units),
+  mark: unitMarks.mark,
+  isMarkCarried: unitMarks.isCarried,
+  skipReason: unitMarks.skipReason,
+  regionCount: sql<number>`(select count(*) from ${regions} where ${regions.unitId} = ${units.id})`,
+};
 
 @singleton()
 export class DrizzleSnapshotRepository implements iSnapshotRepository {
@@ -68,6 +76,22 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
       }
       return row;
     });
+  }
+
+  public async listRegions(snapshotId: string) {
+    return this.databaseService
+      .getDb()
+      .select({
+        fileId: regions.fileId,
+        oldStartLine: regions.oldStartLine,
+        newStartLine: regions.newStartLine,
+        deletions: regions.deletions,
+        additions: regions.additions,
+      })
+      .from(regions)
+      .where(eq(regions.snapshotId, snapshotId))
+      .orderBy(asc(regions.ordinal))
+      .all();
   }
 
   public async listFiles(snapshotId: string) {
@@ -123,6 +147,62 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
       .where(and(eq(snapshotFiles.snapshotId, snapshotId), eq(snapshotFiles.id, fileId)))
       .get();
     return row ? { patch: row.patch ?? undefined } : undefined;
+  }
+
+  public async listUnits(snapshotId: string) {
+    return this.databaseService
+      .getDb()
+      .select(unitWithMarkColumns)
+      .from(units)
+      .leftJoin(unitMarks, eq(unitMarks.unitId, units.id))
+      .where(eq(units.snapshotId, snapshotId))
+      .orderBy(asc(units.ordinal))
+      .all()
+      .map((row) => this.snapshotResolver.toUnitRecord(row));
+  }
+
+  public async findUnit(snapshotId: string, unitId: string) {
+    const row = this.databaseService
+      .getDb()
+      .select(unitWithMarkColumns)
+      .from(units)
+      .leftJoin(unitMarks, eq(unitMarks.unitId, units.id))
+      .where(and(eq(units.snapshotId, snapshotId), eq(units.id, unitId)))
+      .get();
+    return row ? this.snapshotResolver.toUnitRecord(row) : undefined;
+  }
+
+  public async findUnitById(unitId: string) {
+    const row = this.databaseService
+      .getDb()
+      .select(unitWithMarkColumns)
+      .from(units)
+      .leftJoin(unitMarks, eq(unitMarks.unitId, units.id))
+      .where(eq(units.id, unitId))
+      .get();
+    return row ? { ...this.snapshotResolver.toUnitRecord(row), snapshotId: row.snapshotId } : undefined;
+  }
+
+  public async setRevisions(revisions: readonly iUnitRevisionUpdate[]) {
+    if (revisions.length === 0) return;
+    this.databaseService.getDb().transaction((transaction) => {
+      for (const { unitId, revision, previousUnitId } of revisions) {
+        transaction
+          .update(units)
+          .set({ revision, previousUnitId: previousUnitId ?? null })
+          .where(eq(units.id, unitId))
+          .run();
+      }
+    });
+  }
+
+  public async setRemoteVersion(snapshotId: string, version: { id: string; number: number }) {
+    this.databaseService
+      .getDb()
+      .update(snapshots)
+      .set({ remoteVersionId: version.id, remoteVersion: version.number })
+      .where(eq(snapshots.id, snapshotId))
+      .run();
   }
 
   private countByFile(rows: { fileId: string; total: number }[]) {

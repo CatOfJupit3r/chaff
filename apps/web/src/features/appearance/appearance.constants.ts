@@ -3,8 +3,16 @@ import {
   ACCENTS,
   accentsEnumwaii,
   accentValues,
+  CODE_FONT_LABELS,
+  CODE_LINE_HEIGHT_LABELS,
   CODE_SIZE_LABELS,
+  codeFontValues,
+  codeLineHeightValues,
   codeSizeValues,
+  DENSITY_LABELS,
+  densityValues,
+  SYNTAX_THEME_LABELS,
+  syntaxThemeValues,
   THEME_MODE_LABELS,
   themeModeValues,
 } from '@chaff/common/enums/appearance.enums';
@@ -12,6 +20,17 @@ import {
 export const THEME_MODE_OPTIONS = themeModeValues.map((value) => ({ value, label: THEME_MODE_LABELS(value) }));
 
 export const CODE_SIZE_OPTIONS = codeSizeValues.map((value) => ({ value, label: CODE_SIZE_LABELS(value) }));
+
+export const CODE_FONT_OPTIONS = codeFontValues.map((value) => ({ value, label: CODE_FONT_LABELS(value) }));
+
+export const CODE_LINE_HEIGHT_OPTIONS = codeLineHeightValues.map((value) => ({
+  value,
+  label: CODE_LINE_HEIGHT_LABELS(value),
+}));
+
+export const DENSITY_OPTIONS = densityValues.map((value) => ({ value, label: DENSITY_LABELS(value) }));
+
+export const SYNTAX_THEME_OPTIONS = syntaxThemeValues.map((value) => ({ value, label: SYNTAX_THEME_LABELS(value) }));
 
 const ACCENT_SWATCH_CLASSES = accentsEnumwaii.derive({
   [ACCENTS.DEFAULT]: 'bg-accent-default',

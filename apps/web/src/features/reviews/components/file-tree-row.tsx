@@ -1,8 +1,12 @@
 import { useEffect, useRef } from 'react';
 
 import { ExternalIcon } from '@~/components/icons/icons';
+import { cn } from '@~/lib/utils';
 
+import { useDiffReview } from '../diff-review.context';
 import { splitPath } from '../file-tree.utils';
+import { getFileDecision } from '../review-coverage.utils';
+import { FILE_DECISION_DOTS, FILE_DECISION_LABELS } from '../reviews.enums';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffStat } from './diff-stat';
 
@@ -19,6 +23,7 @@ interface iFileTreeRowProps {
 export function FileTreeRow({ file, hasFolder = false, isCurrent, onSelect, onOpenInEditor }: iFileTreeRowProps) {
   const { folder, name } = splitPath(file.path);
   const ref = useRef<HTMLButtonElement>(null);
+  const decision = getFileDecision(useDiffReview().unitsByFile.get(file.id) ?? []);
 
   useEffect(() => {
     if (isCurrent) ref.current?.scrollIntoView({ block: 'nearest' });
@@ -34,7 +39,10 @@ export function FileTreeRow({ file, hasFolder = false, isCurrent, onSelect, onOp
         onClick={() => onSelect(file.path)}
         className="grid h-[30px] w-full grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-2 text-left text-[12.5px] text-muted hover:bg-hover hover:text-fg aria-current:bg-raised aria-current:text-fg"
       >
-        <span aria-hidden="true" className="size-2.5 rounded-full border-[1.5px] border-faint" />
+        <span
+          title={FILE_DECISION_LABELS(decision)}
+          className={cn('size-2.5 rounded-full', FILE_DECISION_DOTS(decision))}
+        />
         <span className="truncate font-mono text-[12px]">
           {hasFolder ? <span className="text-faint">{folder}</span> : null}
           {name}

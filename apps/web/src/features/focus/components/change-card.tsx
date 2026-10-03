@@ -1,0 +1,98 @@
+import { ChangeDigestNote } from '@~/features/digests/components/change-digest-note';
+import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
+import { UnitTestsView } from '@~/features/digests/components/unit-tests-view';
+import type { iDigest } from '@~/features/digests/digests.types';
+import { readyContent } from '@~/features/digests/digests.utils';
+import type { iFinding } from '@~/features/findings/findings.types';
+import type { iSnapshot } from '@~/features/reviews/reviews.types';
+
+import type { iFocusCard } from '../focus-cards.utils';
+import { CARD_VIEWS } from '../focus.enums';
+import type { CardExit, CardView } from '../focus.enums';
+import { CardFindings } from './card-findings';
+import { ChangeCardTop } from './change-card-top';
+import { ChangeMarkNote } from './change-mark-note';
+import { ChangeMemberCode, ChangeMemberUsages } from './change-member-code';
+import { FocusCardShell } from './focus-card-shell';
+import { UnitViewTabs } from './unit-view-tabs';
+
+interface iChangeCardProps {
+  snapshot: iSnapshot;
+  card: iFocusCard;
+  findings: readonly iFinding[];
+  digest: iDigest | undefined;
+  view: CardView;
+  exit?: CardExit;
+  onViewChange: (view: CardView) => void;
+  onOpenInEditor: (path: string, line?: number) => void;
+  onEdit: () => void;
+  onSwipe?: (exit: CardExit) => unknown;
+}
+
+/** A Change unit: the behavior it changes, then each of its units, decided on together. */
+export function ChangeCard({
+  snapshot,
+  card,
+  findings,
+  digest,
+  view,
+  exit,
+  onViewChange,
+  onOpenInEditor,
+  onEdit,
+  onSwipe,
+}: iChangeCardProps) {
+  const content = readyContent(digest);
+  const group = content?.groups.find((candidate) => candidate.id === card.change?.digestGroupId);
+  const unitIds = new Set(card.units.map((unit) => unit.id));
+  const diagrams = content?.diagrams.filter((diagram) => diagram.unitIds.some((unitId) => unitIds.has(unitId))) ?? [];
+  const allTests = content?.units.filter((note) => unitIds.has(note.unitId)).flatMap((note) => note.tests) ?? [];
+  const tests = [...new Map(allTests.map((test) => [`${test.path}:${test.line ?? ''}`, test])).values()];
+  const counts = new Map<CardView, number>([[CARD_VIEWS.code, card.units.length]]);
+  if (content) {
+    counts.set(CARD_VIEWS.diagram, diagrams.length);
+    counts.set(CARD_VIEWS.tests, tests.length);
+  }
+  const fileOf = (fileId: string) => snapshot.files.find((file) => file.id === fileId);
+
+  return (
+    <FocusCardShell label={card.title} exit={exit} onSwipe={onSwipe}>
+      <ChangeCardTop card={card} files={snapshot.files} onEdit={onEdit} />
+      {digest && group ? <ChangeDigestNote runner={digest.runner} group={group} /> : null}
+      <ChangeMarkNote card={card} headSha={snapshot.headSha} hasFindings={findings.length > 0} />
+      <CardFindings findings={findings} />
+      <UnitViewTabs view={view} counts={counts} onChange={onViewChange} />
+      {view === CARD_VIEWS.code
+        ? card.units.map((unit) => (
+            <ChangeMemberCode
+              key={unit.id}
+              snapshotId={snapshot.id}
+              unit={unit}
+              file={fileOf(unit.fileId)}
+              onOpenInEditor={onOpenInEditor}
+            />
+          ))
+        : null}
+      {view === CARD_VIEWS.usages
+        ? card.units.map((unit) => (
+            <ChangeMemberUsages key={unit.id} snapshotId={snapshot.id} unit={unit} onOpenInEditor={onOpenInEditor} />
+          ))
+        : null}
+      {view === CARD_VIEWS.diagram ? (
+        <div className="border-t border-line">
+          <UnitDiagramView diagrams={diagrams} hasDigest={content !== undefined} />
+        </div>
+      ) : null}
+      {view === CARD_VIEWS.tests ? (
+        <div className="border-t border-line">
+          <UnitTestsView
+            tests={tests}
+            headSha={snapshot.headSha}
+            hasDigest={content !== undefined}
+            onOpenInEditor={onOpenInEditor}
+          />
+        </div>
+      ) : null}
+    </FocusCardShell>
+  );
+}

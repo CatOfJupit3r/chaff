@@ -9,9 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root';
+import { Route as StackRouteImport } from './routes/stack';
+import { Route as SettingsRouteImport } from './routes/settings';
+import { Route as FindingsRouteImport } from './routes/findings';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
+import { Route as ReviewsSnapshotIdIndexRouteImport } from './routes/reviews.$snapshotId.index';
+import { Route as ReviewsSnapshotIdExportRouteImport } from './routes/reviews.$snapshotId.export';
+import { Route as ReviewsSnapshotIdDiffRouteImport } from './routes/reviews.$snapshotId.diff';
 
+const StackRoute = StackRouteImport.update({
+  id: '/stack',
+  path: '/stack',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const FindingsRoute = FindingsRouteImport.update({
+  id: '/findings',
+  path: '/findings',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -22,35 +43,115 @@ const ReviewsSnapshotIdRoute = ReviewsSnapshotIdRouteImport.update({
   path: '/reviews/$snapshotId',
   getParentRoute: () => rootRouteImport,
 } as any);
+const ReviewsSnapshotIdIndexRoute = ReviewsSnapshotIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
+const ReviewsSnapshotIdExportRoute = ReviewsSnapshotIdExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
+const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
+  id: '/diff',
+  path: '/diff',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
-  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRoute;
+  '/findings': typeof FindingsRoute;
+  '/settings': typeof SettingsRoute;
+  '/stack': typeof StackRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
+  '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
-  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRoute;
+  '/findings': typeof FindingsRoute;
+  '/settings': typeof SettingsRoute;
+  '/stack': typeof StackRoute;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
-  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRoute;
+  '/findings': typeof FindingsRoute;
+  '/settings': typeof SettingsRoute;
+  '/stack': typeof StackRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
+  '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: '/' | '/reviews/$snapshotId';
+  fullPaths:
+    | '/'
+    | '/findings'
+    | '/settings'
+    | '/stack'
+    | '/reviews/$snapshotId'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
+    | '/reviews/$snapshotId/';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/reviews/$snapshotId';
-  id: '__root__' | '/' | '/reviews/$snapshotId';
+  to:
+    | '/'
+    | '/findings'
+    | '/settings'
+    | '/stack'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
+    | '/reviews/$snapshotId';
+  id:
+    | '__root__'
+    | '/'
+    | '/findings'
+    | '/settings'
+    | '/stack'
+    | '/reviews/$snapshotId'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
+    | '/reviews/$snapshotId/';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
-  ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRoute;
+  FindingsRoute: typeof FindingsRoute;
+  SettingsRoute: typeof SettingsRoute;
+  StackRoute: typeof StackRoute;
+  ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRouteWithChildren;
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stack': {
+      id: '/stack';
+      path: '/stack';
+      fullPath: '/stack';
+      preLoaderRoute: typeof StackRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/settings': {
+      id: '/settings';
+      path: '/settings';
+      fullPath: '/settings';
+      preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/findings': {
+      id: '/findings';
+      path: '/findings';
+      fullPath: '/findings';
+      preLoaderRoute: typeof FindingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/': {
       id: '/';
       path: '/';
@@ -65,12 +166,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewsSnapshotIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/reviews/$snapshotId/': {
+      id: '/reviews/$snapshotId/';
+      path: '/';
+      fullPath: '/reviews/$snapshotId/';
+      preLoaderRoute: typeof ReviewsSnapshotIdIndexRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
+    '/reviews/$snapshotId/export': {
+      id: '/reviews/$snapshotId/export';
+      path: '/export';
+      fullPath: '/reviews/$snapshotId/export';
+      preLoaderRoute: typeof ReviewsSnapshotIdExportRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
+    '/reviews/$snapshotId/diff': {
+      id: '/reviews/$snapshotId/diff';
+      path: '/diff';
+      fullPath: '/reviews/$snapshotId/diff';
+      preLoaderRoute: typeof ReviewsSnapshotIdDiffRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
   }
 }
 
+interface ReviewsSnapshotIdRouteChildren {
+  ReviewsSnapshotIdDiffRoute: typeof ReviewsSnapshotIdDiffRoute;
+  ReviewsSnapshotIdExportRoute: typeof ReviewsSnapshotIdExportRoute;
+  ReviewsSnapshotIdIndexRoute: typeof ReviewsSnapshotIdIndexRoute;
+}
+
+const ReviewsSnapshotIdRouteChildren: ReviewsSnapshotIdRouteChildren = {
+  ReviewsSnapshotIdDiffRoute: ReviewsSnapshotIdDiffRoute,
+  ReviewsSnapshotIdExportRoute: ReviewsSnapshotIdExportRoute,
+  ReviewsSnapshotIdIndexRoute: ReviewsSnapshotIdIndexRoute,
+};
+
+const ReviewsSnapshotIdRouteWithChildren =
+  ReviewsSnapshotIdRoute._addFileChildren(ReviewsSnapshotIdRouteChildren);
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ReviewsSnapshotIdRoute: ReviewsSnapshotIdRoute,
+  FindingsRoute: FindingsRoute,
+  SettingsRoute: SettingsRoute,
+  StackRoute: StackRoute,
+  ReviewsSnapshotIdRoute: ReviewsSnapshotIdRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

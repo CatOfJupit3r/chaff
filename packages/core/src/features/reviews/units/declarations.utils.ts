@@ -141,9 +141,12 @@ function isExported(node: Node, name: string, grammar: Grammar) {
   return false;
 }
 
-/** First line of the declaration including decorators, `export` and the `const` of `const fn = () => {}`. */
+/**
+ * First line of the declaration including decorators, `export`, the `const` of `const fn = () => {}`,
+ * and the comments written right above it at the same indentation.
+ */
 function startRow(node: Node) {
-  let { row } = node.startPosition;
+  let outer = node;
   let { parent } = node;
   for (let depth = 0; depth < 3 && parent; depth += 1) {
     const isWrapper =
@@ -152,8 +155,20 @@ function startRow(node: Node) {
       parent.type === 'lexical_declaration' ||
       parent.type === 'variable_declaration';
     if (!isWrapper) break;
-    row = Math.min(row, parent.startPosition.row);
+    outer = parent;
     parent = parent.parent;
+  }
+
+  let row = Math.min(node.startPosition.row, outer.startPosition.row);
+  let previous = outer.previousNamedSibling;
+  while (
+    previous &&
+    previous.type.includes('comment') &&
+    previous.endPosition.row === row - 1 &&
+    previous.startPosition.column === outer.startPosition.column
+  ) {
+    row = previous.startPosition.row;
+    previous = previous.previousNamedSibling;
   }
   return row;
 }

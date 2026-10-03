@@ -10,37 +10,7 @@ import { createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
 import { appRouter, testDataDir } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
-
-const SCHEDULER = `export class Scheduler {
-  next(attempt: number) {
-    return attempt * 2;
-  }
-}
-`;
-
-async function addWorkspace(repo: TestGitRepo) {
-  return call(appRouter.workspaces.add, { path: repo.path });
-}
-
-/** main has the scheduler; `feature` edits it, adds a helper with its test and bumps the config. */
-function createFeatureRepo() {
-  const repo = createTestGitRepo();
-  repo.commitFiles('base', { 'src/scheduler.ts': SCHEDULER, 'config.json': '{ "retries": 1 }\n' });
-  repo.branch('feature');
-  repo.commitFiles('feature work', {
-    'src/scheduler.ts': SCHEDULER.replace('attempt * 2', 'attempt * 3'),
-    'src/backoff.ts': 'export function backoff(attempt: number) {\n  return 2 ** attempt;\n}\n',
-    'src/backoff.test.ts': "it('grows', () => {\n  expect(backoff(2)).toBe(4);\n});\n",
-    'config.json': '{ "retries": 3 }\n',
-  });
-  return repo;
-}
-
-async function startFeatureReview(repo: TestGitRepo, branch = 'feature', parentBranch = 'main') {
-  const workspace = await addWorkspace(repo);
-  const started = await call(appRouter.reviews.start, { workspaceId: workspace.id, branch, parentBranch });
-  return { workspace, ...started };
-}
+import { addWorkspace, createFeatureRepo, SCHEDULER, startFeatureReview } from '../helpers/review-repo';
 
 /** Everything git keeps about refs and the index, to prove a review left the repository alone. */
 function repositoryState(repo: TestGitRepo) {
@@ -130,6 +100,32 @@ describe('reviews', () => {
     });
   });
 
+  it('diffs a file again with more context, or without its whitespace-only changes', async () => {
+    const lines = Array.from({ length: 30 }, (_, index) => `const line${index + 1} = ${index + 1};`);
+    const repo = createTestGitRepo();
+    repo.commitFiles('base', { 'src/lines.ts': `${lines.join('\n')}\n` });
+    repo.branch('feature');
+    const changed = lines.map((line, index) => {
+      if (index === 3) return 'const line4 = 40;';
+      if (index === 24) return `  ${line}`;
+      return line;
+    });
+    repo.commitFiles('feature work', { 'src/lines.ts': `${changed.join('\n')}\n` });
+    const { snapshotId } = await startFeatureReview(repo);
+    const [file] = (await call(appRouter.reviews.snapshot, { snapshotId })).files;
+    const fileId = file?.id ?? '';
+
+    const frozen = await call(appRouter.reviews.fileDiff, { snapshotId, fileId });
+    const wide = await call(appRouter.reviews.fileDiff, { snapshotId, fileId, contextLines: 10 });
+    const quiet = await call(appRouter.reviews.fileDiff, { snapshotId, fileId, isWhitespaceIgnored: true });
+
+    expect(frozen.patch).not.toContain(' const line15 = 15;');
+    expect(wide.patch).toContain(' const line15 = 15;');
+    expect(quiet.patch).toContain('+const line4 = 40;');
+    expect(quiet.patch).not.toContain('+  const line25 = 25;');
+    expect(frozen.patch).toContain('+  const line25 = 25;');
+  });
+
   it('accounts for renames, deletions, binaries, mode and type changes', async () => {
     const repo = createTestGitRepo();
     repo.commitFiles('base', {
@@ -176,6 +172,8 @@ describe('reviews', () => {
       newCommitCount: 1,
       isBranchRewritten: false,
       isParentMoved: false,
+      isParentChanged: false,
+      hasNewWorkingChanges: false,
     });
     expect(frozen.headSha).not.toBe(repo.git('rev-parse', 'feature'));
     expect(refreshed).toMatchObject({ targetId, isNew: true });

@@ -100,3 +100,88 @@ export const SearchIcon = createIcon(
     <path d="M20 20l-4.5-4.5" />
   </>,
 );
+export const LeftIcon = createIcon('LeftIcon', <path d="M15 6l-6 6 6 6" />);
+export const MessageIcon = createIcon('MessageIcon', <path d="M5 5h14v10H10l-4 4v-4H5z" />);
+export const NextIcon = createIcon('NextIcon', <path d="M5 12h13M13 6l6 6-6 6" />);
+export const QuestionIcon = createIcon(
+  'QuestionIcon',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 16.5v.3" />
+  </>,
+);
+export const ClockIcon = createIcon(
+  'ClockIcon',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </>,
+);
+export const PanelIcon = createIcon(
+  'PanelIcon',
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M15 4v16" />
+  </>,
+);
+export const UndoIcon = createIcon(
+  'UndoIcon',
+  <>
+    <path d="M9 14l-5-5 5-5" />
+    <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+  </>,
+);
+export const FlagIcon = createIcon(
+  'FlagIcon',
+  <>
+    <path d="M5 21V4" />
+    <path d="M5 4h11l-2 4 2 4H5" />
+  </>,
+);
+export const ExportIcon = createIcon(
+  'ExportIcon',
+  <>
+    <path d="M12 15V4" />
+    <path d="M7.5 8.5L12 4l4.5 4.5" />
+    <path d="M5 13v6h14v-6" />
+  </>,
+);
+export const SparkIcon = createIcon(
+  'SparkIcon',
+  <>
+    <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+    <path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z" />
+  </>,
+);
+export const StopIcon = createIcon('StopIcon', <rect x="6.5" y="6.5" width="11" height="11" rx="2" />);
+export const SettingsIcon = createIcon(
+  'SettingsIcon',
+  <>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
+  </>,
+);
+export const MergeIcon = createIcon(
+  'MergeIcon',
+  <>
+    <circle cx="6" cy="6" r="2" />
+    <circle cx="6" cy="18" r="2" />
+    <circle cx="18" cy="18" r="2" />
+    <path d="M6 8v8M18 16V11a4 4 0 0 0-4-4H9" />
+  </>,
+);
+export const EditIcon = createIcon(
+  'EditIcon',
+  <>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+    <path d="M13 7l4 4" />
+  </>,
+);
+export const UpIcon = createIcon('UpIcon', <path d="M6 15l6-6 6 6" />);
+export const SkipIcon = createIcon(
+  'SkipIcon',
+  <>
+    <path d="M6 6l7 6-7 6z" />
+    <path d="M17 6v12" />
+  </>,
+);

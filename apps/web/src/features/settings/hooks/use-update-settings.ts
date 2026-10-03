@@ -8,7 +8,7 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import { settingsQueryOptions } from './use-settings';
 
-/** Applies a settings change immediately and rolls it back if the core rejects it. */
+/** Applies a settings change immediately and rolls it back if the core rejects it; new agent paths are looked up again. */
 export function useUpdateSettings() {
   const queryClient = useQueryClient();
 
@@ -29,8 +29,9 @@ export function useUpdateSettings() {
         if (context?.previous) queryClient.setQueryData(settingsQueryOptions.queryKey, context.previous);
         showToast(getErrorMessage(error));
       },
-      onSuccess: (settings) => {
+      onSuccess: async (settings, changes) => {
         queryClient.setQueryData(settingsQueryOptions.queryKey, settings);
+        if (changes.agentCommands) await queryClient.invalidateQueries({ queryKey: tanstackRPC.digests.runners.key() });
       },
     }),
   );

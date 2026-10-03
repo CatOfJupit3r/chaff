@@ -1,13 +1,14 @@
 import type { iBranch, iLocalStack, iWorkspace } from './workspaces.types';
 
 /**
- * Groups a repository's local branches into stacks using each branch's suggested parent. Every
+ * Groups a repository's local branches into stacks using each branch's parent (confirmed, or else
+ * suggested). Every
  * branch that no other branch builds on ends one stack; stacks without commits are left out.
  */
 export function buildLocalStacks(workspace: iWorkspace, branches: readonly iBranch[]): iLocalStack[] {
   const branchesByName = new Map(branches.map((branch) => [branch.name, branch]));
   const parentOf = (branch: iBranch) => {
-    const parent = branch.suggestedParent ? branchesByName.get(branch.suggestedParent) : undefined;
+    const parent = branch.parent ? branchesByName.get(branch.parent) : undefined;
     return parent && !parent.isDefault ? parent : undefined;
   };
 
@@ -25,7 +26,7 @@ export function buildLocalStacks(workspace: iWorkspace, branches: readonly iBran
       }
       return {
         workspace,
-        base: chain[0]?.suggestedParent ?? workspace.defaultBranch,
+        base: chain[0]?.parent ?? workspace.defaultBranch,
         branches: chain,
         tip,
         commitCount: chain.reduce((total, branch) => total + branch.commitsAhead, 0),

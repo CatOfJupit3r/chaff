@@ -2,6 +2,8 @@ import type { ORPCOutputs } from '@~/utils/orpc';
 
 export type iReviewTarget = ORPCOutputs['reviews']['list'][number];
 
+export type iSnapshotSummary = NonNullable<iReviewTarget['latestSnapshot']>;
+
 export type iSnapshot = ORPCOutputs['reviews']['snapshot'];
 
 export type iSnapshotFile = iSnapshot['files'][number];
@@ -16,3 +18,11 @@ export interface iFileTreeFolder {
   files: iSnapshotFile[];
   fileCount: number;
 }
+
+export type iUnit = ORPCOutputs['reviews']['units'][number];
+
+export type iUnitDetail = ORPCOutputs['reviews']['unitDetail'];
+
+export type iUnitUsages = ORPCOutputs['reviews']['unitUsages'];
+
+export type iUnitUsage = iUnitUsages['usages'][number];
