@@ -1,3 +1,5 @@
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+
 import { FolderIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { List } from '@~/components/ui/list';
@@ -17,7 +19,7 @@ export function NoRepositories({ onAdd, isAdding }: iNoRepositoriesProps) {
           Chaff reads its local branches straight from disk and never writes to it.
         </p>
       </div>
-      <Button variant="primary" onClick={onAdd} disabled={isAdding}>
+      <Button variant="primary" data-onboarding={ONBOARDING_ITEMS.ADD_REPOSITORY} onClick={onAdd} disabled={isAdding}>
         Add repository
       </Button>
     </List>

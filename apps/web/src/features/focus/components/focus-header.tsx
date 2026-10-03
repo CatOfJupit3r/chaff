@@ -1,3 +1,4 @@
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { reviewProgressionValues } from '@chaff/common/enums/review.enums';
 import type { ReviewProgression } from '@chaff/common/enums/review.enums';
 
@@ -61,18 +62,25 @@ export function FocusHeader({
           <Pill variant="neutral">{queuePill}</Pill>
         </button>
       ) : null}
-      <SegmentedControl
-        label="Progression"
-        options={reviewProgressionValues.map((value) => ({ value, label: REVIEW_PROGRESSION_LABELS.get(value) }))}
-        value={progression}
-        onChange={onProgression}
-        className="self-center"
-      />
+      <div data-onboarding={ONBOARDING_ITEMS.PROGRESSION} className="flex self-center">
+        <SegmentedControl
+          label="Progression"
+          options={reviewProgressionValues.map((value) => ({ value, label: REVIEW_PROGRESSION_LABELS.get(value) }))}
+          value={progression}
+          onChange={onProgression}
+        />
+      </div>
       <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo}>
         <UndoIcon />
         Undo
       </Button>
-      <Button variant="ghost" size="sm" aria-pressed={isContextOpen} onClick={onToggleContext}>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-pressed={isContextOpen}
+        data-onboarding={ONBOARDING_ITEMS.CONTEXT}
+        onClick={onToggleContext}
+      >
         <PanelIcon />
         Context
       </Button>

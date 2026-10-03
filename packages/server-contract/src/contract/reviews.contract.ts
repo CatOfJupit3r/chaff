@@ -207,10 +207,6 @@ export const setMarksInputSchema = snapshotIdInput.extend({
     .max(5000),
 });
 
-export const setMarksResultSchema = z.array(
-  z.object({ unitId: z.string(), mark: unitMarkSchema.optional(), skipReason: z.string().optional() }),
-);
-
 export const reviewsContract = oc.router({
   list: oc
     .route({
@@ -385,5 +381,7 @@ export const reviewsContract = oc.router({
         'Records a decision on each unit in this snapshot, or clears it when no mark is given. A Change unit is decided by marking all of its units at once. A Skipped mark carries the reason.',
     })
     .input(setMarksInputSchema)
-    .output(setMarksResultSchema),
+    .output(
+      z.array(z.object({ unitId: z.string(), mark: unitMarkSchema.optional(), skipReason: z.string().optional() })),
+    ),
 });

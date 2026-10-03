@@ -1,37 +1,33 @@
 import { singleton } from 'tsyringe';
 
-import {
-  branchNameOfRef,
-  LOCAL_BRANCH_REFS,
-  localNameOfRemote,
-  REMOTE_BRANCH_REFS,
-} from '@~/features/git/branch-refs.utils';
+import { BranchRefsService } from '@~/features/git/branch-refs.service';
+import type { iBranchRefRow } from '@~/features/git/branch-refs.service';
+import { REMOTE_BRANCH_PREFIX } from '@~/features/git/branch-refs.utils';
 import { GitService } from '@~/features/git/git.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 
-import { REMOTE_BRANCH_LIMIT, REMOTE_BRANCH_MAX_AGE_MS } from './branches.constants';
 import type { iGitBranch } from './workspaces.types';
 
-const FIELD_SEPARATOR = '\u0000';
-const BRANCH_FORMAT = [
-  '%(refname)',
+const BRANCH_FIELDS = [
   '%(objectname)',
   '%(upstream:short)',
   '%(committerdate:unix)',
   '%(authorname)',
   '%(contents:subject)',
-].join('%00');
+];
 /** How far back the history is searched for other branches' tips. */
 const PARENT_SEARCH_DEPTH = 2000;
+/** Commits of the local stacks, beyond the default branch, searched for remote-only branches' tips. */
+const STACK_SEARCH_DEPTH = 20000;
 /** Branch tips found nearest in the history that are compared as possible parents. */
 const MAX_PARENT_CANDIDATES = 8;
 const GIT_CONCURRENCY = 8;
 
 interface iRawBranch {
   name: string;
-  /** Full ref in the user's repository, `refs/heads/...` or `refs/remotes/...`. */
+  /** Full ref name: `refs/heads/<name>`, or `refs/remotes/<remote>/<name>` for a remote-only branch. */
   ref: string;
-  isRemote: boolean;
+  remote?: string;
   headSha: string;
   upstream?: string;
   committedAt: Date;
@@ -44,54 +40,24 @@ interface iParentSuggestion {
   commitsAhead: number;
 }
 
-function parseBranches(output: string): iRawBranch[] {
-  return output
-    .split('\n')
-    .filter((line) => line.length > 0)
-    .flatMap((line) => {
-      const [ref = '', headSha = '', upstream = '', committedAt = '0', authorName = '', subject = ''] =
-        line.split(FIELD_SEPARATOR);
-      const name = branchNameOfRef(ref);
-      if (!name) return [];
-      return [
-        {
-          name,
-          ref,
-          isRemote: ref.startsWith(`${REMOTE_BRANCH_REFS}/`),
-          headSha,
-          upstream: upstream || undefined,
-          committedAt: new Date(Number(committedAt) * 1000),
-          authorName,
-          subject,
-        },
-      ];
-    });
-}
-
-/**
- * Local branches, plus remote-tracking branches nobody checked out: a stack pushed by someone else, or by an
- * agent, shows whole. Only recent remote branches count, newest first and up to a limit, so a repository
- * with thousands of old remote branches stays quick to list.
- */
-function selectBranches(branches: readonly iRawBranch[], now: number) {
-  const local = branches.filter((branch) => !branch.isRemote);
-  const localNames = new Set(local.map((branch) => branch.name));
-  const remote = branches
-    .filter(
-      (branch) =>
-        branch.isRemote &&
-        !localNames.has(localNameOfRemote(branch.name)) &&
-        now - branch.committedAt.getTime() <= REMOTE_BRANCH_MAX_AGE_MS,
-    )
-    .sort((left, right) => right.committedAt.getTime() - left.committedAt.getTime())
-    .slice(0, REMOTE_BRANCH_LIMIT);
-  return [...local, ...remote];
+function toRawBranch({ name, ref, remote, fields }: iBranchRefRow): iRawBranch {
+  const [headSha = '', upstream = '', committedAt = '0', authorName = '', subject = ''] = fields;
+  return {
+    name,
+    ref,
+    remote,
+    headSha,
+    upstream: upstream || undefined,
+    committedAt: new Date(Number(committedAt) * 1000),
+    authorName,
+    subject,
+  };
 }
 
 interface iSuggestionContext {
   /** Branch names by the commit at their tip. */
   tips: ReadonlyMap<string, string[]>;
-  /** Full refs of the listed branches, by name. */
+  /** Full ref name of each branch by its name. */
   refs: ReadonlyMap<string, string>;
   defaultBranch: string | undefined;
   knownParent: string | undefined;
@@ -101,30 +67,40 @@ function upstreamMatches(branch: iRawBranch, candidate: string) {
   return branch.upstream === candidate || branch.upstream?.endsWith(`/${candidate}`) === true;
 }
 
-/** Reads local and remote-tracking branches straight from the user's repository and suggests a parent for each. */
+function isRemoteRef(refs: ReadonlyMap<string, string>, name: string) {
+  return refs.get(name)?.startsWith(REMOTE_BRANCH_PREFIX) === true;
+}
+
+/**
+ * Reads branches straight from the user's repository and suggests a parent for each. Local branches are
+ * all listed; a remote-tracking branch with no local branch of its name is listed when it belongs to a local
+ * branch's stack.
+ */
 @singleton()
 export class BranchesService {
-  constructor(private readonly gitService: GitService) {}
+  constructor(
+    private readonly gitService: GitService,
+    private readonly branchRefsService: BranchRefsService,
+  ) {}
 
-  /** `knownParents` holds the parent suggested last time for each branch. */
+  /**
+   * `knownParents` holds the parent suggested last time for each branch; `reviewedNames` are branches listed
+   * whenever they exist, such as the ones under review and their parents.
+   */
   public async listBranches(
     repoPath: string,
     defaultBranch: string | undefined,
     knownParents: ReadonlyMap<string, string> = new Map(),
+    reviewedNames: ReadonlySet<string> = new Set(),
   ): Promise<iGitBranch[]> {
-    const output = await this.gitService.output(repoPath, [
-      'for-each-ref',
-      `--format=${BRANCH_FORMAT}`,
-      LOCAL_BRANCH_REFS,
-      REMOTE_BRANCH_REFS,
-    ]);
-    const branches = selectBranches(parseBranches(output), Date.now());
-    const refs = new Map(branches.map((branch) => [branch.name, branch.ref]));
+    const all = (await this.branchRefsService.list(repoPath, BRANCH_FIELDS)).map(toRawBranch);
+    const branches = await this.stackMembers(repoPath, all, defaultBranch, reviewedNames);
 
     const tips = new Map<string, string[]>();
     for (const branch of branches) {
       tips.set(branch.headSha, [...(tips.get(branch.headSha) ?? []), branch.name]);
     }
+    const refs = new Map(branches.map((branch) => [branch.name, branch.ref]));
 
     const suggestions = await mapWithConcurrency(
       branches,
@@ -154,14 +130,66 @@ export class BranchesService {
   }
 
   /**
+   * Every local branch, plus the remote-only branches of the local stacks: those whose tip is in a local
+   * branch's history but not on the default branch (the branches below it), and those that build on a local
+   * branch or on one of those (the branches above it). Remote branches merged into the default branch, or
+   * unrelated to any local branch, are left out, so a repository with many of them stays quick to read. The
+   * default branch and the reviewed branches are kept even when they only exist on a remote.
+   */
+  private async stackMembers(
+    repoPath: string,
+    all: readonly iRawBranch[],
+    defaultBranch: string | undefined,
+    reviewedNames: ReadonlySet<string>,
+  ) {
+    const isKept = (branch: iRawBranch) =>
+      branch.remote === undefined || branch.name === defaultBranch || reviewedNames.has(branch.name);
+    const kept = all.filter(isKept);
+    const locals = all.filter((branch) => branch.remote === undefined);
+    const remoteOnly = all.filter((branch) => !isKept(branch));
+    const defaultRef = all.find((branch) => branch.name === defaultBranch);
+    const localTips = [
+      ...new Set(locals.filter((branch) => branch.name !== defaultBranch).map((branch) => branch.headSha)),
+    ];
+    if (remoteOnly.length === 0 || localTips.length === 0) return kept;
+
+    const history = await this.gitService.output(repoPath, [
+      'rev-list',
+      `--max-count=${STACK_SEARCH_DEPTH}`,
+      ...localTips,
+      ...(defaultRef ? [`^${defaultRef.ref}`] : []),
+      '--',
+    ]);
+    const stackCommits = new Set(history.split('\n').filter(Boolean));
+    const below = remoteOnly.filter((branch) => stackCommits.has(branch.headSha));
+    const memberTips = [...new Set([...localTips, ...below.map((branch) => branch.headSha)])].filter((sha) =>
+      stackCommits.has(sha),
+    );
+    const above =
+      memberTips.length === 0
+        ? new Set<string>()
+        : new Set(
+            (
+              await this.gitService.output(repoPath, [
+                'for-each-ref',
+                '--format=%(refname)',
+                ...memberTips.flatMap((sha) => ['--contains', sha]),
+                'refs/remotes',
+              ])
+            ).split('\n'),
+          );
+    return [...kept, ...remoteOnly.filter((branch) => stackCommits.has(branch.headSha) || above.has(branch.ref))];
+  }
+
+  /**
    * Walks the branch's history (merged-in commits included) for other branches' tips and suggests the
    * one with the fewest commits between it and this branch, so a branch that merged newer commits of
    * its parent, or of the default branch, still stacks on its parent. Ties go to the branch's upstream,
-   * then the default branch, then alphabetical order. At the branch's own tip, another branch only
-   * qualifies if it is the default branch or sorts before this one, which keeps two branches on the
-   * same commit from suggesting each other. The parent suggested last time wins ties, and stays the
-   * parent after it gets commits this branch doesn't have, as long as this branch still holds commits of
-   * its own (beyond the default branch) and no other branch is nearer.
+   * then the default branch, then local branches over remote-only ones, then alphabetical order. At the
+   * branch's own tip, another branch only qualifies if it is the default branch or sorts before this one,
+   * which keeps two branches on the same commit from suggesting each other. The parent suggested last time
+   * wins ties, and stays the parent after it gets commits this branch doesn't have, as long as this branch
+   * still holds commits of its own (beyond the default branch) and no other branch is nearer.
    */
   private async suggestParent(
     repoPath: string,
@@ -189,7 +217,9 @@ export class BranchesService {
       ranked.push({ name, commitsAhead: await this.countCommits(repoPath, sha, branch.headSha) });
     }
     const moved = knownParent && !candidates.some(({ name }) => name === knownParent);
-    const movedParent = moved ? await this.movedParent(repoPath, branch, knownParent, refs, defaultBranch) : undefined;
+    const movedParent = moved
+      ? await this.movedParent(repoPath, branch, knownParent, { refs, defaultBranch })
+      : undefined;
     if (movedParent) ranked.push(movedParent);
     if (ranked.length > 0) {
       const [parent] = ranked.sort(
@@ -198,6 +228,7 @@ export class BranchesService {
           Number(right.name === knownParent) - Number(left.name === knownParent) ||
           Number(upstreamMatches(branch, right.name)) - Number(upstreamMatches(branch, left.name)) ||
           Number(right.name === defaultBranch) - Number(left.name === defaultBranch) ||
+          Number(isRemoteRef(refs, left.name)) - Number(isRemoteRef(refs, right.name)) ||
           left.name.localeCompare(right.name),
       );
       if (parent) return { parent: parent.name, commitsAhead: parent.commitsAhead };
@@ -206,7 +237,7 @@ export class BranchesService {
     if (!defaultBranch) return { commitsAhead: shas.length };
     const { stdout, exitCode } = await this.gitService.run(
       repoPath,
-      ['rev-list', '--count', `${defaultBranch}..${branch.headSha}`],
+      ['rev-list', '--count', `${refs.get(defaultBranch) ?? defaultBranch}..${branch.headSha}`],
       { allowFailure: true },
     );
     return { parent: defaultBranch, commitsAhead: exitCode === 0 ? Number(stdout.trim()) : shas.length };
@@ -217,8 +248,7 @@ export class BranchesService {
     repoPath: string,
     branch: iRawBranch,
     parent: string,
-    refs: ReadonlyMap<string, string>,
-    defaultBranch: string | undefined,
+    { refs, defaultBranch }: Pick<iSuggestionContext, 'refs' | 'defaultBranch'>,
   ): Promise<{ name: string; commitsAhead: number } | undefined> {
     const parentRef = refs.get(parent);
     if (parent === defaultBranch || !parentRef) return undefined;

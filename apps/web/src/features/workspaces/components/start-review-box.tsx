@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+
 import { LinkIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 
@@ -14,6 +16,7 @@ export function StartReviewBox({ workspaces }: { workspaces: readonly iWorkspace
 
   return (
     <form
+      data-onboarding={ONBOARDING_ITEMS.START_REVIEW}
       className="flex items-center gap-2.5 rounded-lg border border-line-strong bg-surface py-1.5 pr-1.5 pl-3.5 focus-within:border-accent-line"
       onSubmit={(event) => {
         event.preventDefault();

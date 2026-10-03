@@ -73,33 +73,24 @@ export class SnapshotStoreService {
   }
 
   /**
-   * Current tip of a branch in the user's repository, local or remote-tracking, or undefined when there is no
-   * such branch.
+   * Current tip of a branch in the user's repository: the local branch, else a remote-tracking branch of that
+   * name. Undefined when there is neither.
    */
   public async resolveBranch(repoPath: string, branch: string) {
-    const ref = await this.branchRefsService.qualify(repoPath, branch);
-    if (!ref) return undefined;
-    const { stdout, exitCode } = await this.gitService.run(
-      repoPath,
-      ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`],
-      {
-        allowFailure: true,
-      },
-    );
-    return exitCode === 0 ? stdout.trim() : undefined;
+    return (await this.branchRefsService.resolve(repoPath, branch))?.sha;
   }
 
-  /** Copies a branch and its parent into the store and returns the tips that were copied. */
+  /** Copies a branch and its parent, local or remote-tracking, into the store and returns the tips that were copied. */
   public async fetchHeads(
     workspace: { id: string; repoPath: string },
     branch: string,
     parentBranch: string,
   ): Promise<iSnapshotHeads> {
-    const [branchRef, parentRef] = await Promise.all(
+    const [headRef, parentRef] = await Promise.all(
       [branch, parentBranch].map(async (name) => {
-        const ref = await this.branchRefsService.qualify(workspace.repoPath, name);
-        if (!ref) throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
-        return ref;
+        const resolved = await this.branchRefsService.resolve(workspace.repoPath, name);
+        if (!resolved) throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
+        return resolved.ref;
       }),
     );
 
@@ -112,7 +103,7 @@ export class SnapshotStoreService {
         '--no-write-fetch-head',
         '--no-recurse-submodules',
         workspace.repoPath,
-        `+${branchRef}:${FETCH_REF_PREFIX}/head`,
+        `+${headRef}:${FETCH_REF_PREFIX}/head`,
         `+${parentRef}:${FETCH_REF_PREFIX}/parent`,
       ]);
       const output = await this.gitService.output(storePath, [
@@ -138,11 +129,14 @@ export class SnapshotStoreService {
     return this.mutex.run(workspace.id, async () => {
       const storePath = await this.ensureStore(workspace);
       const fetchOptions = ['fetch', '--quiet', '--no-tags', '--no-write-fetch-head', '--no-recurse-submodules'];
-      await this.gitService.run(
-        storePath,
-        [...fetchOptions, workspace.repoPath, `+refs/heads/${remote.parentBranch}:${FETCH_REF_PREFIX}/local`],
-        { allowFailure: true },
-      );
+      const localParent = await this.branchRefsService.resolve(workspace.repoPath, remote.parentBranch);
+      if (localParent) {
+        await this.gitService.run(
+          storePath,
+          [...fetchOptions, workspace.repoPath, `+${localParent.ref}:${FETCH_REF_PREFIX}/local`],
+          { allowFailure: true },
+        );
+      }
       await this.gitService.run(
         storePath,
         [

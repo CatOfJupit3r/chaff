@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { Provider, createStore } from 'jotai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
@@ -16,54 +17,62 @@ import {
 import { DIFF_CONTEXTS, DIFF_LAYOUTS, INLINE_DIFFS } from '@chaff/common/enums/diff.enums';
 import { DIGEST_RUNNERS } from '@chaff/common/enums/digest.enums';
 import { EDITORS } from '@chaff/common/enums/editors.enums';
-import { ONBOARDING_STATUSES, ONBOARDING_STEPS } from '@chaff/common/enums/onboarding.enums';
+import { ONBOARDING_HINTS, ONBOARDING_ITEMS, ONBOARDING_STATUSES } from '@chaff/common/enums/onboarding.enums';
 import { REVIEW_PROGRESSIONS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 
 import { OnboardingGuide } from '@~/features/onboarding/components/onboarding-guide';
 import { ReplayOnboarding } from '@~/features/onboarding/components/replay-onboarding';
+import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import type { iOnboardingState } from '@~/features/onboarding/onboarding.types';
+import { CORE_ITEMS } from '@~/features/onboarding/onboarding.utils';
 import { settingsQueryOptions } from '@~/features/settings/hooks/use-settings';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
-interface iTestRouteParams {
-  snapshotId?: string;
-}
-
-const rpc = vi.hoisted(() => {
-  const params: iTestRouteParams = {};
-  return { save: vi.fn(), replay: vi.fn(), snapshot: vi.fn(), navigate: vi.fn(), params, pathname: '/settings' };
-});
+const rpc = vi.hoisted(() => ({
+  save: vi.fn(),
+  replay: vi.fn(),
+  navigate: vi.fn(),
+  params: {} as Record<string, string>,
+  pathname: '/',
+}));
 
 vi.mock('@~/utils/orpc', () => ({
   default: {
-    settings: { get: vi.fn(), updateOnboarding: rpc.save, replayOnboarding: rpc.replay },
-    reviews: { snapshot: rpc.snapshot, setMarks: vi.fn() },
-    findings: { create: vi.fn() },
+    settings: { get: vi.fn(), update: vi.fn(), updateOnboarding: rpc.save, replayOnboarding: rpc.replay },
+    workspaces: { add: vi.fn() },
+    reviews: { start: vi.fn(), setMarks: vi.fn(), refresh: vi.fn() },
+    codeHosts: { startChange: vi.fn() },
+    digests: { start: vi.fn() },
+    findings: { create: vi.fn(), setSeverity: vi.fn(), suggestTask: vi.fn(), setStatus: vi.fn() },
+    exports: { post: vi.fn() },
+    changeUnits: {
+      create: vi.fn(),
+      moveUnits: vi.fn(),
+      merge: vi.fn(),
+      rename: vi.fn(),
+      reorder: vi.fn(),
+      remove: vi.fn(),
+      useDigest: vi.fn(),
+    },
   },
 }));
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => rpc.navigate,
   useParams: () => rpc.params,
-  useLocation: () => ({ pathname: rpc.pathname }),
+  useLocation: () => ({ pathname: rpc.pathname, search: {} }),
 }));
 vi.mock('@~/features/settings/hooks/use-settings', async () => {
   const { useQuery } = await import('@tanstack/react-query');
-  const { tanstackRPC } = await import('@~/utils/tanstack-orpc');
-  const options = tanstackRPC.settings.get.queryOptions();
+  const { tanstackRPC: utils } = await import('@~/utils/tanstack-orpc');
+  const options = utils.settings.get.queryOptions();
   return { settingsQueryOptions: options, useSettings: () => useQuery(options).data };
 });
 
-class TestResizeObserver {
-  public observe() {}
-  public disconnect() {}
-  public unobserve() {}
-}
+const IN_PROGRESS = { ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS };
+const CHECKLIST = { name: 'Getting started' };
 
-function mountGuide(onboarding: iOnboardingState = INITIAL_ONBOARDING) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
-  });
-  client.setQueryData(settingsQueryOptions.queryKey, {
+function settingsWith(onboarding: iOnboardingState) {
+  return {
     editor: EDITORS.CURSOR,
     theme: THEME_MODES.DARK,
     accent: ACCENTS.TEAL,
@@ -85,39 +94,56 @@ function mountGuide(onboarding: iOnboardingState = INITIAL_ONBOARDING) {
     digestModels: [],
     shortcuts: [],
     onboarding,
+  };
+}
+
+function mountGuide(onboarding: iOnboardingState = INITIAL_ONBOARDING) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
   });
+  client.setQueryData(settingsQueryOptions.queryKey, settingsWith(onboarding));
   const view = render(
-    <QueryClientProvider client={client}>
-      <OnboardingGuide />
-      <ReplayOnboarding />
-    </QueryClientProvider>,
-  );
-  const rerenderRoute = () =>
-    view.rerender(
+    <Provider store={createStore()}>
       <QueryClientProvider client={client}>
         <OnboardingGuide />
         <ReplayOnboarding />
-      </QueryClientProvider>,
-    );
-  return { client, ...view, rerenderRoute };
+      </QueryClientProvider>
+    </Provider>,
+  );
+  return { client, ...view };
 }
 
 function readState(client: QueryClient) {
-  return client.getQueryData<{ onboarding: iOnboardingState }>(settingsQueryOptions.queryKey)?.onboarding;
+  return client.getQueryData(settingsQueryOptions.queryKey)?.onboarding;
+}
+
+async function runMutation(client: QueryClient, options: object, variables: unknown, isFailing = false) {
+  const mutation = client.getMutationCache().build(client, {
+    ...options,
+    mutationFn: async () => {
+      if (isFailing) throw new Error('Save failed');
+      return {};
+    },
+  });
+  await act(async () => {
+    await mutation.execute(variables).catch(() => undefined);
+  });
+}
+
+function openItem(title: string) {
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${title}`) }));
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   rpc.params = {};
-  rpc.pathname = '/settings';
-  rpc.navigate.mockImplementation(async ({ to, params }: { to: string; params?: iTestRouteParams }) => {
-    rpc.pathname = to.replace('$snapshotId', params?.snapshotId ?? '');
-    rpc.params = params ?? {};
+  rpc.pathname = '/';
+  rpc.navigate.mockImplementation(async ({ to }: { to: string }) => {
+    rpc.pathname = to;
   });
   rpc.save.mockImplementation(async (state: iOnboardingState) => state);
-  rpc.snapshot.mockResolvedValue({ workspaceId: 'workspace', branch: 'feature' });
-  rpc.replay.mockResolvedValue({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS });
-  vi.stubGlobal('ResizeObserver', TestResizeObserver);
+  rpc.replay.mockResolvedValue(IN_PROGRESS);
   vi.spyOn(HTMLElement.prototype, 'getClientRects').mockImplementation(() => {
     const rects = [new DOMRect(100, 100, 120, 40)];
     return Object.assign(rects, { item: (index: number) => rects[index] ?? null });
@@ -125,219 +151,162 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // The guide observes the page until it unmounts, so it goes before the ResizeObserver stub does.
-  cleanup();
   vi.restoreAllMocks();
-  vi.unstubAllGlobals();
 });
 
-describe('onboarding guide', () => {
-  it('opens on first run and persists that it started', async () => {
+describe('getting started checklist', () => {
+  it('opens expanded with a welcome on first run, and Start opens the first item without moving the app', async () => {
     const { client } = mountGuide();
-    expect(screen.getByRole('region', { name: 'Onboarding guide' })).toBeInTheDocument();
+    const panel = screen.getByRole('region', CHECKLIST);
+    expect(within(panel).getByText('Learn Chaff on one of your own changes')).toBeInTheDocument();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Start' }));
+
     await waitFor(() => expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.IN_PROGRESS));
-    expect(rpc.navigate).toHaveBeenCalledWith({ to: '/' });
+    expect(screen.getByRole('button', { name: /^Add a repository/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Show me' })).toBeInTheDocument();
+    expect(rpc.navigate).not.toHaveBeenCalled();
   });
 
   it.each([ONBOARDING_STATUSES.COMPLETED, ONBOARDING_STATUSES.SKIPPED])('keeps a %s guide closed', (status) => {
     mountGuide({ ...INITIAL_ONBOARDING, status });
-    expect(screen.queryByRole('region', { name: 'Onboarding guide' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', CHECKLIST)).not.toBeInTheDocument();
     expect(rpc.save).not.toHaveBeenCalled();
   });
 
-  it.each([ONBOARDING_STEPS.CHOOSE_CHANGE, ONBOARDING_STEPS.CONTEXT, ONBOARDING_STEPS.DONE])(
-    'skips with Esc at %s',
-    async (step) => {
-      const { client } = mountGuide({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS, step });
-      fireEvent.keyDown(window, { key: 'Escape' });
-      await waitFor(() => expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.SKIPPED));
-      expect(screen.queryByRole('region', { name: 'Onboarding guide' })).not.toBeInTheDocument();
-    },
-  );
-
-  it('skips from the visible button, including while the first save is pending', async () => {
-    let resolveStart: (state: iOnboardingState) => unknown = () => undefined;
-    rpc.save.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveStart = resolve;
-        }),
-    );
+  it('skips for good from the welcome', async () => {
     const { client } = mountGuide();
-    await waitFor(() => expect(rpc.save).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('button', { name: 'Skip guide' }));
-    resolveStart({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS });
     await waitFor(() => expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.SKIPPED));
+    expect(rpc.save.mock.lastCall?.[0]).toMatchObject({ status: ONBOARDING_STATUSES.SKIPPED });
+    expect(screen.queryByRole('region', CHECKLIST)).not.toBeInTheDocument();
   });
 
-  it('resumes the saved step and review rather than starting over', async () => {
-    mountGuide({ status: ONBOARDING_STATUSES.IN_PROGRESS, step: ONBOARDING_STEPS.FULL_DIFF, reviewId: 'saved-review' });
-    expect(screen.getByText('Read the full diff')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(rpc.navigate).toHaveBeenCalledWith({
-        to: '/reviews/$snapshotId/diff',
-        params: { snapshotId: 'saved-review' },
-      }),
-    );
-    expect(rpc.save).not.toHaveBeenCalled();
+  it('folds to a progress pill and opens again', () => {
+    mountGuide({ ...IN_PROGRESS, completedItems: [ONBOARDING_ITEMS.ADD_REPOSITORY] });
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse getting started' }));
+    const pill = screen.getByRole('button', { name: `Getting started, 1 of ${CORE_ITEMS.length} done` });
+    expect(screen.queryByRole('region', CHECKLIST)).not.toBeInTheDocument();
+    fireEvent.click(pill);
+    expect(screen.getByRole('region', CHECKLIST)).toBeInTheDocument();
   });
 
-  it('restores the saved Focus review before adopting any current route', async () => {
-    rpc.params = { snapshotId: 'other-review' };
-    rpc.pathname = '/reviews/other-review';
-    const { client } = mountGuide({
-      status: ONBOARDING_STATUSES.IN_PROGRESS,
-      step: ONBOARDING_STEPS.ACCEPT,
-      reviewId: 'saved-review',
-    });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
-    expect(rpc.navigate).toHaveBeenCalledWith({ to: '/reviews/$snapshotId', params: { snapshotId: 'saved-review' } });
-    expect(readState(client)?.reviewId).toBe('saved-review');
-    expect(rpc.save).not.toHaveBeenCalled();
-  });
-
-  it('shows the hosted stack list for a request whose branch is not local', async () => {
-    rpc.snapshot.mockResolvedValue({
-      workspaceId: 'workspace',
-      branch: 'remote-only',
-      change: { project: 'owner/repo' },
-    });
-    vi.stubGlobal('CSS', { escape: (value: string) => value });
-    mountGuide({ status: ONBOARDING_STATUSES.IN_PROGRESS, step: ONBOARDING_STEPS.STACK, reviewId: 'hosted-review' });
-    await waitFor(() => expect(screen.getByText(/Merge requests and pull requests are grouped/)).toBeInTheDocument());
-    expect(rpc.navigate).toHaveBeenCalledWith({ to: '/', search: { repository: 'workspace', branch: 'remote-only' } });
-    expect(rpc.navigate).not.toHaveBeenCalledWith(expect.objectContaining({ to: '/stack' }));
-  });
-
-  it('continues to History after the next branch review opens', async () => {
-    rpc.params = { snapshotId: 'chosen-review' };
-    rpc.pathname = '/reviews/chosen-review';
-    const { client, rerenderRoute } = mountGuide({
-      status: ONBOARDING_STATUSES.IN_PROGRESS,
-      step: ONBOARDING_STEPS.NEXT_BRANCH,
-      reviewId: 'chosen-review',
-    });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
-    rpc.params = { snapshotId: 'next-review' };
-    rpc.pathname = '/reviews/next-review';
-    rerenderRoute();
-    await waitFor(() =>
-      expect(readState(client)).toMatchObject({ step: ONBOARDING_STEPS.HISTORY, reviewId: 'next-review' }),
-    );
-  });
-
-  it('closes the real note composer through Cancel before Next continues', async () => {
-    const composer = document.createElement('div');
-    composer.setAttribute('role', 'dialog');
-    composer.setAttribute('aria-modal', 'true');
-    composer.setAttribute('aria-label', 'Write a note');
-    const cancel = document.createElement('button');
-    cancel.textContent = 'Cancel';
-    const onCancel = vi.fn(() => composer.setAttribute('aria-hidden', 'true'));
-    cancel.addEventListener('click', onCancel);
-    composer.append(cancel);
-    document.body.append(composer);
-    const { client, unmount } = mountGuide({
-      status: ONBOARDING_STATUSES.IN_PROGRESS,
-      step: ONBOARDING_STEPS.COMMENT,
-      reviewId: 'chosen-review',
-    });
-    try {
-      await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
-      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-      await waitFor(() => expect(readState(client)?.step).toBe(ONBOARDING_STEPS.CONTEXT));
-      expect(onCancel).toHaveBeenCalledTimes(1);
-    } finally {
-      unmount();
-      composer.remove();
-    }
-  });
-
-  it('replays from the Settings action and clears the previous review', async () => {
+  it('replays from Settings with progress reset and the checklist open', async () => {
     const { client } = mountGuide({
       status: ONBOARDING_STATUSES.COMPLETED,
-      step: ONBOARDING_STEPS.DONE,
-      reviewId: 'old-review',
+      completedItems: [...CORE_ITEMS],
+      shownHints: [ONBOARDING_HINTS.FOCUS],
     });
     fireEvent.click(screen.getByRole('button', { name: 'Replay onboarding guide' }));
-    await waitFor(() =>
-      expect(readState(client)).toEqual({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS }),
-    );
-    expect(screen.getByText('Pick a change of your own')).toBeInTheDocument();
+    await waitFor(() => expect(readState(client)).toEqual(IN_PROGRESS));
     expect(rpc.replay).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('region', CHECKLIST)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Add a repository/ })).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('lets Next explain starting a review, then waits for a real review to open', async () => {
-    const { client } = mountGuide({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    await waitFor(() => expect(readState(client)?.step).toBe(ONBOARDING_STEPS.START_REVIEW));
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  it('checks off an item from a real decision made anywhere, ignoring failed ones', async () => {
+    const { client } = mountGuide(IN_PROGRESS);
+    const options = tanstackRPC.reviews.setMarks.mutationOptions();
+    const variables = { snapshotId: 'review', marks: [{ unitId: 'unit', mark: UNIT_MARKS.LATER }] };
+
+    await runMutation(client, options, variables, true);
+    expect(readState(client)?.completedItems).toEqual([]);
+
+    await runMutation(client, options, variables);
+    await waitFor(() => expect(readState(client)?.completedItems).toEqual([ONBOARDING_ITEMS.LATER]));
+    expect(rpc.save.mock.lastCall?.[0]).toMatchObject({ completedItems: [ONBOARDING_ITEMS.LATER] });
+    expect(screen.getByRole('button', { name: /^Leave a card for Later, done/ })).toBeInTheDocument();
   });
 
-  it('finishes persistently from the final step', async () => {
-    const { client } = mountGuide({
-      ...INITIAL_ONBOARDING,
-      status: ONBOARDING_STATUSES.IN_PROGRESS,
-      step: ONBOARDING_STEPS.DONE,
-    });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Finish' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Finish' }));
-    await waitFor(() => expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.COMPLETED));
-    expect(screen.queryByRole('region', { name: 'Onboarding guide' })).not.toBeInTheDocument();
-  });
+  it('accepts items in any order and starts a first-run guide when the user acts before pressing Start', async () => {
+    const { client } = mountGuide();
+    await runMutation(client, tanstackRPC.findings.create.mutationOptions(), { snapshotId: 'review' });
+    act(() => reportGuideAction(ONBOARDING_ITEMS.KEY_LIST));
 
-  it('continues on the real review the user opened', async () => {
-    rpc.pathname = '/';
-    const { client, rerenderRoute } = mountGuide({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS });
-    rpc.params = { snapshotId: 'chosen-review' };
-    rpc.pathname = '/reviews/chosen-review';
-    rerenderRoute();
     await waitFor(() =>
-      expect(readState(client)).toMatchObject({ step: ONBOARDING_STEPS.REVIEW_SWITCHER, reviewId: 'chosen-review' }),
+      expect(readState(client)).toMatchObject({
+        status: ONBOARDING_STATUSES.IN_PROGRESS,
+        completedItems: [ONBOARDING_ITEMS.NOTE, ONBOARDING_ITEMS.KEY_LIST],
+      }),
     );
+    expect(screen.getByText(`2 of ${CORE_ITEMS.length}`)).toBeInTheDocument();
   });
 
-  it('advances after a successful decision made by a key or swipe, and stays on failed decisions', async () => {
-    rpc.params = { snapshotId: 'chosen-review' };
-    rpc.pathname = '/reviews/chosen-review';
-    const { client } = mountGuide({
-      status: ONBOARDING_STATUSES.IN_PROGRESS,
-      step: ONBOARDING_STEPS.ACCEPT,
-      reviewId: 'chosen-review',
-    });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled());
-    const variables = { snapshotId: 'chosen-review', marks: [{ unitId: 'unit', mark: UNIT_MARKS.LOOKS_GOOD }] };
-    const failed = client.getMutationCache().build(client, {
-      ...tanstackRPC.reviews.setMarks.mutationOptions(),
-      mutationFn: async () => {
-        throw new Error('Save failed');
-      },
-    });
-    await expect(failed.execute(variables)).rejects.toThrow('Save failed');
-    expect(readState(client)?.step).toBe(ONBOARDING_STEPS.ACCEPT);
-    const succeeded = client.getMutationCache().build(client, {
-      ...tanstackRPC.reviews.setMarks.mutationOptions(),
-      mutationFn: async () => [{ unitId: 'unit', mark: UNIT_MARKS.LOOKS_GOOD }],
-    });
-    await succeeded.execute(variables);
-    await waitFor(() => expect(readState(client)?.step).toBe(ONBOARDING_STEPS.LATER));
-  });
-
-  it('keeps a hidden note composer from hiding Skip guide', async () => {
-    const composer = document.createElement('div');
-    composer.setAttribute('role', 'dialog');
-    composer.setAttribute('aria-modal', 'true');
-    composer.setAttribute('aria-hidden', 'true');
-    document.body.append(composer);
+  it('closes a tip with Esc without skipping the guide or reaching other Esc handlers', async () => {
+    const { client } = mountGuide(IN_PROGRESS);
+    const onEscape = vi.fn();
+    document.addEventListener('keydown', onEscape);
     try {
-      const { client } = mountGuide({ ...INITIAL_ONBOARDING, status: ONBOARDING_STATUSES.IN_PROGRESS });
-      const skip = screen.getByRole('button', { name: 'Skip guide' });
-      expect(composer.contains(skip)).toBe(false);
-      fireEvent.click(skip);
-      await waitFor(() => expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.SKIPPED));
+      openItem('Open Jump to');
+      fireEvent.click(screen.getByRole('button', { name: 'Show me' }));
+      expect(screen.getByRole('dialog', { name: 'Open Jump to' })).toBeInTheDocument();
+
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+
+      expect(screen.queryByRole('dialog', { name: 'Open Jump to' })).not.toBeInTheDocument();
+      expect(onEscape).not.toHaveBeenCalled();
+      expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.IN_PROGRESS);
+      expect(screen.getByRole('region', CHECKLIST)).toBeInTheDocument();
+
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      expect(onEscape).toHaveBeenCalledTimes(1);
+      expect(rpc.save).not.toHaveBeenCalled();
     } finally {
-      composer.remove();
+      document.removeEventListener('keydown', onEscape);
     }
+  });
+
+  it('navigates only for Show me, rings the real control, and closes the tip once the action is done', async () => {
+    rpc.pathname = '/settings';
+    const anchor = document.createElement('button');
+    anchor.dataset.onboarding = ONBOARDING_ITEMS.FINDINGS;
+    const onAnchorClick = vi.fn();
+    anchor.addEventListener('click', onAnchorClick);
+    document.body.append(anchor);
+    const { client } = mountGuide(IN_PROGRESS);
+    try {
+      expect(rpc.navigate).not.toHaveBeenCalled();
+      openItem('Set a severity or suggest a task');
+      fireEvent.click(screen.getByRole('button', { name: 'Show me' }));
+
+      expect(rpc.navigate).toHaveBeenCalledWith({ to: '/findings' });
+      expect(screen.getByRole('dialog', { name: 'Set a severity or suggest a task' })).toBeInTheDocument();
+      expect(onAnchorClick).not.toHaveBeenCalled();
+
+      await runMutation(client, tanstackRPC.findings.setSeverity.mutationOptions(), { findingId: 'f', severity: null });
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog', { name: 'Set a severity or suggest a task' })).not.toBeInTheDocument(),
+      );
+      expect(readState(client)?.completedItems).toEqual([ONBOARDING_ITEMS.FINDINGS]);
+    } finally {
+      anchor.remove();
+    }
+  });
+
+  it('says it is set once the last counted item is done, and completes the guide', async () => {
+    const { client } = mountGuide({ ...IN_PROGRESS, completedItems: CORE_ITEMS.slice(1) });
+    act(() => reportGuideAction(ONBOARDING_ITEMS.ADD_REPOSITORY));
+    await waitFor(() => expect(readState(client)?.status).toBe(ONBOARDING_STATUSES.COMPLETED));
+    expect(screen.getByText("You're set")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('region', CHECKLIST)).not.toBeInTheDocument();
+  });
+
+  it('shows a screen hint on the first visit only and remembers it', async () => {
+    rpc.pathname = '/settings';
+    const { client, unmount } = mountGuide(IN_PROGRESS);
+    const hint = screen.getByRole('region', { name: 'Try on Settings' });
+    expect(within(hint).getByRole('button', { name: 'Change appearance or a key' })).toBeInTheDocument();
+    await waitFor(() => expect(readState(client)?.shownHints).toEqual([ONBOARDING_HINTS.SETTINGS]));
+    unmount();
+
+    mountGuide({ ...IN_PROGRESS, shownHints: [ONBOARDING_HINTS.SETTINGS] });
+    expect(screen.queryByRole('region', { name: 'Try on Settings' })).not.toBeInTheDocument();
+  });
+
+  it('checks off the Full diff when the user opens it', async () => {
+    rpc.pathname = '/reviews/review/diff';
+    const { client } = mountGuide(IN_PROGRESS);
+    await waitFor(() => expect(readState(client)?.completedItems).toContain(ONBOARDING_ITEMS.FULL_DIFF));
   });
 });

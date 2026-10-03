@@ -1,7 +1,9 @@
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+
 import { Kbd } from '@~/components/ui/kbd';
 import { cn } from '@~/lib/utils';
 
-import { CARD_VIEW_LABELS, cardViewValues } from '../focus.enums';
+import { CARD_VIEW_LABELS, CARD_VIEWS, cardViewValues } from '../focus.enums';
 import type { CardView } from '../focus.enums';
 
 interface iUnitViewTabsProps {
@@ -21,6 +23,7 @@ export function UnitViewTabs({ view, counts, onChange }: iUnitViewTabsProps) {
           type="button"
           role="tab"
           aria-selected={candidate === view}
+          data-onboarding={candidate === CARD_VIEWS.diagram ? ONBOARDING_ITEMS.DIAGRAM : undefined}
           onClick={() => onChange(candidate)}
           className={cn(
             'inline-flex h-[38px] items-center gap-[7px] border-b-2 border-transparent px-2.5 text-[13px] whitespace-nowrap text-muted hover:text-fg',

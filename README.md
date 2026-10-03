@@ -410,9 +410,9 @@ The width you drag the Full diff's file list to is kept.
 | --- | --- |
 | Electron desktop app, unsigned installers for Windows, macOS and Linux | Works |
 | Add repositories from disk, read-only | Works |
-| Onboarding guide: first run, saved progress, skip at any step, replay from Settings | Works |
+| Getting started checklist: real actions in any order, Show me tips, screen hints, skip any time, replay from Settings | Works |
 | Local branch stacks with suggested parents, kept together when a lower branch gets new commits | Works |
-| Remote-only branches (pushed but never checked out, from the last 90 days) join the stack and can be reviewed | Works |
+| Remote-tracking branches (all remotes, origin first) join their local stacks, can be reviewed and are noticed after git fetch | Works |
 | Frozen snapshots in Chaff's own git store | Works |
 | Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
 | Full diff: tree or list, one or all files, unified (old and new line numbers) or split, wrap, context; filter by file name or changed code | Works |

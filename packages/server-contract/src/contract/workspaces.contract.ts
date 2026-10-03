@@ -14,13 +14,16 @@ export const workspaceSchema = z.object({
 export const branchSchema = z.object({
   /** `feature` for a local branch, `origin/feature` for a remote-tracking branch with no local branch. */
   name: z.string(),
-  /** Only on the remote: pushed, or fetched from someone else, but never checked out here. */
-  isRemote: z.boolean(),
   headSha: z.string(),
   subject: z.string(),
   authorName: z.string(),
   committedAt: z.date(),
   upstream: z.string().optional(),
+  /**
+   * Set when the branch only exists as a remote-tracking branch (`refs/remotes/<remote>/<name>`), to the remote
+   * it is read from; local branches leave it out.
+   */
+  remote: z.string().optional(),
   isDefault: z.boolean(),
   /**
    * Nearest branch whose tip, or a commit it had when this branch left it, is in this branch's history; the
@@ -69,9 +72,9 @@ export const workspacesContract = oc.router({
 
   branches: oc
     .route({
-      summary: 'List local branches',
+      summary: 'List branches',
       description:
-        'Reads every local branch of the repository from disk, newest commit first, with a suggested parent for each.',
+        'Reads every local branch of the repository from disk, plus the remote-tracking branches of their stacks that have no local branch, newest commit first, with a suggested parent for each.',
     })
     .input(workspaceIdInput)
     .output(z.array(branchSchema)),

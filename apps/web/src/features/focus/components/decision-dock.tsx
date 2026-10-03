@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+import type { OnboardingItem } from '@chaff/common/enums/onboarding.enums';
 import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
@@ -43,6 +45,11 @@ const COMMENT_BUTTON_CLASSES = new Map<NoteMark, string>([
   [UNIT_MARKS.SKIPPED, 'aria-pressed:border-fg aria-pressed:bg-raised aria-pressed:text-fg'],
 ]);
 
+const COMMENT_BUTTON_GUIDE_ITEMS = new Map<NoteMark, OnboardingItem>([
+  [UNIT_MARKS.CONCERN, ONBOARDING_ITEMS.NOTE],
+  [UNIT_MARKS.SKIPPED, ONBOARDING_ITEMS.SKIP],
+]);
+
 function GroupHeading({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="flex items-baseline gap-2 overflow-hidden text-[11.5px] whitespace-nowrap text-faint">
@@ -75,6 +82,7 @@ export function DecisionDock({
     <button
       type="button"
       aria-pressed={isPressed(candidate)}
+      data-onboarding={COMMENT_BUTTON_GUIDE_ITEMS.get(candidate)}
       onClick={() => onComment(candidate)}
       className={cn(
         ACTION_CLASS,
@@ -89,7 +97,10 @@ export function DecisionDock({
   );
 
   return (
-    <div className="relative z-4 flex flex-none justify-center border-t border-line bg-canvas px-6 pt-2.5 pb-3">
+    <div
+      data-onboarding-avoid
+      className="relative z-4 flex flex-none justify-center border-t border-line bg-canvas px-6 pt-2.5 pb-3"
+    >
       <div className="relative w-full max-w-[920px]">
         <NoteComposer
           mark={noteMark}
@@ -120,6 +131,7 @@ export function DecisionDock({
               <button
                 type="button"
                 aria-pressed={isPressed(UNIT_MARKS.LATER)}
+                data-onboarding={ONBOARDING_ITEMS.LATER}
                 onClick={onLater}
                 className={cn(
                   ACTION_CLASS,
@@ -134,6 +146,7 @@ export function DecisionDock({
               <button
                 type="button"
                 aria-pressed={isPressed(UNIT_MARKS.LOOKS_GOOD)}
+                data-onboarding={ONBOARDING_ITEMS.LOOKS_GOOD}
                 onClick={onLooksGood}
                 className={cn(
                   ACTION_CLASS,

@@ -46,7 +46,7 @@ export function FindingsScreen() {
         <b className="font-medium text-fg">Findings</b>
       </TopBar>
       <Screen>
-        <div data-onboarding-findings className="mx-auto flex max-w-[1240px] flex-col gap-5">
+        <div className="mx-auto flex max-w-[1240px] flex-col gap-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="m-0 text-[20px] font-semibold tracking-[-0.015em]">Findings</h1>

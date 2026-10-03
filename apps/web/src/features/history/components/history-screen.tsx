@@ -24,7 +24,7 @@ export function HistoryScreen() {
         <b className="font-medium text-fg">History</b>
       </TopBar>
       <Screen>
-        <div data-onboarding-history className="mx-auto flex max-w-[980px] flex-col gap-5">
+        <div className="mx-auto flex max-w-[980px] flex-col gap-5">
           <div>
             <h1 className="m-0 text-[20px] font-semibold tracking-[-0.015em] text-balance">History</h1>
             <p className="m-0 mt-1 text-muted">

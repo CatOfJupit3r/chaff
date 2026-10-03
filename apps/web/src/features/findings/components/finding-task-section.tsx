@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { DIGEST_RUNNER_LABELS, DIGEST_RUNNER_PROVIDERS } from '@chaff/common/enums/digest.enums';
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { FINDING_TASK_STATES } from '@chaff/common/enums/review.enums';
 
 import { SparkIcon } from '@~/components/icons/icons';
@@ -50,7 +51,7 @@ export function FindingTaskSection({ finding }: { finding: iFinding }) {
       </div>
       {task ? null : (
         <div className="flex flex-wrap items-center gap-3">
-          <Button size="sm" disabled={actions.isBusy} onClick={suggest}>
+          <Button size="sm" disabled={actions.isBusy} data-onboarding={ONBOARDING_ITEMS.FINDINGS} onClick={suggest}>
             <SparkIcon />
             Suggest a task
           </Button>
