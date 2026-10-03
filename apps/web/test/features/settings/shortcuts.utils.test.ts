@@ -20,6 +20,12 @@ describe('shortcuts', () => {
 
     expect(describeShortcutConflict(keys, SHORTCUT_ACTIONS.FOCUS_LATER, 'g')).toBe('G is already Looks good');
     expect(describeShortcutConflict(keys, SHORTCUT_ACTIONS.FOCUS_UNDO, '3')).toBe("3 switches the card's views");
+    expect(describeShortcutConflict(keys, SHORTCUT_ACTIONS.VERIFY_CLOSE, '/')).toBe(
+      '/ is kept for Jump to and the key list',
+    );
+    expect(describeShortcutConflict(keys, SHORTCUT_ACTIONS.FOCUS_LATER, 'e')).toBe(
+      'E is already Whole file around the code',
+    );
     expect(describeShortcutConflict(keys, SHORTCUT_ACTIONS.VERIFY_CLOSE, 'g')).toBeUndefined();
     expect(describeShortcutConflict(keys, SHORTCUT_ACTIONS.FOCUS_LATER, 'l')).toBeUndefined();
   });

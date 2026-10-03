@@ -39,6 +39,12 @@ export const CHANGE_REQUEST_PREFIXES = codeHostsEnumwaii.derive({
 });
 
 /** Which open changes the inbox lists for a project. Lowercase because it appears in the URL. */
+/** Whether a merge or pull request is still open on its host. */
+export const changeStatesEnumwaii = new Enumwaii('ChangeState', ['OPEN', 'MERGED', 'CLOSED']);
+
+export const CHANGE_STATES = changeStatesEnumwaii.enum;
+export type ChangeState = InferEnumwaii<typeof changeStatesEnumwaii>;
+
 export const inboxFiltersEnumwaii = new Enumwaii('InboxFilter', ['review', 'authored', 'all']);
 
 export const INBOX_FILTERS = inboxFiltersEnumwaii.enum;

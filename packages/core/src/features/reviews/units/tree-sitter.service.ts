@@ -9,7 +9,7 @@ import { LoggerFactory } from '@~/features/logger/logger.factory';
 
 import { extractDeclarations } from './declarations.utils';
 import type { iDeclaration } from './declarations.utils';
-import { GRAMMAR_FILES } from './grammar.enums';
+import { GRAMMAR_FILES, SEPARATE_GRAMMAR_PACKAGES } from './grammar.enums';
 import type { Grammar } from './grammar.enums';
 
 const require = createRequire(import.meta.url);
@@ -69,6 +69,14 @@ export class TreeSitterService {
     return this.options.treeSitterDir ?? packagedGrammarsDirectory();
   }
 
+  private grammarPath(grammar: Grammar) {
+    const separatePackage = SEPARATE_GRAMMAR_PACKAGES.get(grammar);
+    const directory =
+      this.options.treeSitterDir ??
+      (separatePackage ? path.dirname(require.resolve(`${separatePackage}/package.json`)) : this.directory);
+    return path.join(directory, GRAMMAR_FILES(grammar));
+  }
+
   private async loadRuntime() {
     this.runtime ??= (async () => {
       const { directory } = this;
@@ -85,7 +93,7 @@ export class TreeSitterService {
     let language = this.languages.get(grammar);
     if (!language) {
       language = this.loadRuntime()
-        .then(async ({ module }) => module.Language.load(path.join(this.directory, GRAMMAR_FILES(grammar))))
+        .then(async ({ module }) => module.Language.load(this.grammarPath(grammar)))
         .catch((error: unknown) => {
           this.logger.warn('Could not load a tree-sitter grammar', { grammar, error: String(error) });
           return undefined;

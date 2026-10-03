@@ -1,5 +1,6 @@
 import { execFile, spawn } from 'node:child_process';
 import { access, constants } from 'node:fs/promises';
+import path from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -22,8 +23,18 @@ export class AgentProcessError extends Error {}
 
 /** Runs an agent CLI to completion, streaming stdout line by line. Aborting the signal kills it. */
 export async function runAgentProcess({ command, args, cwd, input, signal, onLine }: iAgentProcessOptions) {
+  const isNodeScript = path.extname(command).toLowerCase() === '.mjs';
+  const executable = isNodeScript ? process.execPath : command;
+  const argumentsToPass = isNodeScript ? [command, ...args] : args;
+  const env = isNodeScript && process.versions.electron ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env;
   return new Promise((resolve: (value?: undefined) => unknown, reject) => {
-    const child = spawn(command, args, { cwd, signal, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(executable, argumentsToPass, {
+      cwd,
+      signal,
+      env,
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     let pending = '';
     let stderr = '';
 

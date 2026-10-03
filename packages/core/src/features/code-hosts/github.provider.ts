@@ -1,7 +1,7 @@
 import { singleton } from 'tsyringe';
 import z from 'zod';
 
-import { CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
+import { CHANGE_STATES, CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { DIFF_SIDES } from '@chaff/common/enums/review.enums';
 
@@ -28,6 +28,8 @@ const pullSchema = z.object({
   number: z.number(),
   title: z.string(),
   body: z.string().nullish(),
+  state: z.string().optional(),
+  merged_at: z.string().nullish(),
   user: userSchema,
   head: z.object({ ref: z.string(), sha: z.string() }),
   base: z.object({ ref: z.string() }),
@@ -60,6 +62,11 @@ const issueCommentSchema = z.object({
   html_url: z.string(),
 });
 
+function changeState(pull: z.infer<typeof pullSchema>) {
+  if (pull.merged_at) return CHANGE_STATES.MERGED;
+  return pull.state === 'closed' ? CHANGE_STATES.CLOSED : CHANGE_STATES.OPEN;
+}
+
 function toChange(pull: z.infer<typeof pullSchema>): iRemoteChange {
   return {
     number: pull.number,
@@ -72,6 +79,7 @@ function toChange(pull: z.infer<typeof pullSchema>): iRemoteChange {
     headSha: pull.head.sha,
     webUrl: pull.html_url,
     isDraft: pull.draft ?? false,
+    state: changeState(pull),
     updatedAt: new Date(pull.updated_at),
     assigneeUsernames: (pull.assignees ?? []).map((user) => user.login),
     reviewerUsernames: (pull.requested_reviewers ?? []).map((user) => user.login),
@@ -131,6 +139,14 @@ export class GitHubProvider implements iCodeHostProvider {
   public async getChange(access: iCodeHostAccess, project: string, changeNumber: number) {
     const pull = await getJson(this.request(access, `/repos/${project}/pulls/${changeNumber}`), pullSchema);
     return pull ? toChange(pull) : undefined;
+  }
+
+  public async getIssue(access: iCodeHostAccess, project: string, issueNumber: number) {
+    const issue = await getJson(
+      this.request(access, `/repos/${project}/issues/${issueNumber}`),
+      z.object({ number: z.number(), title: z.string(), body: z.string().nullish() }),
+    );
+    return issue ? { number: issue.number, title: issue.title, description: issue.body ?? '' } : undefined;
   }
 
   public async listChangeCommits(access: iCodeHostAccess, project: string, changeNumber: number) {

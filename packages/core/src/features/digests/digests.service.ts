@@ -5,13 +5,16 @@ import { inject, singleton } from 'tsyringe';
 import { DIGEST_RUNNER_LABELS, DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import type { iCoreOptions } from '@~/core.types';
 import { CORE_OPTIONS_TOKEN, DIGEST_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { AgentCommandsService } from '@~/features/agents/agent-commands.service';
+import { RemoteChangesService } from '@~/features/code-hosts/remote-changes.service';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
 import { PreferencesService } from '@~/features/preferences/preferences.service';
 import { ChangeUnitsService } from '@~/features/reviews/change-units/change-units.service';
+import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
@@ -22,12 +25,14 @@ import { ClaudeCodeAdapter } from './claude-code.adapter';
 import { CodexAdapter } from './codex.adapter';
 import { checkDigest } from './digest-check.utils';
 import { AGENT_DIGEST_JSON_SCHEMA, agentDigestSchema } from './digest-output.schema';
+import { fitPatch } from './digest-patch.utils';
+import { previewOf } from './digest-preview.utils';
 import { buildDigestPrompt } from './digest-prompt.utils';
 import type { iDigestRepository } from './digest.repository';
-import type { iDigestRunnerAdapter, iPromptUnit } from './digests.types';
+import type { iDigestPreview, iDigestRunnerAdapter, iPromptUnit } from './digests.types';
 
 const DIGESTS_DIRECTORY = 'digests';
-/** Characters of diff put in the prompt; the agent reads files for anything past this. */
+/** Characters of diff put in the prompt; files past this are outlined and the agent reads them in the checkout. */
 const MAX_PROMPT_PATCH_CHARS = 120_000;
 const MAX_COMMIT_MESSAGES = 50;
 /** A digest that takes longer than this is stopped. */
@@ -60,6 +65,7 @@ export class DigestsService {
     private readonly agentCommandsService: AgentCommandsService,
     private readonly preferencesService: PreferencesService,
     private readonly changeUnitsService: ChangeUnitsService,
+    private readonly remoteChangesService: RemoteChangesService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('digests');
@@ -105,6 +111,7 @@ export class DigestsService {
     const cancelled = await this.digestRepository.update(digestId, {
       status: DIGEST_STATUSES.CANCELLED,
       progress: null,
+      preview: null,
       finishedAt: new Date(),
     });
     this.running.get(digestId)?.abort(new Error('Stopped'));
@@ -130,7 +137,7 @@ export class DigestsService {
     command: string,
     runner: DigestRunner,
     snapshot: iSnapshotRecord,
-    target: { workspaceId: string; branch: string },
+    target: iReviewTargetRecord,
     signal: AbortSignal,
   ) {
     const folder = path.join(this.options.dataDir, DIGESTS_DIRECTORY, digestId);
@@ -143,12 +150,31 @@ export class DigestsService {
       lastProgressAt = now;
       this.digestRepository.update(digestId, { progress }).catch(() => undefined);
     };
+    // The preview is written at most once per interval, always ending with the newest one received.
+    let latestPreview: iDigestPreview | undefined;
+    let writtenPreview: string | undefined;
+    let previewWrittenAt = 0;
+    let previewTimer: ReturnType<typeof setTimeout> | undefined;
+    const writePreview = () => {
+      previewTimer = undefined;
+      const serialized = JSON.stringify(latestPreview);
+      if (!latestPreview || serialized === writtenPreview || signal.aborted) return;
+      writtenPreview = serialized;
+      previewWrittenAt = Date.now();
+      this.digestRepository.update(digestId, { preview: latestPreview }).catch(() => undefined);
+    };
+    const showPreview = (preview: iDigestPreview | undefined) => {
+      if (!preview) return;
+      latestPreview = preview;
+      previewTimer ??= setTimeout(writePreview, Math.max(0, previewWrittenAt + PROGRESS_INTERVAL_MS - Date.now()));
+    };
+    const stopPreview = () => clearTimeout(previewTimer);
 
     try {
       await mkdir(scratchDir, { recursive: true });
       onProgress('Checking out the snapshot');
       await this.snapshotStoreService.addWorktree(target.workspaceId, snapshot.headSha, checkout);
-      const { prompt, unitIds, shortIds } = await this.preparePrompt(snapshot, target);
+      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(snapshot, target);
       onProgress(`Starting ${DIGEST_RUNNER_LABELS(runner)}`);
       const answer = await this.adapterFor(runner).run(command, {
         cwd: checkout,
@@ -157,18 +183,22 @@ export class DigestsService {
         schema: AGENT_DIGEST_JSON_SCHEMA,
         signal,
         onProgress,
+        onPartialAnswer: (partial) => showPreview(previewOf(partial, unitIds.length)),
       });
+      stopPreview();
       const parsed = agentDigestSchema.safeParse(answer);
       if (!parsed.success) throw new Error('The agent answered in an unexpected shape');
-      const content = checkDigest(parsed.data, unitIds, shortIds, checkout);
+      const content = { ...checkDigest(parsed.data, unitIds, shortIds, checkout), outlinedPaths };
       await this.changeUnitsService.adoptDigest(snapshot.id, content);
       await this.digestRepository.update(digestId, {
         status: DIGEST_STATUSES.READY,
         content,
         progress: null,
+        preview: null,
         finishedAt: new Date(),
       });
     } catch (error) {
+      stopPreview();
       // A cancelled digest is already marked; anything else that stops the run is a failure.
       const current = await this.digestRepository.findById(digestId);
       if (current?.status === DIGEST_STATUSES.RUNNING) {
@@ -177,6 +207,7 @@ export class DigestsService {
           status: DIGEST_STATUSES.FAILED,
           error: reason instanceof Error ? reason.message : String(reason),
           progress: null,
+          preview: null,
           finishedAt: new Date(),
         });
       }
@@ -187,8 +218,8 @@ export class DigestsService {
     }
   }
 
-  private async preparePrompt(snapshot: iSnapshotRecord, target: { workspaceId: string; branch: string }) {
-    const [units, files, commits, patch, preferences] = await Promise.all([
+  private async preparePrompt(snapshot: iSnapshotRecord, target: iReviewTargetRecord) {
+    const [units, files, commits, fullPatch, preferences, change] = await Promise.all([
       this.snapshotRepository.listUnits(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
       this.snapshotStoreService.commitMessages(
@@ -199,7 +230,11 @@ export class DigestsService {
       ),
       this.snapshotStoreService.patch(target.workspaceId, snapshot.baseSha, snapshot.headSha),
       this.preferencesService.texts(target.workspaceId),
+      target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST
+        ? this.remoteChangesService.describe(target).catch(() => undefined)
+        : undefined,
     ]);
+    const { patch, outlined } = fitPatch(fullPatch, MAX_PROMPT_PATCH_CHARS);
     const paths = new Map(files.map((file) => [file.id, file.path]));
     const promptUnits: iPromptUnit[] = units.map((unit, index) => ({
       shortId: `u${index + 1}`,
@@ -220,14 +255,16 @@ export class DigestsService {
       headSha: snapshot.headSha,
       commits,
       units: promptUnits,
-      patch: patch.slice(0, MAX_PROMPT_PATCH_CHARS),
-      isPatchTruncated: patch.length > MAX_PROMPT_PATCH_CHARS,
+      patch,
+      outlined,
+      change,
       preferences,
     });
     return {
       prompt,
       unitIds: units.map((unit) => unit.id),
       shortIds: new Map(promptUnits.map((unit) => [unit.shortId, unit.unitId])),
+      outlinedPaths: outlined.map((file) => file.path),
     };
   }
 }

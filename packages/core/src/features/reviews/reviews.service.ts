@@ -2,12 +2,24 @@ import { randomUUID } from 'node:crypto';
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
-import { IS_INSPECTED_MARK, REVIEW_TARGET_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import {
+  IS_ACTIVE_FINDING_STATUS,
+  IS_INSPECTED_MARK,
+  REVIEW_TARGET_KINDS,
+  UNIT_MARKS,
+} from '@chaff/common/enums/review.enums';
 
-import { REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
+import {
+  FINDING_REPOSITORY_TOKEN,
+  REVIEW_TARGET_REPOSITORY_TOKEN,
+  SNAPSHOT_REPOSITORY_TOKEN,
+  UNIT_MARK_REPOSITORY_TOKEN,
+} from '@~/di/tokens';
 import { RemoteChangesService } from '@~/features/code-hosts/remote-changes.service';
 import { AnchorRelocationService } from '@~/features/findings/anchor-relocation.service';
+import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import { GitService } from '@~/features/git/git.service';
+import { RefWatchService } from '@~/features/git/ref-watch.service';
 import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
 import { KeyedMutex } from '@~/lib/concurrency';
@@ -62,13 +74,19 @@ export class ReviewsService {
     private readonly secondPassService: SecondPassService,
     private readonly anchorRelocationService: AnchorRelocationService,
     private readonly changeUnitsService: ChangeUnitsService,
+    private readonly refWatchService: RefWatchService,
+    @inject(FINDING_REPOSITORY_TOKEN) private readonly findingRepository: iFindingRepository,
   ) {}
 
   public async list(workspaceId?: string): Promise<iReviewTargetResponse[]> {
-    const targets = await this.reviewTargetRepository.list(workspaceId);
+    const [targets, findings] = await Promise.all([
+      this.reviewTargetRepository.list(workspaceId),
+      this.findingRepository.list({ workspaceId }),
+    ]);
     return Promise.all(
       targets.map(async (target) => {
         const latest = await this.snapshotRepository.findLatest(target.id);
+        const own = findings.filter((finding) => finding.targetId === target.id);
         return {
           id: target.id,
           workspaceId: target.workspaceId,
@@ -77,6 +95,12 @@ export class ReviewsService {
           parentBranch: target.parentBranch,
           change: changeInfo(target),
           latestSnapshot: latest ? await this.toSummary(latest) : undefined,
+          findingCount: own.length,
+          activeFindingCount: own.filter((finding) => IS_ACTIVE_FINDING_STATUS(finding.status)).length,
+          archived:
+            target.archivedAt && target.archiveReason
+              ? { at: target.archivedAt, reason: target.archiveReason }
+              : undefined,
         };
       }),
     );
@@ -221,6 +245,8 @@ export class ReviewsService {
       this.snapshotStoreService.resolveBranch(repoPath, snapshot.parentBranch),
     ]);
     const unchanged = {
+      // Uncommitted work changes files, not refs, so working changes are still re-read on a timer.
+      isWatched: !isWorkingChanges,
       isBranchMissing: false,
       newCommitCount: 0,
       isBranchRewritten: false,
@@ -239,6 +265,18 @@ export class ReviewsService {
     if (ancestry.exitCode !== 0) return { ...unchanged, isBranchRewritten: true };
     const newCommits = await this.gitService.output(repoPath, ['rev-list', '--count', `${committedSha}..${branchSha}`]);
     return { ...unchanged, newCommitCount: Number(newCommits) };
+  }
+
+  /**
+   * Yields each time a branch may have moved in the repository a local review reads, until `signal` aborts.
+   * Merge and pull requests live on their host, so their stream ends at once.
+   */
+  public async *watchLiveStatus(snapshotId: string, signal: AbortSignal) {
+    const snapshot = await this.getSnapshotRecord(snapshotId);
+    const target = await this.getTarget(snapshot.targetId);
+    if (target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST) return;
+    const { repoPath } = await this.workspacesService.getRecord(target.workspaceId);
+    for await (const changedAt of this.refWatchService.changes(repoPath, signal)) yield { changedAt };
   }
 
   /** The review target and the workspace it belongs to. */

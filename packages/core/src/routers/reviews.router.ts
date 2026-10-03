@@ -1,11 +1,16 @@
 import { container } from 'tsyringe';
 
+import { DiffSearchService } from '@~/features/reviews/diff/diff-search.service';
+import { ReviewHistoryService } from '@~/features/reviews/history/review-history.service';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { UnitsService } from '@~/features/reviews/units/units.service';
 import { base, procedure } from '@~/lib/orpc';
 
 export const reviewsRouter = base.reviews.router({
   list: procedure.reviews.list.handler(async ({ input }) => container.resolve(ReviewsService).list(input.workspaceId)),
+  history: procedure.reviews.history.handler(async ({ input }) =>
+    container.resolve(ReviewHistoryService).list(input.workspaceId),
+  ),
 
   start: procedure.reviews.start.handler(async ({ input }) => container.resolve(ReviewsService).start(input)),
 
@@ -24,6 +29,14 @@ export const reviewsRouter = base.reviews.router({
   liveStatus: procedure.reviews.liveStatus.handler(async ({ input }) =>
     container.resolve(ReviewsService).getLiveStatus(input.snapshotId),
   ),
+
+  searchDiff: procedure.reviews.searchDiff.handler(async ({ input }) =>
+    container.resolve(DiffSearchService).search(input.snapshotId, input.query),
+  ),
+
+  watch: procedure.reviews.watch.handler(async function* watchLiveStatus({ input, signal }) {
+    yield* container.resolve(ReviewsService).watchLiveStatus(input.snapshotId, signal ?? new AbortController().signal);
+  }),
 
   fileDiff: procedure.reviews.fileDiff.handler(async ({ input }) =>
     container.resolve(ReviewsService).getFileDiff(input.snapshotId, input.fileId, {

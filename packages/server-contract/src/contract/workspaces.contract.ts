@@ -18,6 +18,11 @@ export const branchSchema = z.object({
   authorName: z.string(),
   committedAt: z.date(),
   upstream: z.string().optional(),
+  /**
+   * Set when the branch only exists as a remote-tracking branch (`refs/remotes/<remote>/<name>`), to the remote
+   * it is read from; local branches leave it out.
+   */
+  remote: z.string().optional(),
   isDefault: z.boolean(),
   /**
    * Nearest branch whose tip, or a commit it had when this branch left it, is in this branch's history; the
@@ -66,10 +71,30 @@ export const workspacesContract = oc.router({
 
   branches: oc
     .route({
-      summary: 'List local branches',
+      summary: 'List branches',
       description:
-        'Reads every local branch of the repository from disk, newest commit first, with a suggested parent for each.',
+        'Reads every local branch of the repository from disk, plus the remote-tracking branches of their stacks that have no local branch, newest commit first, with a suggested parent for each.',
     })
     .input(workspaceIdInput)
     .output(z.array(branchSchema)),
+
+  branchStat: oc
+    .route({
+      summary: "Count a branch's changes",
+      description:
+        'Files, added lines and deleted lines between where the branch left its parent and its tip, read from disk before any snapshot exists.',
+    })
+    .input(
+      workspaceIdInput.extend({
+        branch: z.string().min(1).max(255),
+        parentBranch: z.string().min(1).max(255),
+      }),
+    )
+    .output(
+      z.object({
+        fileCount: z.number().int().nonnegative(),
+        additions: z.number().int().nonnegative(),
+        deletions: z.number().int().nonnegative(),
+      }),
+    ),
 });

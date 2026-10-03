@@ -196,6 +196,30 @@ describe('buildFileUnits', () => {
     expect(go.units[0]?.isExported).toBe(true);
   });
 
+  it('finds Kotlin methods and objects, and keeps private functions unexported', async () => {
+    const before = [
+      'class Scheduler {',
+      '    fun next(attempt: Int): Int {',
+      '        return attempt * 3',
+      '    }',
+      '}',
+      '',
+      'object Registry {',
+      '    private fun key() = "a"',
+      '}',
+      '',
+    ].join('\n');
+    const after = before.replace('attempt * 3', 'attempt * 2').replace('"a"', '"b"');
+
+    const { units, lines } = await build('src/Scheduler.kt', before, after);
+
+    expect(units.map((unit) => [unit.title, unit.symbolKind, unit.isExported])).toEqual([
+      ['Scheduler.next', SYMBOL_KINDS.METHOD, true],
+      ['Registry.key', SYMBOL_KINDS.METHOD, false],
+    ]);
+    expectEveryChangeCovered(units, lines);
+  });
+
   it('keeps a deleted file as one section', async () => {
     const { units, lines } = await build('src/old.ts', SCHEDULER, '', { status: FILE_STATUSES.DELETED });
 

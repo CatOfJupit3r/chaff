@@ -26,6 +26,7 @@
     "@chaff/eslint-config": "workspace:*",
     "@chaff/prettier-config": "workspace:*",
     "@orpc/server": "catalog:",
+    "@tree-sitter-grammars/tree-sitter-kotlin": "1.1.0",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "@vscode/tree-sitter-wasm": "0.3.1",

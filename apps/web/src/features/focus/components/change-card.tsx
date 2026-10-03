@@ -1,6 +1,5 @@
 import { ChangeDigestNote } from '@~/features/digests/components/change-digest-note';
 import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
-import { UnitTestsView } from '@~/features/digests/components/unit-tests-view';
 import type { iDigest } from '@~/features/digests/digests.types';
 import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
@@ -9,7 +8,9 @@ import type { iSnapshot } from '@~/features/reviews/reviews.types';
 import type { iFocusCard } from '../focus-cards.utils';
 import { CARD_VIEWS } from '../focus.enums';
 import type { CardExit, CardView } from '../focus.enums';
+import { useFoundTests } from '../hooks/use-found-tests';
 import { CardFindings } from './card-findings';
+import { CardTestsView } from './card-tests-view';
 import { ChangeCardTop } from './change-card-top';
 import { ChangeMarkNote } from './change-mark-note';
 import { ChangeMemberCode, ChangeMemberUsages } from './change-member-code';
@@ -25,6 +26,7 @@ interface iChangeCardProps {
   exit?: CardExit;
   onViewChange: (view: CardView) => void;
   onOpenInEditor: (path: string, line?: number) => void;
+  onOpenUnit: (unitId: string) => void;
   onEdit: () => void;
   onSwipe?: (exit: CardExit) => unknown;
 }
@@ -39,6 +41,7 @@ export function ChangeCard({
   exit,
   onViewChange,
   onOpenInEditor,
+  onOpenUnit,
   onEdit,
   onSwipe,
 }: iChangeCardProps) {
@@ -48,11 +51,14 @@ export function ChangeCard({
   const diagrams = content?.diagrams.filter((diagram) => diagram.unitIds.some((unitId) => unitIds.has(unitId))) ?? [];
   const allTests = content?.units.filter((note) => unitIds.has(note.unitId)).flatMap((note) => note.tests) ?? [];
   const tests = [...new Map(allTests.map((test) => [`${test.path}:${test.line ?? ''}`, test])).values()];
+  const found = useFoundTests(
+    snapshot.id,
+    card.units.map((unit) => unit.id),
+  );
+  const testCount = tests.length > 0 ? tests.length : found.length;
   const counts = new Map<CardView, number>([[CARD_VIEWS.code, card.units.length]]);
-  if (content) {
-    counts.set(CARD_VIEWS.diagram, diagrams.length);
-    counts.set(CARD_VIEWS.tests, tests.length);
-  }
+  if (content) counts.set(CARD_VIEWS.diagram, diagrams.length);
+  if (content || testCount > 0) counts.set(CARD_VIEWS.tests, testCount);
   const fileOf = (fileId: string) => snapshot.files.find((file) => file.id === fileId);
 
   return (
@@ -80,18 +86,23 @@ export function ChangeCard({
         : null}
       {view === CARD_VIEWS.diagram ? (
         <div className="border-t border-line">
-          <UnitDiagramView diagrams={diagrams} hasDigest={content !== undefined} />
+          <UnitDiagramView
+            snapshotId={snapshot.id}
+            diagrams={diagrams}
+            hasDigest={content !== undefined}
+            currentUnitIds={unitIds}
+            onOpenUnit={onOpenUnit}
+          />
         </div>
       ) : null}
       {view === CARD_VIEWS.tests ? (
-        <div className="border-t border-line">
-          <UnitTestsView
-            tests={tests}
-            headSha={snapshot.headSha}
-            hasDigest={content !== undefined}
-            onOpenInEditor={onOpenInEditor}
-          />
-        </div>
+        <CardTestsView
+          tests={tests}
+          found={found}
+          headSha={snapshot.headSha}
+          hasDigest={content !== undefined}
+          onOpenInEditor={onOpenInEditor}
+        />
       ) : null}
     </FocusCardShell>
   );

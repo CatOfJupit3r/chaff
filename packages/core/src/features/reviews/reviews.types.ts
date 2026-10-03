@@ -1,5 +1,5 @@
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
-import type { ReviewTargetKind, UnitMark } from '@chaff/common/enums/review.enums';
+import type { ArchiveReason, ReviewTargetKind, UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iNewReviewTarget } from './review-targets/review-targets.types';
 import type { iSnapshotFileSummary, iSnapshotRecord } from './snapshots/snapshots.types';
@@ -37,7 +37,17 @@ export interface iReviewTargetResponse {
   parentBranch: string;
   change?: iChangeRequestInfo;
   latestSnapshot?: iSnapshotSummary;
+  findingCount: number;
+  /** Findings still open or waiting on a fix or a check. */
+  activeFindingCount: number;
+  archived?: { at: Date; reason: ArchiveReason };
 }
+
+export type iReviewHistoryEntry = Omit<iReviewTargetResponse, 'latestSnapshot'> & {
+  latestSnapshot: iSnapshotSummary;
+  workspaceName: string;
+  lastActivityAt: Date;
+};
 
 export type iSnapshotResponse = iSnapshotSummary &
   Pick<iSnapshotRecord, 'targetId' | 'parentBranch' | 'parentHeadSha' | 'baseSha'> & {
@@ -54,6 +64,8 @@ export type iSnapshotResponse = iSnapshotSummary &
   };
 
 export interface iSnapshotLiveStatus {
+  /** Branch moves are pushed by watching the repository's refs; otherwise the status is re-read on a timer. */
+  isWatched: boolean;
   isBranchMissing: boolean;
   newCommitCount: number;
   isBranchRewritten: boolean;

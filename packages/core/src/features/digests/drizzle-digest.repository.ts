@@ -45,11 +45,15 @@ export class DrizzleDigestRepository implements iDigestRepository {
     return row ? this.digestResolver.toDigestRecord(row) : undefined;
   }
 
-  public async update(digestId: string, { content, ...changes }: iDigestUpdate) {
+  public async update(digestId: string, { content, preview, ...changes }: iDigestUpdate) {
     const row = this.databaseService
       .getDb()
       .update(digests)
-      .set({ ...changes, ...(content ? { content: JSON.stringify(content) } : {}) })
+      .set({
+        ...changes,
+        ...(content ? { content: JSON.stringify(content) } : {}),
+        ...(preview === undefined ? {} : { preview: preview && JSON.stringify(preview) }),
+      })
       .where(eq(digests.id, digestId))
       .returning()
       .get();
@@ -60,7 +64,7 @@ export class DrizzleDigestRepository implements iDigestRepository {
     const rows = this.databaseService
       .getDb()
       .update(digests)
-      .set({ status: DIGEST_STATUSES.FAILED, error, progress: null, finishedAt: new Date() })
+      .set({ status: DIGEST_STATUSES.FAILED, error, progress: null, preview: null, finishedAt: new Date() })
       .where(and(eq(digests.status, DIGEST_STATUSES.RUNNING)))
       .returning({ id: digests.id })
       .all();

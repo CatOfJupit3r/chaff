@@ -9,6 +9,7 @@ import { pluralize } from '@~/utils/pluralize';
 import type { iMarkTally } from '../focus-queue.utils';
 import { FOCUS_QUEUES } from '../focus.enums';
 import type { FocusQueue } from '../focus.enums';
+import { NextBranchStep } from './next-branch-step';
 
 interface iFocusEndCardProps {
   snapshot: iSnapshot;
@@ -74,6 +75,7 @@ export function FocusEndCard({ snapshot, tally, regions, queue, onQueue }: iFocu
           Full diff
         </Link>
       </div>
+      <NextBranchStep snapshot={snapshot} />
     </div>
   );
 }

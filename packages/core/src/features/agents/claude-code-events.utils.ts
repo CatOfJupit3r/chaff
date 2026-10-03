@@ -7,6 +7,35 @@ export interface iClaudeStreamEvent {
   result?: unknown;
   structured_output?: unknown;
   message?: { content?: { type?: string; name?: string; input?: Record<string, unknown> }[] };
+  /** With `--include-partial-messages`: one streamed piece of the assistant's message. */
+  event?: {
+    type?: string;
+    index?: number;
+    content_block?: { type?: string; name?: string };
+    delta?: { type?: string; partial_json?: string };
+  };
+}
+
+/**
+ * Follows the structured answer as Claude Code streams it: the JSON written so far into its `StructuredOutput`
+ * call. Returns the text after each piece, or undefined for events that add nothing.
+ */
+export function createStructuredOutputStream() {
+  let blockIndex: number | undefined;
+  let text = '';
+  return (event: iClaudeStreamEvent) => {
+    if (event.type !== 'stream_event' || !event.event) return undefined;
+    const { type, index, content_block: block, delta } = event.event;
+    if (type === 'message_start') blockIndex = undefined;
+    if (type === 'content_block_start' && block?.type === 'tool_use' && block.name === 'StructuredOutput') {
+      blockIndex = index;
+      text = '';
+      return undefined;
+    }
+    if (type !== 'content_block_delta' || index !== blockIndex || delta?.type !== 'input_json_delta') return undefined;
+    text += delta.partial_json ?? '';
+    return text;
+  };
 }
 
 export function parseClaudeStreamEvent(line: string) {

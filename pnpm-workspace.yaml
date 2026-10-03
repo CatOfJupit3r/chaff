@@ -4,6 +4,7 @@ packages:
   - configs/*
 allowBuilds:
   '@swc/core': true
+  '@tree-sitter-grammars/tree-sitter-kotlin': false
   electron-winstaller: false
   esbuild: true
   unrs-resolver: true
@@ -28,3 +29,5 @@ catalog:
   '@typescript/native-preview': 7.0.0-dev.20260707.2
 minimumReleaseAgeExclude:
   - eslint-plugin-n@18.2.2
+patchedDependencies:
+  '@pierre/diffs@1.5.1': patches/@pierre__diffs@1.5.1.patch

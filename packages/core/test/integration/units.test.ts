@@ -151,7 +151,7 @@ describe('review units', () => {
     expect(SCHEDULER).toContain('next(attempt: number)');
   });
 
-  it("finds where a function's name is used, outside the function itself", async () => {
+  it("finds where a function's name is used outside the function itself, marking test files", async () => {
     const { snapshotId } = await startFeatureReview(createFeatureRepo());
     const backoff = await unitByTitle(snapshotId, 'backoff');
 
@@ -167,6 +167,7 @@ describe('review units', () => {
           firstLine: 1,
           code: ["it('grows', () => {", '  expect(backoff(2)).toBe(4);', '});', ''],
           isInReview: true,
+          isInTest: true,
         },
       ],
     });

@@ -63,6 +63,8 @@ const CONTAINER_SYMBOL_KINDS: Record<string, SymbolKind> = {
   namespace_declaration: SYMBOL_KINDS.MODULE,
   namespace_definition: SYMBOL_KINDS.MODULE,
   mod_item: SYMBOL_KINDS.MODULE,
+  object_declaration: SYMBOL_KINDS.CLASS,
+  type_alias: SYMBOL_KINDS.TYPE,
 };
 
 /** Containers that are usually too large to review as one unit. */
@@ -102,6 +104,7 @@ const TEST_CALLEES = new Set([
 const NAME_LIKE_NODE_TYPE = /identifier|name|constant/;
 const VISIBILITY_NODE_TYPE = /visibility_modifier|^modifiers?$/;
 const PUBLIC_KEYWORD = /\b(pub|public|export)\b/;
+const NON_PUBLIC_KEYWORD = /\b(private|internal|protected)\b/;
 
 function namedChildren(node: Node) {
   return node.namedChildren.filter((child): child is Node => child !== null);
@@ -138,6 +141,10 @@ function isExported(node: Node, name: string, grammar: Grammar) {
   if (hasPublicModifier(node)) return true;
   if (grammar === GRAMMARS.GO) return /^[A-Z]/.test(name);
   if (grammar === GRAMMARS.PYTHON) return !name.startsWith('_');
+  // Kotlin declarations are public unless a modifier says otherwise.
+  if (grammar === GRAMMARS.KOTLIN) {
+    return !namedChildren(node).some((child) => child.type === 'modifiers' && NON_PUBLIC_KEYWORD.test(child.text));
+  }
   return false;
 }
 
@@ -194,7 +201,10 @@ function describeNode(node: Node, grammar: Grammar, containers: string[], isInsi
   const containerKind = CONTAINER_SYMBOL_KINDS[type];
   if (containerKind) {
     const name = nameOf(node);
-    return name ? ({ name, symbolKind: containerKind, isFunctionLike: false } satisfies iDeclarationDraft) : undefined;
+    // Kotlin writes interfaces as class declarations with the `interface` keyword.
+    const isKotlinInterface = node.children.some((child) => child?.type === 'interface');
+    const symbolKind = isKotlinInterface ? SYMBOL_KINDS.INTERFACE : containerKind;
+    return name ? ({ name, symbolKind, isFunctionLike: false } satisfies iDeclarationDraft) : undefined;
   }
 
   if (ASSIGNMENT_NODE_TYPES.has(type)) {

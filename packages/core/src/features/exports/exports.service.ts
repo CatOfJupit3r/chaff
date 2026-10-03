@@ -150,6 +150,9 @@ export class ExportsService {
       const raised = raisedLocation(history, anchor.id, raisedOn);
       const latest = anchor.locations.at(-1);
       const current = latest?.snapshotId === snapshot.id ? latest : undefined;
+      const currentText = current
+        ? history.find((location) => location.anchorId === anchor.id && location.snapshotId === snapshot.id)?.text
+        : undefined;
       const original = raised
         ? { ...raised, quote: raised.text }
         : {
@@ -177,6 +180,7 @@ export class ExportsService {
           endLine: current.endLine,
           headSha: current.headSha,
           match: current.match,
+          quote: currentText ?? undefined,
         },
         unitTitle: unitId ? titles.get(unitId) : undefined,
       };

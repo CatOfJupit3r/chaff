@@ -29,7 +29,9 @@ export function FocusHints() {
     { keys: ['←', '→'], label: 'move' },
     ...ACTION_HINTS.map(([action, text]) => ({ keys: [label(action)], label: text })),
     { keys: ['1', '4'], label: 'code, usages, diagram, tests', isRange: true },
+    { keys: [label(SHORTCUT_ACTIONS.FOCUS_EXPAND)], label: 'whole file' },
     { keys: [label(SHORTCUT_ACTIONS.FOCUS_CONTEXT)], label: 'context' },
+    { keys: ['?'], label: 'all keys' },
   ];
 
   return (

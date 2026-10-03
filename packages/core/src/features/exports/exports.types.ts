@@ -30,8 +30,8 @@ export interface iPacketAnchor {
   side: DiffSide;
   /** Where the reviewer wrote it, with the code as it was when the finding was last raised. */
   original: iPacketLines & { quote: string; contextBefore: string; contextAfter: string };
-  /** Where it is in the review's newest snapshot; absent when it was written on that snapshot. */
-  current?: iPacketLines & { match: AnchorMatch };
+  /** Where it is in the review's newest snapshot, with the code there; absent when it was written on that snapshot. */
+  current?: iPacketLines & { match: AnchorMatch; quote?: string };
   unitTitle?: string;
 }
 

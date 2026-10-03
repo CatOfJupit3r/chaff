@@ -38,6 +38,7 @@ export function summarizeStackReview(stack: iLocalStack, targets: readonly iRevi
     links,
     next: lastStarted ?? links[0],
     isStarted: started.length > 0,
+    activeFindingCount: links.reduce((total, link) => total + (link.target?.activeFindingCount ?? 0), 0),
     regionCount: started.reduce((total, link) => total + (link.target?.latestSnapshot?.regionCount ?? 0), 0),
     accountedRegionCount: started.reduce(
       (total, link) => total + (link.target?.latestSnapshot?.accountedRegionCount ?? 0),

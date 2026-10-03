@@ -2,6 +2,7 @@ import { Screen } from '@~/components/layout/screen';
 import { TopBar } from '@~/components/layout/top-bar';
 import { List } from '@~/components/ui/list';
 import { SectionLabel } from '@~/components/ui/section-label';
+import { ReplayOnboarding } from '@~/features/onboarding/components/replay-onboarding';
 import { PreferencesSection } from '@~/features/preferences/components/preferences-section';
 import { AgentsSection } from '@~/features/settings/components/agents-section';
 import { DiffLayoutSection } from '@~/features/settings/components/diff-layout-section';
@@ -46,6 +47,7 @@ export function SettingsScreen() {
           <AgentsSection />
           <PreferencesSection workspaces={workspaces} />
           <ShortcutsSection />
+          <ReplayOnboarding />
         </div>
       </Screen>
     </>

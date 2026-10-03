@@ -1,10 +1,12 @@
 import { call } from '@orpc/server';
 import { describe, expect, it } from 'vitest';
 
+import { EXPORT_SCOPES } from '@chaff/common/enums/export.enums';
 import {
   ANCHOR_MATCHES,
   FINDING_KINDS,
   FINDING_STATUSES,
+  findingStatusesEnumwaii,
   UNIT_MARKS,
   UNIT_REVISIONS,
 } from '@chaff/common/enums/review.enums';
@@ -174,6 +176,22 @@ describe('second pass', () => {
     });
     const [unchanged] = await call(appRouter.findings.compare, { findingId: onBackoff.id });
     expect(unchanged?.after).toMatchObject({ match: ANCHOR_MATCHES.EXACT, text: unchanged?.before.text });
+
+    const packet = await call(appRouter.exports.packet, {
+      snapshotId: nextId,
+      scope: EXPORT_SCOPES.review,
+      statuses: [...findingStatusesEnumwaii.values],
+      findingIds: [onNext.id, onTest.id],
+      shouldQuoteCode: true,
+      shouldListUnreviewed: false,
+    });
+    // The quote is the code at the location the packet names, not the code as it was raised.
+    expect(packet.markdown).toContain(
+      `\`src/scheduler.ts:4-6\` (Scheduler.next) @ ${repo.git('rev-parse', 'feature').slice(0, 7)}`,
+    );
+    expect(packet.markdown).toContain('return attempt * 4;');
+    expect(packet.markdown).not.toContain('return attempt * 3;');
+    expect(packet.markdown).toContain('expect(backoff(2))');
   });
 
   it('compares a reopened concern with the code it was reopened on', async () => {
