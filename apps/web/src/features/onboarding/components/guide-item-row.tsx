@@ -32,7 +32,7 @@ function StatusMark({ isDone }: { isDone: boolean }) {
 
 /** One checklist item: opens to say what it is about, with Show me; a Later item says what unlocks it. */
 export function GuideItemRow({ item, isDone, isOpen, onToggle, onShowMe }: iGuideItemRowProps) {
-  const guide = ONBOARDING_ITEM_GUIDES(item);
+  const guide = ONBOARDING_ITEM_GUIDES.get(item);
   const detailId = useId();
 
   if (guide.unlock && !isDone) {

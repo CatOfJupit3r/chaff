@@ -140,7 +140,7 @@ export function buildUnitPatch(input: iUnitPatchInput): string | undefined {
 
   const body = hunks.flatMap((hunk) => [
     hunkHeader(hunk),
-    ...hunk.map((line) => `${DIFF_LINE_MARKERS(line.type)}${line.text}`),
+    ...hunk.map((line) => `${DIFF_LINE_MARKERS.get(line.type)}${line.text}`),
   ]);
   return `${[header, ...body].join('\n')}\n`;
 }

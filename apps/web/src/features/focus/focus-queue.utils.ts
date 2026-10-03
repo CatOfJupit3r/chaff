@@ -36,7 +36,7 @@ export function countRegions(units: readonly iUnit[]) {
   const sum = (list: readonly iUnit[]) => list.reduce((total, unit) => total + unit.regionCount, 0);
   return {
     regionCount: sum(units),
-    accountedRegionCount: sum(units.filter((unit) => unit.mark !== undefined && IS_ACCOUNTED_MARK(unit.mark))),
+    accountedRegionCount: sum(units.filter((unit) => unit.mark !== undefined && IS_ACCOUNTED_MARK.get(unit.mark))),
   };
 }
 

@@ -14,9 +14,10 @@ interface iDigestOptionsFieldsProps extends Pick<
 }
 
 function modelHint(runner: DigestRunner, isModelsPending: boolean, modelCount: number) {
-  if (isModelsPending) return `Asking ${DIGEST_RUNNER_LABELS(runner)} for its models...`;
-  if (modelCount === 0) return `${DIGEST_RUNNER_LABELS(runner)} didn't list its models, so it runs with its default.`;
-  return `Passed to ${DIGEST_RUNNER_LABELS(runner)} as --model.`;
+  if (isModelsPending) return `Asking ${DIGEST_RUNNER_LABELS.get(runner)} for its models...`;
+  if (modelCount === 0)
+    return `${DIGEST_RUNNER_LABELS.get(runner)} didn't list its models, so it runs with its default.`;
+  return `Passed to ${DIGEST_RUNNER_LABELS.get(runner)} as --model.`;
 }
 
 /** The model the agent runs with and anything the reviewer wants it to look at on top of the usual digest. */
@@ -40,7 +41,7 @@ export function DigestOptionsFields({
           onChange={(event) => setModel(event.target.value)}
           className="w-full"
         >
-          <option value="">{DIGEST_RUNNER_LABELS(runner)} default</option>
+          <option value="">{DIGEST_RUNNER_LABELS.get(runner)} default</option>
           {models.map((candidate) => (
             <option key={candidate.id} value={candidate.id} title={candidate.description}>
               {candidate.label}

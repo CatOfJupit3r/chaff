@@ -55,7 +55,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
         {interdiff.reviewed ? (
           <SegmentedControl
             label="Compare"
-            options={codeScopeValues.map((value) => ({ value, label: CODE_SCOPE_LABELS(value) }))}
+            options={codeScopeValues.map((value) => ({ value, label: CODE_SCOPE_LABELS.get(value) }))}
             value={scope}
             onChange={setScope}
           />

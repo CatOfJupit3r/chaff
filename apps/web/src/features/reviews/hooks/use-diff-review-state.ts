@@ -65,7 +65,7 @@ export function useDiffReviewState(snapshot: iSnapshot): iDiffReview {
     if (!draft) return false;
     try {
       const finding = await create.mutateAsync({ snapshotId, kind, body, anchors: [draft] });
-      showToast(`${FINDING_KIND_LABELS(kind)} F-${finding.number} saved`);
+      showToast(`${FINDING_KIND_LABELS.get(kind)} F-${finding.number} saved`);
       setDraft(undefined);
       return true;
     } catch (error) {

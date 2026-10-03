@@ -14,10 +14,7 @@ export interface iDiffNote {
   discussion?: iDiscussion;
 }
 
-const ANNOTATION_SIDES = diffSidesEnumwaii.derive({
-  [DIFF_SIDES.OLD]: 'deletions',
-  [DIFF_SIDES.NEW]: 'additions',
-});
+const ANNOTATION_SIDES = diffSidesEnumwaii.derive([DIFF_SIDES.OLD, 'deletions'], [DIFF_SIDES.NEW, 'additions']);
 
 export function buildNoteAnnotations(
   fileId: string,
@@ -26,7 +23,7 @@ export function buildNoteAnnotations(
   discussions: readonly iDiscussion[] = [],
 ): DiffLineAnnotation<iDiffNote>[] {
   const annotations: DiffLineAnnotation<iDiffNote>[] = placements.map(({ finding, side, line }) => ({
-    side: ANNOTATION_SIDES(side),
+    side: ANNOTATION_SIDES.get(side),
     lineNumber: line,
     metadata: { finding },
   }));
@@ -34,10 +31,10 @@ export function buildNoteAnnotations(
     const side = discussion.newLine === undefined ? DIFF_SIDES.OLD : DIFF_SIDES.NEW;
     const line = discussion.newLine ?? discussion.oldLine;
     if (line !== undefined)
-      annotations.push({ side: ANNOTATION_SIDES(side), lineNumber: line, metadata: { discussion } });
+      annotations.push({ side: ANNOTATION_SIDES.get(side), lineNumber: line, metadata: { discussion } });
   }
   if (draft?.fileId === fileId) {
-    annotations.push({ side: ANNOTATION_SIDES(draft.side), lineNumber: draft.endLine, metadata: {} });
+    annotations.push({ side: ANNOTATION_SIDES.get(draft.side), lineNumber: draft.endLine, metadata: {} });
   }
   return annotations;
 }

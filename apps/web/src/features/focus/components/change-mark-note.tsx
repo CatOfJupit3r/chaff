@@ -29,7 +29,7 @@ export function ChangeMarkNote({ card, headSha, hasFindings }: iChangeMarkNotePr
 
   return (
     <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-canvas px-[22px] py-[9px] text-[12.5px] text-muted">
-      <Pill variant="neutral">{mark ? UNIT_MARK_LABELS(mark) : 'Mixed'}</Pill>
+      <Pill variant="neutral">{mark ? UNIT_MARK_LABELS.get(mark) : 'Mixed'}</Pill>
       <span>
         {card.units[0]?.skipReason && mark ? `Skipped: ${card.units[0].skipReason}. ` : ''}
         {mark ? `You decided this on ${headSha.slice(0, 7)}.` : `Its units differ: ${parts.join(', ')}.`}

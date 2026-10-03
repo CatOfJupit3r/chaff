@@ -37,8 +37,8 @@ export function FixRow({ fix, onCancel, onDiscard }: iFixRowProps) {
   return (
     <div className="flex flex-col gap-2.5 border-t border-line px-4 py-3.5 text-[13px] first:border-t-0">
       <div className="flex items-center gap-2.5">
-        <Pill variant={FIX_STATUS_PILLS(fix.status)}>{FIX_STATUS_LABELS(fix.status)}</Pill>
-        <span className="font-medium text-fg">{DIGEST_RUNNER_LABELS(fix.runner)}</span>
+        <Pill variant={FIX_STATUS_PILLS.get(fix.status)}>{FIX_STATUS_LABELS.get(fix.status)}</Pill>
+        <span className="font-medium text-fg">{DIGEST_RUNNER_LABELS.get(fix.runner)}</span>
         <span className="font-mono text-[12px] text-muted">{findingLabels(fix.findingNumbers)}</span>
         <span className="ml-auto text-[12px] text-faint">{formatRelativeTime(fix.startedAt)}</span>
       </div>
@@ -52,7 +52,7 @@ export function FixRow({ fix, onCancel, onDiscard }: iFixRowProps) {
       ) : null}
       {fix.report?.applied.map((item) => (
         <p key={item.findingId} className="m-0 text-fg">
-          <span className="font-mono text-muted">F-{item.number}</span> is now {FINDING_STATUS_LABELS(item.status)}
+          <span className="font-mono text-muted">F-{item.number}</span> is now {FINDING_STATUS_LABELS.get(item.status)}
         </p>
       ))}
       {fix.summary ? (

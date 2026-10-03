@@ -44,7 +44,7 @@ export function useGuideTip() {
   const showMe = (item: OnboardingItem) => {
     returnFocus.current = document.activeElement;
     setTipItem(item);
-    const { screen } = ONBOARDING_ITEM_GUIDES(item);
+    const { screen } = ONBOARDING_ITEM_GUIDES.get(item);
     if (screen === ONBOARDING_SCREENS.ANYWHERE || screen === screenForPath(pathname)) return;
     goTo(screen).catch((error: unknown) => showToast(getErrorMessage(error)));
   };
@@ -76,7 +76,7 @@ export function useGuideTip() {
     };
   });
 
-  const screen = tipItem ? ONBOARDING_ITEM_GUIDES(tipItem).screen : undefined;
+  const screen = tipItem ? ONBOARDING_ITEM_GUIDES.get(tipItem).screen : undefined;
   return {
     tipItem,
     isWaitingForReview: screen !== undefined && isReviewScreen(screen) && !reviewId,

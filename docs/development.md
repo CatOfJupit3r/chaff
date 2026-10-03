@@ -9,7 +9,7 @@ Setup and first run are in the [README](../README.md#getting-started). This page
 - `packages/core` (`@chaff/core`) - the Chaff core, a library bundled into the desktop main process: oRPC routers, services, SQLite schema and migrations, read-only git access, snapshot store, tree-sitter units
 - `packages/server-contract` - API contract definitions and schema exports
 - `packages/common` - shared utilities, types, constants, and helpers
-- `packages/enumwaii` - enum helper library and its ESLint rules
+- `enumwaii` and `eslint-plugin-enumwaii` - npm dependencies for typed enums and their ESLint rules
 - `configs/*` - shared ESLint and Prettier configs
 - `assets/brand` - Chaff icon: `chaff-mark.svg` (single-color, uses `currentColor`) and the dark/light PNG originals
 - `docs` - this documentation and the screenshots used in the README

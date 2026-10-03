@@ -48,14 +48,14 @@ export function AgentRow({ runner, status }: iAgentRowProps) {
     <ListRow className="items-start">
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex items-center gap-2">
-          <b className="text-[13px] font-medium text-fg">{DIGEST_RUNNER_LABELS(runner)}</b>
-          <span className="text-[12px] text-muted">{DIGEST_RUNNER_PROVIDERS(runner)}</span>
+          <b className="text-[13px] font-medium text-fg">{DIGEST_RUNNER_LABELS.get(runner)}</b>
+          <span className="text-[12px] text-muted">{DIGEST_RUNNER_PROVIDERS.get(runner)}</span>
           {isDefault ? <Pill>Default</Pill> : null}
         </div>
         <TextInput
-          aria-label={`${DIGEST_RUNNER_LABELS(runner)} command`}
+          aria-label={`${DIGEST_RUNNER_LABELS.get(runner)} command`}
           value={draft}
-          placeholder={`${DIGEST_RUNNER_COMMANDS(runner)} (found on PATH)`}
+          placeholder={`${DIGEST_RUNNER_COMMANDS.get(runner)} (found on PATH)`}
           spellCheck={false}
           className="max-w-[520px] font-mono text-[12.5px]"
           onChange={(event) => setDraft(event.target.value)}

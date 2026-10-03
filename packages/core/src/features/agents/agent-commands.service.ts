@@ -40,7 +40,7 @@ export class AgentCommandsService {
     const command = await resolveExecutable(this.commandFor(runner, agentCommands));
     if (!command) {
       throw ORPCUnprocessableContentError(errorCodes.DIGEST_RUNNER_UNAVAILABLE, {
-        runner: DIGEST_RUNNER_LABELS(runner),
+        runner: DIGEST_RUNNER_LABELS.get(runner),
       });
     }
     return command;
@@ -48,6 +48,6 @@ export class AgentCommandsService {
 
   private commandFor(runner: DigestRunner, agentCommands: iSettingsResponse['agentCommands']) {
     const picked = agentCommands.find((candidate) => candidate.runner === runner)?.command;
-    return picked ?? this.options.agentCommands?.get(runner) ?? DIGEST_RUNNER_COMMANDS(runner);
+    return picked ?? this.options.agentCommands?.get(runner) ?? DIGEST_RUNNER_COMMANDS.get(runner);
   }
 }

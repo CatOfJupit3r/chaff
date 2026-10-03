@@ -33,7 +33,7 @@ export function PostingView({ snapshot, host, statuses, tab }: iPostingViewProps
       </div>
     );
   }
-  if (!preview.data) return <p className="m-0 px-5 py-4 text-muted">Asking {CODE_HOST_LABELS(host)}...</p>;
+  if (!preview.data) return <p className="m-0 px-5 py-4 text-muted">Asking {CODE_HOST_LABELS.get(host)}...</p>;
   if (tab === EXPORT_TABS.post) return <PostingList snapshot={snapshot} preview={preview.data} statuses={statuses} />;
 
   const command = tab === EXPORT_TABS.cli ? preview.data.cliCommand : preview.data.curlCommand;
@@ -42,8 +42,8 @@ export function PostingView({ snapshot, host, statuses, tab }: iPostingViewProps
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2.5 text-[12.5px] text-muted">
         <span>
           {command
-            ? `The same draft as commands you run yourself. Nothing is published until you submit the review on ${CODE_HOST_LABELS(host)}.`
-            : `Every chosen finding is already posted to this ${CHANGE_REQUEST_NOUNS(host)}.`}
+            ? `The same draft as commands you run yourself. Nothing is published until you submit the review on ${CODE_HOST_LABELS.get(host)}.`
+            : `Every chosen finding is already posted to this ${CHANGE_REQUEST_NOUNS.get(host)}.`}
         </span>
         <Button size="sm" disabled={!command} onClick={async () => copy(command)}>
           <CopyIcon />

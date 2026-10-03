@@ -18,7 +18,7 @@ interface iRepositoryRemoteRowProps {
 function describeRemote(remote: ReturnType<typeof useWorkspaceRemote>['remote'], connections: readonly iConnection[]) {
   if (!remote) return 'No project. Its remotes match none of your connections.';
   const connection = connections.find((candidate) => candidate.id === remote.connectionId);
-  const host = connection ? CODE_HOST_LABELS(connection.host) : 'Unknown host';
+  const host = connection ? CODE_HOST_LABELS.get(connection.host) : 'Unknown host';
   return `${host} · ${remote.project}${remote.isDetected ? ' (from its remotes)' : ''}`;
 }
 
@@ -50,7 +50,7 @@ export function RepositoryRemoteRow({ workspace, connections }: iRepositoryRemot
             >
               {connections.map((connection) => (
                 <option key={connection.id} value={connection.id}>
-                  {CODE_HOST_LABELS(connection.host)} · {connection.baseUrl}
+                  {CODE_HOST_LABELS.get(connection.host)} · {connection.baseUrl}
                 </option>
               ))}
             </SelectInput>

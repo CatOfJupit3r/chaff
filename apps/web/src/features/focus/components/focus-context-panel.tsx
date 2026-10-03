@@ -68,7 +68,7 @@ export function FocusContextPanel({
       <ContextFindings title="From the rest of the stack" findings={stackFindings} shouldShowBranch />
       <section className="flex min-h-0 flex-col gap-2">
         <div className="flex items-center justify-between">
-          <SectionLabel>{REVIEW_PROGRESSION_LABELS(progression)}</SectionLabel>
+          <SectionLabel>{REVIEW_PROGRESSION_LABELS.get(progression)}</SectionLabel>
           {progression === REVIEW_PROGRESSIONS.changes ? (
             <Button variant="ghost" size="sm" onClick={onEditChanges}>
               <EditIcon />
@@ -93,7 +93,7 @@ export function FocusContextPanel({
                 <span
                   className={cn(
                     'size-2 flex-none rounded-full bg-line-strong',
-                    mark && UNIT_MARK_SEGMENT_CLASSES(mark),
+                    mark && UNIT_MARK_SEGMENT_CLASSES.get(mark),
                   )}
                 />
                 <span className={cn('min-w-0 flex-1 truncate', card.change && 'font-medium')}>{card.title}</span>

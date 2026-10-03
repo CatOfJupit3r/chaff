@@ -86,7 +86,7 @@ export function NoteComposer({ mark, headSha, isSaving, source, onCancel, onSave
   const textArea = useRef<HTMLTextAreaElement>(null);
   const style = NOTE_STYLES.get(mark) ?? QUESTION_STYLE;
   const isSkip = mark === UNIT_MARKS.SKIPPED;
-  const scopeFooter = isSkip ? undefined : NOTE_SCOPE_FOOTERS(options.scope);
+  const scopeFooter = isSkip ? undefined : NOTE_SCOPE_FOOTERS.get(options.scope);
   const isCardCovered =
     isSkip ||
     options.scope === NOTE_SCOPES.CARD ||

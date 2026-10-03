@@ -5,7 +5,7 @@ import type { iDiscussion } from './code-hosts.types';
 
 /** "!412" on GitLab, "#412" on GitHub. */
 export function changeLabel(host: CodeHost, changeNumber: number) {
-  return `${CHANGE_REQUEST_PREFIXES(host)}${changeNumber}`;
+  return `${CHANGE_REQUEST_PREFIXES.get(host)}${changeNumber}`;
 }
 
 /** Threads on a file, by the line they sit on in the new version (or the old one for deleted lines). */

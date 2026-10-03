@@ -38,12 +38,12 @@ function anchorSection(anchor: iFindingRecord['anchors'][number]) {
 
 /** Asks for the finding restated as one task a coding agent can act on, no wider than the comment. */
 export function buildTaskPrompt(finding: iFindingRecord) {
-  const kind = FINDING_KIND_LABELS(finding.kind);
-  const severity = finding.severity ? `, ${FINDING_SEVERITY_LABELS(finding.severity)}` : '';
+  const kind = FINDING_KIND_LABELS.get(finding.kind);
+  const severity = finding.severity ? `, ${FINDING_SEVERITY_LABELS.get(finding.severity)}` : '';
   const places =
     finding.anchors.length > 0
       ? finding.anchors.map(anchorSection).join('\n\n')
-      : `${FINDING_SCOPE_LABELS(finding.scope)}.`;
+      : `${FINDING_SCOPE_LABELS.get(finding.scope)}.`;
   return [
     'A reviewer wrote the comment below on a branch an AI coding agent produced. Restate it as one task the agent can act on.',
     '',

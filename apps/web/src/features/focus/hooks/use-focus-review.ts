@@ -101,7 +101,7 @@ export function useFocusReview(snapshotId: string) {
     if (!current.units.every((unit) => marked.some((candidate) => candidate.id === unit.id))) return;
     const decided = new Map(marked.map((unit) => [unit.id, mark]));
     const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
-    cardExit.run(UNIT_MARK_EXITS(mark), () => goTo(nextIndex));
+    cardExit.run(UNIT_MARK_EXITS.get(mark), () => goTo(nextIndex));
   };
 
   const decide = (mark: typeof UNIT_MARKS.LOOKS_GOOD | typeof UNIT_MARKS.LATER) => {

@@ -8,11 +8,11 @@ import type { iCoreHost } from '@~/host/core-host.types';
 
 import { SecretFile } from './secret-file';
 
-const THEME_SOURCES = themeModesEnumwaii.derive({
-  [THEME_MODES.SYSTEM]: 'system',
-  [THEME_MODES.DARK]: 'dark',
-  [THEME_MODES.LIGHT]: 'light',
-});
+const THEME_SOURCES = themeModesEnumwaii.derive(
+  [THEME_MODES.SYSTEM, 'system'],
+  [THEME_MODES.DARK, 'dark'],
+  [THEME_MODES.LIGHT, 'light'],
+);
 
 /** What the core may ask of the OS: a folder picker, opening links, following the theme, and the keychain. */
 export class ElectronCoreHost implements iCoreHost {
@@ -41,6 +41,6 @@ export class ElectronCoreHost implements iCoreHost {
   }
 
   public async applyTheme(theme: ThemeMode) {
-    nativeTheme.themeSource = THEME_SOURCES(theme);
+    nativeTheme.themeSource = THEME_SOURCES.get(theme);
   }
 }

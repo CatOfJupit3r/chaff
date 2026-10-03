@@ -9,10 +9,10 @@ import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import type { iHostWrite } from '@~/features/code-hosts/code-hosts.types';
 
 /** The header curl sends; the token is read from an environment variable the reviewer sets. */
-const TOKEN_HEADERS = codeHostsEnumwaii.derive({
-  [CODE_HOSTS.GITLAB]: 'PRIVATE-TOKEN: $GITLAB_TOKEN',
-  [CODE_HOSTS.GITHUB]: 'Authorization: Bearer $GITHUB_TOKEN',
-});
+const TOKEN_HEADERS = codeHostsEnumwaii.derive(
+  [CODE_HOSTS.GITLAB, 'PRIVATE-TOKEN: $GITLAB_TOKEN'],
+  [CODE_HOSTS.GITHUB, 'Authorization: Bearer $GITHUB_TOKEN'],
+);
 
 const DELIMITER = 'CHAFF_JSON';
 

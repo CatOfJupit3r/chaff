@@ -29,7 +29,7 @@ export function ConnectionsSection() {
           <ListRow key={connection.id}>
             <div className="min-w-0">
               <div className="font-medium">
-                {CODE_HOST_LABELS(connection.host)}{' '}
+                {CODE_HOST_LABELS.get(connection.host)}{' '}
                 <span className="font-normal text-muted">as @{connection.username}</span>
               </div>
               <div className="mt-[3px] flex flex-wrap gap-x-3.5 text-[12.5px] text-muted">

@@ -78,19 +78,20 @@ throw ORPCInternalServerError(errorCodes.GIT_UNAVAILABLE, undefined, { cause: er
 Add the code to the `Enumwaii` list in `packages/common/src/enums/errors.enums.ts` and its message to the `errorMessages` map. `derive` throws at load time when a code has no message, so always add both:
 
 ```typescript
-const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
+import { em } from 'enumwaii';
+const errorCodesEnumwaii = em([
   'INTERNAL_SERVER_ERROR',
   'WORKSPACE_NOT_FOUND',
   // ...other codes
   'MY_NEW_ERROR',
 ]);
 
-export const errorMessages = errorCodesEnumwaii.derive({
-  [errorCodes.INTERNAL_SERVER_ERROR]: 'An unexpected error occurred',
-  [errorCodes.WORKSPACE_NOT_FOUND]: 'Repository not found',
+export const errorMessages = errorCodesEnumwaii.derive(
+  [errorCodes.INTERNAL_SERVER_ERROR, 'An unexpected error occurred'],
+  [errorCodes.WORKSPACE_NOT_FOUND, 'Repository not found'],
   // ...other messages
-  [errorCodes.MY_NEW_ERROR]: 'Clear, user-friendly error message',
-});
+  [errorCodes.MY_NEW_ERROR, 'Clear, user-friendly error message'],
+);
 ```
 
 ### 2. Use the error code in your handler/service
@@ -131,7 +132,7 @@ Allowed in the current state? -> No -> ORPCUnprocessableContentError
 
 **Always use error codes**: Never expose raw errors or use undefined error codes. All codes must be defined in `packages/common/src/enums/errors.enums.ts`.
 
-**Use enumwaii for closed-set decisions**: Import the owning `Enumwaii` accessor and compare against members such as `THEME_MODES.DARK`. Never introduce raw mode/status/kind strings, duplicate unions, or ad-hoc maps. Validate untrusted values with the enumwaii `.schema`, `.parse`, `.safeParse`, or `.is` before branching on them.
+**Use enumwaii for closed-set decisions**: Import the owning `Enumwaii` accessor and compare against members such as `THEME_MODES.DARK`. Never introduce raw mode/status/kind strings, duplicate unions, or ad-hoc maps. Validate untrusted values with the enumwaii Zod adapter, `.parse`, `.safeParse`, or `.is` before branching on them.
 
 ## Advanced error utilities
 

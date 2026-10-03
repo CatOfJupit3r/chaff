@@ -24,7 +24,7 @@ interface iConnectDialogProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-const HOST_OPTIONS = codeHostValues.map((value) => ({ value, label: CODE_HOST_LABELS(value) }));
+const HOST_OPTIONS = codeHostValues.map((value) => ({ value, label: CODE_HOST_LABELS.get(value) }));
 
 export function ConnectDialog({ isOpen, onOpenChange }: iConnectDialogProps) {
   const { connect } = useConnectionMutations();
@@ -62,12 +62,12 @@ export function ConnectDialog({ isOpen, onOpenChange }: iConnectDialogProps) {
               <TextInput
                 value={baseUrl}
                 onChange={(event) => setBaseUrl(event.target.value)}
-                placeholder={CODE_HOST_DEFAULT_URLS(host)}
+                placeholder={CODE_HOST_DEFAULT_URLS.get(host)}
                 aria-label="Address"
                 spellCheck={false}
               />
             </Field>
-            <Field label="Token" hint={TOKEN_SCOPE_HINTS(host)}>
+            <Field label="Token" hint={TOKEN_SCOPE_HINTS.get(host)}>
               <TextInput
                 type="password"
                 value={token}
@@ -78,8 +78,8 @@ export function ConnectDialog({ isOpen, onOpenChange }: iConnectDialogProps) {
               />
             </Field>
             <Callout>
-              The token is checked with {CODE_HOST_LABELS(host)}, then kept encrypted in your system keychain. It never
-              leaves this computer except to talk to {CODE_HOST_LABELS(host)}.
+              The token is checked with {CODE_HOST_LABELS.get(host)}, then kept encrypted in your system keychain. It
+              never leaves this computer except to talk to {CODE_HOST_LABELS.get(host)}.
             </Callout>
             {connect.error ? <Callout variant="warn">{getErrorMessage(connect.error)}</Callout> : null}
             <DialogFooter>

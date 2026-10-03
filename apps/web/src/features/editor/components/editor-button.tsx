@@ -22,7 +22,7 @@ export function EditorButton() {
         onClick={() => setIsOpen(true)}
       >
         <ExternalIcon />
-        {EDITOR_LABELS(editor)}
+        {EDITOR_LABELS.get(editor)}
       </Button>
       <EditorDialog isOpen={isOpen} onOpenChange={setIsOpen} />
     </>

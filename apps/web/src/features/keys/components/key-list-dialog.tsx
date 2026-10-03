@@ -65,8 +65,11 @@ export function KeyListDialog() {
   }, [isOpen]);
   const screenRows = (screen: ShortcutScreen) =>
     shortcutActionValues
-      .filter((action) => SHORTCUT_ACTION_SCREENS(action) === screen)
-      .map((action) => ({ keys: [shortcutKeyLabel(keys.get(action) ?? '')], label: SHORTCUT_ACTION_LABELS(action) }));
+      .filter((action) => SHORTCUT_ACTION_SCREENS.get(action) === screen)
+      .map((action) => ({
+        keys: [shortcutKeyLabel(keys.get(action) ?? '')],
+        label: SHORTCUT_ACTION_LABELS.get(action),
+      }));
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -77,7 +80,7 @@ export function KeyListDialog() {
           {shortcutScreenValues.map((screen) => (
             <KeyRows
               key={screen}
-              title={SHORTCUT_SCREEN_LABELS(screen)}
+              title={SHORTCUT_SCREEN_LABELS.get(screen)}
               rows={screen === SHORTCUT_SCREENS.FOCUS ? [...FOCUS_FIXED, ...screenRows(screen)] : screenRows(screen)}
             />
           ))}

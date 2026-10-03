@@ -29,7 +29,7 @@ interface iNoteOptionsProps {
 const scopeLabel = (scope: NoteScope, options: iNoteOptions) =>
   scope === NOTE_SCOPES.UNITS && options.scope === NOTE_SCOPES.UNITS
     ? `${options.unitIds.length} units…`
-    : NOTE_SCOPE_LABELS(scope);
+    : NOTE_SCOPE_LABELS.get(scope);
 
 /** What the concern or question is about (this card, picked units, the branch or the stack) and its severity. */
 export function NoteOptions({ mark, options, source, isEnabled, onChange }: iNoteOptionsProps) {

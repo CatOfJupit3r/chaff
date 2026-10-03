@@ -16,7 +16,7 @@ description: Create React components following project conventions for UI compos
 
 ## Enumwaii requirement
 
-Use `Enumwaii` for every closed set used by a component, hook, URL state, select, default, or test fixture. Import the owning accessor and use members such as `SETTINGS_TABS.ACCOUNT`; do not introduce `z.enum`, raw string unions, duplicated literals, or `Record<string, ...>` maps for enum-backed values. Use the enumwaii `.schema` in form validation and computed keys in metadata maps (`{ [SETTINGS_TABS.ACCOUNT]: ... }`).
+Use `Enumwaii` for every closed set used by a component, hook, URL state, select, default, or test fixture. Import the owning accessor and use members such as `SETTINGS_TABS.ACCOUNT`; do not introduce `z.enum`, raw string unions, duplicated literals, or `Record<string, ...>` maps for enum-backed values. Use `emToZodSchema` from `enumwaii/zod` for form validation and tuple entries in derived metadata (`[SETTINGS_TABS.ACCOUNT, ...]`).
 
 ## Size And Composition Limits
 
@@ -422,21 +422,21 @@ Use nuqs for shareable, bookmarkable UI state (filters, tabs, modals):
 
 ```typescript
 import { parseAsStringEnum, useQueryState } from 'nuqs';
-import { Enumwaii } from '@chaff/enumwaii/enumwaii';
+import { em } from 'enumwaii';
 
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 
 // These values are intentionally lowercase because they are URL-facing.
-const settingsTabsEnumwaii = new Enumwaii('SettingsTab', ['appearance', 'editor', 'repositories']);
+const settingsTabsEnumwaii = em(['appearance', 'editor', 'repositories']);
 const SETTINGS_TABS = settingsTabsEnumwaii.enum;
-const SETTINGS_TAB_LABELS = settingsTabsEnumwaii.derive({
-  [SETTINGS_TABS.appearance]: 'Appearance',
-  [SETTINGS_TABS.editor]: 'Editor',
-  [SETTINGS_TABS.repositories]: 'Repositories',
-});
+const SETTINGS_TAB_LABELS = settingsTabsEnumwaii.derive(
+  [SETTINGS_TABS.appearance, 'Appearance'],
+  [SETTINGS_TABS.editor, 'Editor'],
+  [SETTINGS_TABS.repositories, 'Repositories'],
+);
 const SETTINGS_TAB_OPTIONS = settingsTabsEnumwaii.values.map((value) => ({
   value,
-  label: SETTINGS_TAB_LABELS(value),
+  label: SETTINGS_TAB_LABELS.get(value),
 }));
 
 export function SettingsTabs() {
@@ -534,7 +534,8 @@ export function CreateDialog({ isOpen, onOpenChange }: iCreateDialogProps) {
 Use state machine pattern for wizard flows, with the steps declared as an `Enumwaii`:
 
 ```typescript
-const wizardStepsEnumwaii = new Enumwaii('WizardStep', ['SELECT_TYPE', 'CONFIGURE', 'CONFIRM']);
+import { em } from 'enumwaii';
+const wizardStepsEnumwaii = em(['SELECT_TYPE', 'CONFIGURE', 'CONFIRM']);
 const WIZARD_STEPS = wizardStepsEnumwaii.enum;
 type WizardStep = InferEnumwaii<typeof wizardStepsEnumwaii>;
 

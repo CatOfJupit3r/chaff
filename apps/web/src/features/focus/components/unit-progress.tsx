@@ -32,7 +32,7 @@ export function UnitProgress({ cards, index, onJump }: iUnitProgressProps) {
       {cards.map((card, cardIndex) => {
         const isCurrent = cardIndex === index;
         const mark = cardMark(card);
-        const label = `${cardIndex + 1}: ${card.title}${mark ? `, ${UNIT_MARK_LABELS(mark)}` : ''}`;
+        const label = `${cardIndex + 1}: ${card.title}${mark ? `, ${UNIT_MARK_LABELS.get(mark)}` : ''}`;
         return (
           <button
             key={card.id}
@@ -45,7 +45,7 @@ export function UnitProgress({ cards, index, onJump }: iUnitProgressProps) {
             className={cn(
               'h-[5px] min-w-0 flex-1 bg-line-strong p-0',
               isSpaced ? 'rounded-[3px]' : 'rounded-none',
-              mark && UNIT_MARK_SEGMENT_CLASSES(mark),
+              mark && UNIT_MARK_SEGMENT_CLASSES.get(mark),
               isCurrent &&
                 (isSpaced ? 'outline-[1.5px] outline-offset-2 outline-fg outline-solid' : 'h-[13px] min-w-[3px] bg-fg'),
             )}

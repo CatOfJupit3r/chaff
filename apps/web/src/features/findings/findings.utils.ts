@@ -1,3 +1,5 @@
+import { emToZodSchema } from 'enumwaii/zod';
+
 import {
   ANCHOR_MATCHES,
   FINDING_KINDS,
@@ -30,7 +32,7 @@ export function formatAnchorLocation(anchor: iFindingAnchor) {
 }
 
 export function matchesFilter(finding: iFinding, filter: FindingFilter) {
-  const statuses = FINDING_FILTER_STATUSES(filter);
+  const statuses = FINDING_FILTER_STATUSES.get(filter);
   return statuses === undefined || statuses.includes(finding.status);
 }
 
@@ -41,7 +43,7 @@ export function countByFilter(findings: readonly iFinding[]) {
 }
 
 export function countActive(findings: readonly iFinding[]) {
-  return findings.filter((finding) => IS_ACTIVE_FINDING_STATUS(finding.status)).length;
+  return findings.filter((finding) => IS_ACTIVE_FINDING_STATUS.get(finding.status)).length;
 }
 
 /** Where an anchor sits in a snapshot: as written, or where it was found again; undefined when it is not there. */
@@ -98,7 +100,7 @@ export function findingActionLabel(from: FindingStatus, to: FindingStatus) {
   }
   if (to === FINDING_STATUSES.REOPENED && from === FINDING_STATUSES.FIX_PROPOSED) return 'Still wrong';
   if (to === FINDING_STATUSES.CLOSED && from !== FINDING_STATUSES.ANSWERED) return 'Close without an answer';
-  return FINDING_ACTION_LABELS(to);
+  return FINDING_ACTION_LABELS.get(to);
 }
 
 export function severityFromChoice(choice: SeverityChoice): FindingSeverity | undefined {
@@ -106,5 +108,5 @@ export function severityFromChoice(choice: SeverityChoice): FindingSeverity | un
 }
 
 export function choiceFromSeverity(severity: FindingSeverity | undefined): SeverityChoice {
-  return severity === undefined ? SEVERITY_CHOICES.NONE : severityChoicesEnumwaii.schema.parse(severity);
+  return severity === undefined ? SEVERITY_CHOICES.NONE : emToZodSchema(severityChoicesEnumwaii).parse(severity);
 }

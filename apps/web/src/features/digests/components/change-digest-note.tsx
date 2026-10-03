@@ -18,7 +18,7 @@ export function ChangeDigestNote({ runner, group }: iChangeDigestNoteProps) {
     <div className="px-[22px] pb-4">
       <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11.5px] text-faint">
         <SparkIcon className="size-[13px]" />
-        Digest · {DIGEST_RUNNER_LABELS(runner)}, read-only
+        Digest · {DIGEST_RUNNER_LABELS.get(runner)}, read-only
       </div>
       {group.before || group.after ? (
         <div className="grid max-w-[78ch] gap-3 text-[13px] leading-[1.55] md:grid-cols-2">
@@ -46,7 +46,7 @@ export function ChangeDigestNote({ runner, group }: iChangeDigestNoteProps) {
                 : 'ml-1.5 rounded-[4px] border border-line px-[5px] text-[10.5px] text-faint'
             }
           >
-            {INTENT_SOURCE_LABELS(group.intentSource)}
+            {INTENT_SOURCE_LABELS.get(group.intentSource)}
           </span>
         </p>
       ) : null}

@@ -35,7 +35,7 @@ export function FileDiffBody({ snapshotId, file, layout, isWrapped }: iFileDiffB
     return <FileNote>Too large to show here ({changedLines}). Open it in your editor instead.</FileNote>;
   }
   if (display === FILE_DISPLAYS.BINARY) {
-    return <FileNote>Binary file {FILE_STATUS_LABELS(file.status).toLowerCase()}.</FileNote>;
+    return <FileNote>Binary file {FILE_STATUS_LABELS.get(file.status).toLowerCase()}.</FileNote>;
   }
   if (display === FILE_DISPLAYS.RENAME_ONLY) {
     return <FileNote>Renamed from {file.oldPath}, contents unchanged.</FileNote>;
@@ -48,7 +48,7 @@ export function FileDiffBody({ snapshotId, file, layout, isWrapped }: iFileDiffB
     );
   }
   if (display === FILE_DISPLAYS.EMPTY) {
-    return <FileNote>{FILE_STATUS_LABELS(file.status)} with no lines.</FileNote>;
+    return <FileNote>{FILE_STATUS_LABELS.get(file.status)} with no lines.</FileNote>;
   }
   if (isCollapsed) {
     return (

@@ -1,3 +1,4 @@
+import { emToZodSchema } from 'enumwaii/zod';
 import z from 'zod';
 
 import {
@@ -86,7 +87,7 @@ export function reportedStatus(
   finding: { kind: FindingKind; status: FindingStatus },
   item: Pick<iReportItem, 'status' | 'note'>,
 ): { status: FindingStatus } | { reason: ReportSkipReason } {
-  const reported = agentReportStatusesEnumwaii.schema.safeParse(item.status.toLowerCase());
+  const reported = emToZodSchema(agentReportStatusesEnumwaii).safeParse(item.status.toLowerCase());
   const target = reported.success ? REPORTED_TARGETS.get(reported.data) : undefined;
   if (!target) return { reason: REPORT_SKIP_REASONS.UNSUPPORTED_STATUS };
   if (finding.kind !== target.kind) return { reason: REPORT_SKIP_REASONS.WRONG_KIND };

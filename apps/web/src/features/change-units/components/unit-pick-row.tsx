@@ -17,10 +17,10 @@ export function UnitPickRow({ unit, path, isPicked, onToggle }: iUnitPickRowProp
       <span
         className={cn(
           'size-2 flex-none rounded-full bg-line-strong',
-          unit.mark && UNIT_MARK_SEGMENT_CLASSES(unit.mark),
+          unit.mark && UNIT_MARK_SEGMENT_CLASSES.get(unit.mark),
         )}
       />
-      <span className="flex-none text-faint">{UNIT_KIND_LABELS(unit.kind)}</span>
+      <span className="flex-none text-faint">{UNIT_KIND_LABELS.get(unit.kind)}</span>
       <span className="min-w-0 truncate font-mono text-fg">{unit.title}</span>
       <span className="ml-auto min-w-0 truncate font-mono text-[11px] text-faint">{path}</span>
     </label>

@@ -16,7 +16,9 @@ export interface iShortcutBinding {
 /** The key each action answers to. */
 export function resolveShortcutKeys(bindings: readonly iShortcutBinding[]): ReadonlyMap<ShortcutAction, string> {
   const picked = new Map(bindings.map((binding) => [binding.action, binding.key]));
-  return new Map(shortcutActionValues.map((action) => [action, picked.get(action) ?? DEFAULT_SHORTCUT_KEYS(action)]));
+  return new Map(
+    shortcutActionValues.map((action) => [action, picked.get(action) ?? DEFAULT_SHORTCUT_KEYS.get(action)]),
+  );
 }
 
 /** Actions whose key another action on the same screen also uses, or that the screen keeps for itself. */
@@ -24,11 +26,11 @@ export function findShortcutConflicts(bindings: readonly iShortcutBinding[]): Sh
   const keys = resolveShortcutKeys(bindings);
   return shortcutActionValues.filter((action) => {
     const key = keys.get(action);
-    const screen = SHORTCUT_ACTION_SCREENS(action);
+    const screen = SHORTCUT_ACTION_SCREENS.get(action);
     if (key === undefined) return false;
-    if (RESERVED_SHORTCUT_KEYS(screen).includes(key)) return true;
+    if (RESERVED_SHORTCUT_KEYS.get(screen).includes(key)) return true;
     return shortcutActionValues.some(
-      (other) => other !== action && SHORTCUT_ACTION_SCREENS(other) === screen && keys.get(other) === key,
+      (other) => other !== action && SHORTCUT_ACTION_SCREENS.get(other) === screen && keys.get(other) === key,
     );
   });
 }

@@ -11,18 +11,18 @@ interface iOrderableFile {
 const CONTRACT_PATH =
   /(^|\/)(types?|interfaces?|contracts?|schemas?|models?)(\.|\/)|\.(contract|schema|types?)\.\w+$|\.d\.ts$|\.proto$|\.graphql$/;
 
-const KIND_RANKS = fileKindsEnumwaii.derive({
-  [FILE_KINDS.SOURCE]: 1,
-  [FILE_KINDS.TEST]: 1,
-  [FILE_KINDS.CONFIG]: 2,
-  [FILE_KINDS.DOCS]: 3,
-  [FILE_KINDS.GENERATED]: 4,
-  [FILE_KINDS.BINARY]: 5,
-});
+const KIND_RANKS = fileKindsEnumwaii.derive(
+  [FILE_KINDS.SOURCE, 1],
+  [FILE_KINDS.TEST, 1],
+  [FILE_KINDS.CONFIG, 2],
+  [FILE_KINDS.DOCS, 3],
+  [FILE_KINDS.GENERATED, 4],
+  [FILE_KINDS.BINARY, 5],
+);
 
 function rank(file: iOrderableFile) {
   if (file.kind === FILE_KINDS.SOURCE && CONTRACT_PATH.test(file.path)) return 0;
-  return KIND_RANKS(file.kind);
+  return KIND_RANKS.get(file.kind);
 }
 
 /** File name without test markers or extension, so `foo.test.ts` and `foo.ts` share a stem. */

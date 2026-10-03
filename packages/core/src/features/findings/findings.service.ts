@@ -72,7 +72,7 @@ export class FindingsService {
     const findings = await this.findingRepository.list({ workspaceId: target.workspaceId });
     return findings.filter(
       (finding) =>
-        IS_ACTIVE_FINDING_STATUS(finding.status) &&
+        IS_ACTIVE_FINDING_STATUS.get(finding.status) &&
         finding.branch !== target.branch &&
         ((finding.kind === FINDING_KINDS.CONCERN && lowerIds.has(finding.targetId)) ||
           (finding.scope === FINDING_SCOPES.STACK && stackIds.has(finding.targetId))),
@@ -124,7 +124,7 @@ export class FindingsService {
   /** Turns an active question into an open concern, keeping its comment and anchors. */
   public async convertToConcern(findingId: string) {
     const finding = await this.getFinding(findingId);
-    if (finding.kind !== FINDING_KINDS.QUESTION || !IS_ACTIVE_FINDING_STATUS(finding.status)) {
+    if (finding.kind !== FINDING_KINDS.QUESTION || !IS_ACTIVE_FINDING_STATUS.get(finding.status)) {
       throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
     }
     const updated = await this.findingRepository.convertToConcern(findingId, await this.latestSnapshotId(finding));

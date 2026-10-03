@@ -23,7 +23,9 @@ export function shortcutKeyLabel(key: string) {
 
 /** The action a key triggers on a screen, if any. */
 export function findShortcutAction(keys: ReadonlyMap<ShortcutAction, string>, screen: ShortcutScreen, key: string) {
-  return shortcutActionValues.find((action) => SHORTCUT_ACTION_SCREENS(action) === screen && keys.get(action) === key);
+  return shortcutActionValues.find(
+    (action) => SHORTCUT_ACTION_SCREENS.get(action) === screen && keys.get(action) === key,
+  );
 }
 
 /** The bindings with `action` on `key`; no key, or the default one, drops the custom binding. */
@@ -33,7 +35,7 @@ export function rebindShortcut(
   key?: string,
 ): iShortcutBinding[] {
   const others = bindings.filter((binding) => binding.action !== action);
-  return key === undefined || key === DEFAULT_SHORTCUT_KEYS(action) ? others : [...others, { action, key }];
+  return key === undefined || key === DEFAULT_SHORTCUT_KEYS.get(action) ? others : [...others, { action, key }];
 }
 
 /** Why `action` can't take `key` given the current keys, or nothing when it can. */
@@ -42,11 +44,11 @@ export function describeShortcutConflict(
   action: ShortcutAction,
   key: string,
 ) {
-  const screen = SHORTCUT_ACTION_SCREENS(action);
+  const screen = SHORTCUT_ACTION_SCREENS.get(action);
   if (GLOBAL_SHORTCUT_KEYS.includes(key)) return `${shortcutKeyLabel(key)} is kept for Jump to and the key list`;
-  if (RESERVED_SHORTCUT_KEYS(screen).includes(key)) return `${shortcutKeyLabel(key)} switches the card's views`;
+  if (RESERVED_SHORTCUT_KEYS.get(screen).includes(key)) return `${shortcutKeyLabel(key)} switches the card's views`;
   const taken = shortcutActionValues.find(
-    (other) => other !== action && SHORTCUT_ACTION_SCREENS(other) === screen && keys.get(other) === key,
+    (other) => other !== action && SHORTCUT_ACTION_SCREENS.get(other) === screen && keys.get(other) === key,
   );
-  return taken ? `${shortcutKeyLabel(key)} is already ${SHORTCUT_ACTION_LABELS(taken)}` : undefined;
+  return taken ? `${shortcutKeyLabel(key)} is already ${SHORTCUT_ACTION_LABELS.get(taken)}` : undefined;
 }

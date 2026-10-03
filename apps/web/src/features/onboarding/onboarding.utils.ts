@@ -20,12 +20,12 @@ const SCREEN_PATHS = new Map<string, OnboardingScreen>([
 
 /** Items counted towards progress: everything outside the Later group. */
 export const CORE_ITEMS = onboardingItemValues.filter(
-  (item) => ONBOARDING_ITEM_GUIDES(item).group !== ONBOARDING_GROUPS.LATER,
+  (item) => ONBOARDING_ITEM_GUIDES.get(item).group !== ONBOARDING_GROUPS.LATER,
 );
 
 export const GUIDE_CHECKLIST: readonly iGuideChecklistGroup[] = onboardingGroupValues.map((group) => ({
   group,
-  items: onboardingItemValues.filter((item) => ONBOARDING_ITEM_GUIDES(item).group === group),
+  items: onboardingItemValues.filter((item) => ONBOARDING_ITEM_GUIDES.get(item).group === group),
 }));
 
 export function isGuideActive(state: iOnboardingState) {
@@ -54,7 +54,7 @@ export function withCompletedItems(state: iOnboardingState, items: readonly Onbo
 /** Open items the user can do on `screen`, for its first-visit hint. */
 export function openItemsOn(screen: OnboardingScreen, completed: readonly OnboardingItem[]) {
   return CORE_ITEMS.filter((item) => {
-    const guide = ONBOARDING_ITEM_GUIDES(item);
+    const guide = ONBOARDING_ITEM_GUIDES.get(item);
     return !completed.includes(item) && (guide.screen === screen || guide.alsoOn?.includes(screen) === true);
   });
 }

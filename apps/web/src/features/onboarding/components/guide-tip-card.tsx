@@ -16,7 +16,7 @@ interface iGuideTipCardProps {
 
 /** What the highlighted control does, in a sentence or two. */
 export function GuideTipCard({ item, isAnchored, isWaitingForReview, onClose }: iGuideTipCardProps) {
-  const guide = ONBOARDING_ITEM_GUIDES(item);
+  const guide = ONBOARDING_ITEM_GUIDES.get(item);
   const titleId = useId();
   const card = useRef<HTMLElement>(null);
   useEffect(() => {

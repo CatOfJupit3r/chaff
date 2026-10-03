@@ -40,7 +40,7 @@ export function HistoryScreen() {
               value,
               label: (
                 <>
-                  {HISTORY_FILTER_LABELS(value)}
+                  {HISTORY_FILTER_LABELS.get(value)}
                   <span className="font-mono text-[11px] text-faint tabular-nums">
                     {value === HISTORY_FILTERS.archived ? archived.length : entries.length}
                   </span>

@@ -16,7 +16,7 @@ import { FileStatusSummary } from './file-status';
 import { FileTreeFolder } from './file-tree-folder';
 import { FileTreeRow } from './file-tree-row';
 
-const VIEW_OPTIONS = fileTreeViewValues.map((value) => ({ value, label: FILE_TREE_VIEW_LABELS(value) }));
+const VIEW_OPTIONS = fileTreeViewValues.map((value) => ({ value, label: FILE_TREE_VIEW_LABELS.get(value) }));
 
 interface iFileTreePanelProps {
   snapshotId: string;

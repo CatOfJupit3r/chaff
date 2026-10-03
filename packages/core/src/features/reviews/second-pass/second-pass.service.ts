@@ -61,7 +61,7 @@ export class SecondPassService {
     for (let step = 0; unitId && step < MAX_HISTORY; step += 1) {
       const earlier = await this.snapshotRepository.findUnitById(unitId);
       if (!earlier) return undefined;
-      if (earlier.mark && IS_INSPECTED_MARK(earlier.mark)) return earlier;
+      if (earlier.mark && IS_INSPECTED_MARK.get(earlier.mark)) return earlier;
       unitId = earlier.previousUnitId;
     }
     return undefined;

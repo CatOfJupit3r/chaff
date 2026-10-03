@@ -96,7 +96,7 @@ export class ReviewsService {
           change: changeInfo(target),
           latestSnapshot: latest ? await this.toSummary(latest) : undefined,
           findingCount: own.length,
-          activeFindingCount: own.filter((finding) => IS_ACTIVE_FINDING_STATUS(finding.status)).length,
+          activeFindingCount: own.filter((finding) => IS_ACTIVE_FINDING_STATUS.get(finding.status)).length,
           archived:
             target.archivedAt && target.archiveReason
               ? { at: target.archivedAt, reason: target.archiveReason }
@@ -431,7 +431,7 @@ export class ReviewsService {
       this.unitMarkRepository.countAccountedRegions(id),
     ]);
     const inspectedUnitCount = [...markCounts].reduce(
-      (sum, [mark, total]) => (IS_INSPECTED_MARK(mark) ? sum + total : sum),
+      (sum, [mark, total]) => (IS_INSPECTED_MARK.get(mark) ? sum + total : sum),
       0,
     );
     return {

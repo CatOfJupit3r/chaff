@@ -19,7 +19,7 @@ import { OverviewNotices } from './overview-notices';
 import { StackNeighborhood } from './stack-neighborhood';
 import { StackOutline } from './stack-outline';
 
-const INBOX_OPTIONS = inboxFilterValues.map((value) => ({ value, label: INBOX_FILTER_LABELS(value) }));
+const INBOX_OPTIONS = inboxFilterValues.map((value) => ({ value, label: INBOX_FILTER_LABELS.get(value) }));
 
 export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorkspace[] }) {
   const overview = useOverview(workspaces);

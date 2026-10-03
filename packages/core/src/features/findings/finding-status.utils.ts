@@ -25,7 +25,7 @@ export function statusAfterRelocation(
   status: FindingStatus,
   matches: readonly AnchorMatch[],
 ): FindingStatus | undefined {
-  if (!IS_ACTIVE_FINDING_STATUS(status) || matches.length === 0) return undefined;
+  if (!IS_ACTIVE_FINDING_STATUS.get(status) || matches.length === 0) return undefined;
   const next = nextStatus(kind, status, matches);
   return next === status ? undefined : next;
 }

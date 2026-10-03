@@ -21,7 +21,7 @@ function findingsLabel({ findingCount, activeFindingCount }: iReviewHistoryEntry
 /** One review: what it was of, how far it got, its findings, and why it is archived if it is. */
 export function HistoryRow({ entry }: { entry: iReviewHistoryEntry }) {
   const { change, latestSnapshot: snapshot, archived } = entry;
-  const kindLabel = HISTORY_KIND_LABELS(entry.kind);
+  const kindLabel = HISTORY_KIND_LABELS.get(entry.kind);
 
   return (
     <ListRow>
@@ -38,7 +38,7 @@ export function HistoryRow({ entry }: { entry: iReviewHistoryEntry }) {
           {kindLabel ? <Pill variant="neutral">{kindLabel}</Pill> : null}
           {archived ? (
             <Pill variant="out" title={`Archived ${formatRelativeTime(archived.at)}`}>
-              {ARCHIVE_REASON_LABELS(archived.reason)}
+              {ARCHIVE_REASON_LABELS.get(archived.reason)}
             </Pill>
           ) : null}
           {isReviewComplete(snapshot) ? <Pill variant="ok">complete</Pill> : null}

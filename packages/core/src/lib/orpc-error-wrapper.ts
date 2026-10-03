@@ -1,12 +1,12 @@
 import { ORPCError } from '@orpc/server';
+import { em } from 'enumwaii';
+import type { InferEnumwaii } from 'enumwaii';
 
 import { errorCodes, errorMessages } from '@chaff/common/enums/errors.enums';
 import type { ErrorCodesType } from '@chaff/common/enums/errors.enums';
 import { handleError } from '@chaff/common/helpers/error-handling.helper';
-import { Enumwaii } from '@chaff/enumwaii/enumwaii';
-import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
-const orpcErrorKindsEnumwaii = new Enumwaii('ORPCErrorKind', ['INFO', 'UNEXPECTED']);
+const orpcErrorKindsEnumwaii = em(['INFO', 'UNEXPECTED']);
 
 export const ORPC_ERROR_KINDS = orpcErrorKindsEnumwaii.enum;
 export type ORPCErrorKind = InferEnumwaii<typeof orpcErrorKindsEnumwaii>;
@@ -81,7 +81,7 @@ export function createErrorPayload(code: ErrorCodesType, additionalData?: Record
   return {
     code,
     ...additionalData,
-    message: errorMessages(code),
+    message: errorMessages.get(code),
   };
 }
 

@@ -10,8 +10,8 @@ import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { DIFF_MODE_LABELS, diffModeValues } from '../reviews.enums';
 import type { DiffMode } from '../reviews.enums';
 
-const MODE_OPTIONS = diffModeValues.map((value) => ({ value, label: DIFF_MODE_LABELS(value) }));
-const LAYOUT_OPTIONS = diffLayoutValues.map((value) => ({ value, label: DIFF_LAYOUT_LABELS(value) }));
+const MODE_OPTIONS = diffModeValues.map((value) => ({ value, label: DIFF_MODE_LABELS.get(value) }));
+const LAYOUT_OPTIONS = diffLayoutValues.map((value) => ({ value, label: DIFF_LAYOUT_LABELS.get(value) }));
 
 interface iDiffToolbarProps {
   isTreeOpen: boolean;

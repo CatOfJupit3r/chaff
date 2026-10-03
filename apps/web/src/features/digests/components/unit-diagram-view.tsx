@@ -74,7 +74,7 @@ export function UnitDiagramView({
         <section key={diagram.id} className="flex flex-col gap-2.5">
           <header className="flex flex-wrap items-center gap-2 text-[13px]">
             <span className="font-medium text-fg">{diagram.title}</span>
-            <Pill variant="neutral">{DIAGRAM_KIND_LABELS(diagram.kind)}</Pill>
+            <Pill variant="neutral">{DIAGRAM_KIND_LABELS.get(diagram.kind)}</Pill>
             {diagram.isSuggestion ? <Pill variant="question">suggested design, not the code</Pill> : null}
           </header>
           <MermaidDiagram

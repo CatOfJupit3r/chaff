@@ -17,7 +17,7 @@ const SHOWN_ITEM_COUNT = 3;
 
 /** Shown once on the first visit to a screen: the first few open checklist items that can be done here. */
 export function GuideHint({ hint, items, onShowMe, onDismiss }: iGuideHintProps) {
-  const label = `Try on ${ONBOARDING_SCREEN_LABELS(hint)}`;
+  const label = `Try on ${ONBOARDING_SCREEN_LABELS.get(hint)}`;
   const moreCount = items.length - SHOWN_ITEM_COUNT;
 
   return (
@@ -39,7 +39,7 @@ export function GuideHint({ hint, items, onShowMe, onDismiss }: iGuideHintProps)
               onClick={() => onShowMe(item)}
               className="flex h-7 w-full items-center gap-2 rounded-sm px-1 text-left text-[12.5px] text-fg-soft hover:bg-hover hover:text-fg"
             >
-              <span className="min-w-0 flex-1 truncate">{ONBOARDING_ITEM_GUIDES(item).title}</span>
+              <span className="min-w-0 flex-1 truncate">{ONBOARDING_ITEM_GUIDES.get(item).title}</span>
               <RightIcon className="size-3.5 text-faint" />
             </button>
           </li>

@@ -21,8 +21,8 @@ export function GuideChecklist({ completed, onShowMe }: iGuideChecklistProps) {
   return (
     <div className="flex flex-col gap-3 px-2 pt-2.5 pb-3">
       {GUIDE_CHECKLIST.map(({ group, items }) => (
-        <section key={group} aria-label={ONBOARDING_GROUP_LABELS(group)} className="flex flex-col gap-0.5">
-          <SectionLabel className="px-1.5 pb-0.5">{ONBOARDING_GROUP_LABELS(group)}</SectionLabel>
+        <section key={group} aria-label={ONBOARDING_GROUP_LABELS.get(group)} className="flex flex-col gap-0.5">
+          <SectionLabel className="px-1.5 pb-0.5">{ONBOARDING_GROUP_LABELS.get(group)}</SectionLabel>
           <ul className="m-0 flex list-none flex-col p-0">
             {items.map((item) => (
               <GuideItemRow

@@ -71,7 +71,7 @@ export function UnitCard({
       <UnitRevisionNote unit={unit} version={snapshot.version} />
       {unit.mark ? (
         <div className="flex flex-wrap items-center gap-2.5 border-t border-line bg-canvas px-[22px] py-[9px] text-[12.5px] text-muted">
-          <Pill variant="neutral">{UNIT_MARK_LABELS(unit.mark)}</Pill>
+          <Pill variant="neutral">{UNIT_MARK_LABELS.get(unit.mark)}</Pill>
           <span>
             {unit.skipReason ? `Skipped: ${unit.skipReason}. ` : ''}
             {unit.isMarkCarried

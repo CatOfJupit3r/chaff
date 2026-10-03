@@ -101,7 +101,7 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
   const openInEditor = useOpenInEditor(repoPath);
   const comparisons = useFindingComparison(finding);
   const setSeverity = useSetFindingSeverity();
-  const canSetSeverity = finding.kind === FINDING_KINDS.CONCERN && IS_ACTIVE_FINDING_STATUS(finding.status);
+  const canSetSeverity = finding.kind === FINDING_KINDS.CONCERN && IS_ACTIVE_FINDING_STATUS.get(finding.status);
 
   return (
     <article className="flex min-w-0 flex-col rounded-lg border border-line bg-surface">
