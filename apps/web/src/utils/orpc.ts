@@ -1,56 +1,30 @@
 import { createORPCClient, onError } from '@orpc/client';
-import { RPCLink } from '@orpc/client/fetch';
+import { RPCLink } from '@orpc/client/message-port';
 import type { ContractRouterClient, InferContractRouterOutputs } from '@orpc/contract';
-import { createIsomorphicFn } from '@tanstack/react-start';
-import { getRequestHeaders } from '@tanstack/react-start/server';
-import { isError } from 'lodash-es';
 
+import { DESKTOP_RPC_PORT_MESSAGE } from '@chaff/common/constants/desktop-bridge.constants';
 import type { CONTRACT } from '@chaff/server-contract/app.contract';
 
-import { getBackendURL, isOnClient } from './ssr-helpers';
+/**
+ * Opens a channel to the Chaff core. The desktop preload forwards the far end of the channel to
+ * the main process, where the core answers every call over it.
+ */
+function connectToCore() {
+  const { port1: clientPort, port2: corePort } = new MessageChannel();
+  window.postMessage(DESKTOP_RPC_PORT_MESSAGE, window.location.origin, [corePort]);
+  clientPort.start();
 
-const INTERCEPTORS = [
-  onError((error) => {
-    if (!isOnClient) return;
-    if (isError(error) && error.message.includes('The operation was aborted')) return;
-    console.error(error);
-  }),
-] as ConstructorParameters<typeof RPCLink>[0]['interceptors'];
-
-const getORPCClient = createIsomorphicFn()
-  .client((): ContractRouterClient<typeof CONTRACT> => {
-    const URL = getBackendURL('/rpc');
-    const link = new RPCLink({
-      url: URL,
-      async fetch(url, options) {
-        return fetch(url, {
-          ...options,
-          credentials: 'include',
-        });
-      },
-      interceptors: INTERCEPTORS,
-    });
-
-    return createORPCClient(link);
-  })
-  .server((): ContractRouterClient<typeof CONTRACT> => {
-    const URL = getBackendURL('/rpc');
-    const link = new RPCLink({
-      url: URL,
-      headers: getRequestHeaders,
-      interceptors: INTERCEPTORS,
-    });
-    return createORPCClient(link);
+  return new RPCLink({
+    port: clientPort,
+    interceptors: [
+      onError((error) => {
+        console.error(error);
+      }),
+    ],
   });
-// I don't really want to add oRPC server to here too, so better keep it separate
-// .server(() =>
-//   createRouterClient(appRouter, {
-//     context: async ({ req }) => {
-//       return createContext({ context: req });
-//     },
-//   }),
-// )
+}
 
-const client: ContractRouterClient<typeof CONTRACT> = getORPCClient();
+const client: ContractRouterClient<typeof CONTRACT> = createORPCClient(connectToCore());
+
 export type ORPCOutputs = InferContractRouterOutputs<typeof CONTRACT>;
 export default client;

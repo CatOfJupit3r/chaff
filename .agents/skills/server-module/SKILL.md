@@ -3,20 +3,21 @@ name: server-module
 description: >
   Organize and implement server features as focused, nested modules with clear
   service, repository, resolver, schema, and router boundaries. Use when adding
-  or refactoring Hono/oRPC server functionality under apps/server/src.
+  or refactoring Chaff core (oRPC) functionality under packages/core/src.
 ---
 
 # Server modules
 
 Use a feature-first module layout. Keep domain code under
-`apps/server/src/features/<feature>/`; do not place feature services,
+`packages/core/src/features/<feature>/`; do not place feature services,
 repositories, resolvers, or business types directly in `src/`.
 
 ## Boundaries
 
 - `*.service.ts` owns business workflows, policies, orchestration, and
   transactions that span repositories or external services. Services do not
-  contain HTTP/oRPC concerns.
+  contain router or transport concerns; they report expected failures by
+  throwing the `ORPC*Error` helpers from `@~/lib/orpc-error-wrapper`.
 - `*.repository.ts` declares the persistence boundary as an `i`-prefixed
   interface. `drizzle-*.repository.ts` implements it with Drizzle and is the
   only feature layer that should know table-query details.
@@ -27,14 +28,18 @@ repositories, resolvers, or business types directly in `src/`.
 - `*.types.ts` contains feature input and response types. Derive repository
   responses from Drizzle table inference with `Pick`, `Omit`, or intersections;
   do not duplicate database columns manually.
-- `*.schema.ts` contains feature-local Zod schemas or record schemas. Shared
-  transport schemas belong in `packages/shared` contracts.
+- Drizzle tables live in `packages/core/src/db/schema/<name>.schema.ts`, not in
+  the feature folder. Transport schemas belong in the
+  `packages/server-contract` contracts.
 - `*.constants.ts` contains feature-local non-sensitive constants. Shared
-  server/client constants belong in `packages/shared/src/constants`.
+  server/client constants belong in `packages/common/src/constants`.
 - `routers/*.router.ts` is the transport adapter. It validates through the
-  shared contract, performs authentication/authorization, calls a service, and
-  maps errors through the server error-handling conventions. Keep business
-  logic out of routers.
+  shared contract, calls a service from a `procedure` handler, and relies on
+  the `procedure` error boundary from `@~/lib/orpc` to normalize unexpected
+  errors. Keep business logic out of routers.
+- The core never imports Electron. OS access (dialogs, opening links, native
+  theme) goes through the injected `iCoreHost` (`CORE_HOST_TOKEN`), and git
+  access goes through `GitService`, which only reads repositories.
 
 The normal dependency direction is:
 
@@ -52,21 +57,20 @@ tables, or query builders.
 Start with a flat feature directory when the feature is small:
 
 ```text
-apps/server/src/features/findings/
-  findings.service.ts
-  findings.constants.ts
-  findings.types.ts
-  finding.repository.ts
-  drizzle-finding.repository.ts
-  finding.resolver.ts
-  finding.repository.types.ts
+packages/core/src/features/workspaces/
+  workspaces.service.ts
+  branches.service.ts
+  workspaces.types.ts
+  workspace.repository.ts
+  drizzle-workspace.repository.ts
+  workspace.resolver.ts
 ```
 
 When a feature contains distinct subdomains, create nested modules rather than
 allowing the feature root to become a dumping ground:
 
 ```text
-apps/server/src/features/storyteller/
+packages/core/src/features/storyteller/
   storyteller.service.ts
   agent-executions/
     agent-execution.service.ts
@@ -96,11 +100,14 @@ any closed-set value.
 3. Define feature types and the repository interface in the owning module.
 4. Add or update the resolver for the exact response shape.
 5. Implement the Drizzle repository behind the interface, using injected
-   `PostgresService` and resolver dependencies.
-6. Implement the service with injected interfaces and other services. Keep
-   authorization decisions explicit and use the server error-handling skill for
-   access failures.
-7. Add the router adapter and register it using the existing router pattern.
+   `DatabaseService` and resolver dependencies, and bind it to its token in
+   `packages/core/src/di/tokens.ts` and `registerServices()` in
+   `packages/core/src/di/container.ts`.
+6. Implement the service with injected interfaces and other services. Use the
+   server error-handling skill for expected failures such as missing records
+   or invalid paths.
+7. Add the router adapter and register it in
+   `packages/core/src/routers/app-router.ts`.
 8. Add meaningful service or router integration tests; do not test schemas,
    migrations, generated code, constants, or third-party behavior.
 9. Run `pnpm run verify` before handoff.

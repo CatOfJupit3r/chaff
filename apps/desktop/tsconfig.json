@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@~/*": ["../../packages/core/src/*"],
+      "@chaff/common/*": ["../../packages/common/src/*"],
+      "@chaff/server-contract/*": ["../../packages/server-contract/src/*"]
+    },
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "files": ["../../packages/common/src/globals.d.ts"],
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts", "tsdown.config.ts"]
+}

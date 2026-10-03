@@ -1,0 +1,45 @@
+{
+  "name": "@chaff/core",
+  "main": "src/core.ts",
+  "type": "module",
+  "scripts": {
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "check-types": "tsgo --noEmit",
+    "lint": "eslint . --fix",
+    "prettify": "prettier --write ./src/",
+    "test": "vitest run",
+    "test:watch": "NODE_ENV=test vitest",
+    "test:ui": "NODE_ENV=test vitest --ui"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "prettier": "@chaff/prettier-config",
+  "dependencies": {
+    "@chaff/common": "workspace:*",
+    "@chaff/enumwaii": "workspace:*",
+    "@chaff/server-contract": "workspace:*",
+    "@orpc/server": "catalog:",
+    "@vscode/tree-sitter-wasm": "0.3.1",
+    "drizzle-orm": "^0.45.2",
+    "reflect-metadata": "0.2.2",
+    "safe-stable-stringify": "2.5.0",
+    "tsyringe": "4.10.0",
+    "winston": "3.19.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@chaff/eslint-config": "workspace:*",
+    "@chaff/prettier-config": "workspace:*",
+    "@swc/core": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitest/ui": "catalog:",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-swc": "catalog:",
+    "vitest": "catalog:"
+  }
+}

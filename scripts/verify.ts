@@ -14,7 +14,7 @@
  *   pnpm run verify                                    # check-types + lint across the workspace
  *   pnpm run verify --tests                            # also run the test suite
  *   pnpm run verify --filter web                       # scope every step to a single package
- *   pnpm run verify --files apps/server/src/foo.ts ...  # lint exactly these files; scope
+ *   pnpm run verify --files packages/core/src/foo.ts ...  # lint exactly these files; scope
  *                                                       # check-types to the packages that own them
  */
 
@@ -49,7 +49,7 @@ function readFiles(): string[] {
 const filter = readFilter();
 const files = readFiles();
 
-/** First two path segments (e.g. `apps/server`) for a file under a workspace root, or null. */
+/** First two path segments (e.g. `packages/core`) for a file under a workspace root, or null. */
 function packageDirFor(filePath: string): string | null {
   const normalized = filePath.split(path.sep).join('/');
   const segments = normalized.split('/');

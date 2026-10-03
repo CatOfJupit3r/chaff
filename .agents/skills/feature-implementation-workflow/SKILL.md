@@ -73,12 +73,12 @@ Load skills lazily to conserve context: instead of front-loading every reference
 | Database schema or migrations | `drizzle-orm` |
 | New oRPC contracts / API endpoints | `orpc-contract-creation` |
 | Server router handlers | `server-router-implementation` |
-| Error handling, access control | `server-error-handling` |
+| Error handling | `server-error-handling` |
 | DI setup, new services | `dependency-injection-setup` |
 | TanStack Query hooks / mutations | `tanstack-query-integration` |
 | React components, forms, routes | `react-component-patterns` |
 | Forms with TanStack Form + Zod | `tanstack-forms` |
-| Tests | `repository-testing-workflow` |
+| Tests | `server-testing` |
 
 Do not load every skill. Load the smallest useful set.
 
@@ -138,8 +138,9 @@ After each meaningful unit of work, run the narrowest relevant validation comman
 
 ```bash
 pnpm run verify --filter web
-pnpm run verify --filter server
-pnpm run verify --filter @chaff/shared
+pnpm run verify --filter @chaff/core
+pnpm run verify --filter desktop
+pnpm run verify --filter @chaff/server-contract
 ```
 
 Run the unscoped command when changes cross packages:
@@ -150,7 +151,7 @@ pnpm run verify
 
 Do not interleave formatting with edits — run `pnpm run prettify` once at the end of the phase, never between edits, to avoid stale-file races.
 
-Use `repository-testing-workflow` to choose tests, and add `--tests` to `pnpm run verify` to run them. Do not write tests that only verify framework behavior or static rendering without meaningful behavior.
+Use `server-testing` to choose tests, and add `--tests` to `pnpm run verify` to run them. Do not write tests that only verify framework behavior or static rendering without meaningful behavior.
 
 If type errors or tests fail, fix the root cause before continuing. Do not accumulate validation debt across roadmap items.
 
@@ -189,7 +190,7 @@ pnpm run verify
 pnpm run prettify
 ```
 
-For cross-package or full-stack work, add `--tests` to `pnpm run verify` (or run the relevant tests from `repository-testing-workflow`).
+For cross-package or full-stack work, add `--tests` to `pnpm run verify` (or run the relevant tests from `server-testing`).
 
 Fix remaining issues before declaring the selected scope complete.
 
@@ -230,14 +231,14 @@ When you encounter these patterns, load the corresponding skill if not already l
 - Claude Code handoff, another agent will implement -> `agent-implementation-proof`
 - branch/PR/diff review, false-completion check -> `codex-diff-verification`
 - `z.enum`, creating reusable enums -> `enumwaii`
-- `pgTable(`, `drizzle`, migration -> `drizzle-orm`
+- `sqliteTable(`, `drizzle`, migration -> `drizzle-orm`
 - `oc.route(`, `.input(`, `.output(`, contract file -> `orpc-contract-creation`
-- `protectedProcedure`, `.handler(` -> `server-router-implementation`
-- `ORPCNotFoundError`, `ORPCForbiddenError`, `errorCodes` -> `server-error-handling`
-- `@injectable()`, `container.resolve(`, `LoggerFactory` -> `dependency-injection-setup`
+- `procedure.`, `.handler(` -> `server-router-implementation`
+- `ORPCNotFoundError`, `ORPCBadRequestError`, `errorCodes` -> `server-error-handling`
+- `@singleton()`, `@injectable()`, `container.resolve(`, `LoggerFactory` -> `dependency-injection-setup`
 - `tanstackRPC.`, `queryOptions`, `mutationOptions` -> `tanstack-query-integration`
 - `useAppForm`, `withForm`, `withFieldGroup` -> `tanstack-forms`
-- `test(`, `describe(`, `createTestContext`, `test.describe(` -> `repository-testing-workflow`
+- `test(`, `describe(`, `call(appRouter.`, `expectORPCError` -> `server-testing`
 
 ## Notes
 

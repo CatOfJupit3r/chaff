@@ -20,5 +20,5 @@
   },
   "exclude": ["./eslint.config.js"],
   "files": ["../../packages/common/src/globals.d.ts"],
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "src/types.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "src/types.d.ts", "test/**/*.ts", "test/**/*.tsx"]
 }

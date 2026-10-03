@@ -8,8 +8,8 @@
       "default": "./dist/app.contract.mjs"
     },
     "./contract/*": {
-      "types": "./dist/*.d.mts",
-      "default": "./dist/*.mjs"
+      "types": "./dist/contract/*.d.mts",
+      "default": "./dist/contract/*.mjs"
     }
   },
   "files": [

@@ -9,11 +9,10 @@ description: Create React components following project conventions for UI compos
 
 - **Compose from UI primitives** - Use `@~/components/ui/*` instead of building from scratch
 - **Type safety** - Interface props with `i` prefix convention
-- **Design tokens** - Use Tailwind tokens (`bg-background`, `text-muted-foreground`) never hardcoded colors
+- **Design tokens** - Use Tailwind tokens (`bg-canvas`, `text-muted`) never hardcoded colors
 - **Accessibility first** - Semantic HTML, ARIA labels, keyboard navigation
 - **Handle all states** - Loading (skeletons), error (alerts/boundaries), empty, success
 - **URL state sync** - Use nuqs for filters, pagination, sorting
-- **Mobile-first** - Responsive variants with `isMobile` prop pattern
 
 ## Enumwaii requirement
 
@@ -49,7 +48,7 @@ Refactor immediately when any of these show up:
 ### How To Stay Under The Limits
 
 - Extract orchestration into `hooks/use-<feature>-state.ts` or `hooks/use-<feature>-controller.ts`
-- Keep route/container components focused on query selection, permission checks, and wiring callbacks
+- Keep route/container components focused on query selection and wiring callbacks
 - Move presentational sections into `components/<slice>/<slice>-section.tsx`, `*-card.tsx`, `*-dialog.tsx`, or `*-panel.tsx`
 - Move derived labels, formatting, and option mapping into `*.utils.ts`
 - Group shared state views under dedicated files instead of declaring them beside the main feature component
@@ -68,15 +67,17 @@ Refactor immediately when any of these show up:
 ### State Component File Pattern
 
 ```text
-apps/web/src/features/stories/components/
-  ├── story-detail-page.tsx
-  ├── skeleton-components.tsx
-  ├── error-components.tsx
-  ├── empty-components.tsx
-  └── story-detail/
-      ├── editable-story-header.tsx
-      ├── story-meta-badges.tsx
-      └── story-workspace-shortcuts.tsx
+apps/web/src/features/workspaces/components/
+  reviews-screen.tsx
+  local-stacks-group.tsx
+  repositories-group.tsx
+  repository-row.tsx
+  remove-repository-dialog.tsx
+  stack-row.tsx
+  branch-chain.tsx
+  skeleton-components.tsx    # StackRowsSkeleton
+  error-components.tsx       # BranchesErrorRow
+  empty-components.tsx       # NoRepositories, NoLocalStacks
 ```
 
 Rules for shared state files:
@@ -104,12 +105,13 @@ Rules for shared state files:
 **ALWAYS** prefix component props interfaces with `i`:
 
 ```typescript
-interface iUserCardProps {
-  userId: string;
-  onEdit?: () => void;
+interface iRepositoriesGroupProps {
+  workspaces: readonly iWorkspace[];
+  onAdd: () => void;
+  isAdding: boolean;
 }
 
-export function UserCard({ userId, onEdit }: iUserCardProps) {
+export function RepositoriesGroup({ workspaces, onAdd, isAdding }: iRepositoriesGroupProps) {
   // Component implementation
 }
 ```
@@ -117,32 +119,34 @@ export function UserCard({ userId, onEdit }: iUserCardProps) {
 ### Feature Organization
 
 ```
-apps/web/src/features/characters/
-  ├── components/
-  │   ├── character-card.tsx
-  │   ├── character-list.tsx
-  │   └── index.ts               # Export public API
-  ├── hooks/
-  │   ├── use-character.ts
-  │   └── use-create-character.ts
-  ├── schemas/
-  │   └── character.schema.ts    # Zod schemas
-  └── index.ts                   # Feature public API
+apps/web/src/features/workspaces/
+  components/
+    reviews-screen.tsx
+    repository-row.tsx
+    empty-components.tsx
+    ...
+  hooks/
+    use-workspaces.ts          # Query options + query hook
+    use-add-workspace.ts
+    use-remove-workspace.ts
+    use-local-stacks.ts
+  local-stacks.utils.ts        # Pure helpers
+  workspaces.types.ts          # Types from ORPCOutputs
 ```
 
-Export only what other features need:
+There are no `index.ts` barrels. Routes and other features import from the owning file:
 
 ```typescript
-// features/characters/index.ts
-export { CharacterCard, CharacterList } from './components';
-export { useCharacter, useCreateCharacter } from './hooks';
+// routes/index.tsx
+import { ReviewsScreen } from '@~/features/workspaces/components/reviews-screen';
+import { workspacesQueryOptions } from '@~/features/workspaces/hooks/use-workspaces';
 ```
 
 ### Container vs Presentational Split
 
 Use this split by default for non-trivial feature UI:
 
-- **Container components** own data loading, URL state, permissions, and mutation wiring
+- **Container components** own data loading, URL state, and mutation wiring
 - **Presentational components** receive data and callbacks, render markup, and stay mostly stateless
 - **Feature hooks** own multi-step local state, effects, derived values, keyboard handlers, and action orchestration
 - **State components** render empty, error, skeleton, and not-found views from dedicated shared files
@@ -155,47 +159,57 @@ If a component needs both heavy orchestration and a large render tree, that is t
 
 Common primitives from `@~/components/ui`:
 
-- **Layout**: `Card`, `CardHeader`, `CardTitle`, `CardContent`, `Separator`, `ScrollArea`
-- **Forms**: `Button`, `Input`, `Textarea`, `Label`, `Checkbox`, `Switch`, `Select`
-- **Feedback**: `Alert`, `Skeleton`, `Empty`, `Loader`, `Progress`
-- **Overlay**: `Dialog`, `Sheet`, `Drawer`, `Popover`, `Tooltip`, `DropdownMenu`
-- **Navigation**: `Tabs`, `Breadcrumb`, `NavigationMenu`
-- **Data**: `Avatar`, `Badge`, `Item` (list items)
+- **Layout**: `List`, `ListRow`, `SectionLabel`; screens use `Screen` and `TopBar` from `@~/components/layout`
+- **Controls**: `Button` (variants `default`, `primary`, `ghost`, `icon`; sizes `default`, `sm`, `icon`), `SegmentedControl`, `Field` (labelled row)
+- **Feedback**: `Callout` (`warn`, `info`), `Pill` (`open`, `fix`, `ok`, `out`, `question`, `neutral`), `showToast` from `@~/components/toast/toast-store`
+- **Overlay**: `Dialog`, `DialogContent`, `DialogHeader` (`title`, `description`), `DialogBody`, `DialogFooter`, `DialogClose` (Base UI)
+- **Brand and icons**: `Logo`; icons such as `FolderIcon`, `CloseIcon`, `SunIcon` from `@~/components/icons/icons`, built with `createIcon`
+
+If a primitive is missing, add it to `components/ui` (Base UI for behavior, theme tokens for color) instead of building it inside a feature.
 
 ### Composition Pattern
 
 ```typescript
-import { Card, CardHeader, CardTitle, CardContent } from '@~/components/ui/card';
+// features/workspaces/components/repository-row.tsx
+import { useState } from 'react';
+
+import { FolderIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@~/components/ui/avatar';
+import { ListRow } from '@~/components/ui/list';
+import { Pill } from '@~/components/ui/pill';
 
-interface iCharacterCardProps {
-  character: {
-    id: string;
-    name: string;
-    avatarUrl?: string;
-    description?: string;
-  };
-  onSelect?: () => void;
-}
+import type { iWorkspace } from '../workspaces.types';
+import { RemoveRepositoryDialog } from './remove-repository-dialog';
 
-export function CharacterCard({ character, onSelect }: iCharacterCardProps) {
+export function RepositoryRow({ workspace }: { workspace: iWorkspace }) {
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-3">
-        <Avatar>
-          <AvatarImage src={character.avatarUrl} alt={character.name} />
-          <AvatarFallback>{character.name[0]}</AvatarFallback>
-        </Avatar>
-        <CardTitle>{character.name}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">{character.description}</p>
-        <Button className="mt-4" onClick={onSelect}>
-          Select Character
+    <ListRow>
+      <div className="flex min-w-0 items-start gap-3">
+        <FolderIcon className="mt-[3px] text-faint" />
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 font-medium">
+            {workspace.name}
+            {workspace.isAvailable ? null : <Pill variant="open">folder missing</Pill>}
+          </div>
+          <div className="mt-[3px] truncate font-mono text-[12px] text-muted" title={workspace.repoPath}>
+            {workspace.repoPath}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        {workspace.defaultBranch ? (
+          <span className="font-mono text-[12px] text-muted" title="Default branch">
+            {workspace.defaultBranch}
+          </span>
+        ) : null}
+        <Button variant="ghost" size="sm" onClick={() => setIsRemoveOpen(true)}>
+          Remove
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+      <RemoveRepositoryDialog workspace={workspace} isOpen={isRemoveOpen} onOpenChange={setIsRemoveOpen} />
+    </ListRow>
   );
 }
 ```
@@ -204,7 +218,7 @@ export function CharacterCard({ character, onSelect }: iCharacterCardProps) {
 
 **→ See `.agents/skills/tanstack-forms/SKILL.md` for comprehensive form patterns.**
 
-Quick reference - use `useAppForm` with Zod validation:
+Quick reference - use `useAppForm` with Zod validation (the form hook is added with the first form; see that skill):
 
 ```typescript
 import z from 'zod';
@@ -246,27 +260,38 @@ export function CreateCharacterForm() {
 **Always import skeletons from dedicated shared files** - never declare them inline in the main component file:
 
 ```typescript
-import { Alert } from '@~/components/ui/alert';
-import { useCharacter } from '../hooks/use-character';
-import { CharacterDetailNotFound, CharacterDetailQueryError } from './error-components';
-import { CharacterDetailSkeleton } from './skeleton-components';
+// features/workspaces/components/local-stacks-group.tsx
+import { List } from '@~/components/ui/list';
+import { SectionLabel } from '@~/components/ui/section-label';
 
-export function CharacterDetail({ characterId }: { characterId: string }) {
-  const { data: character, isPending, error } = useCharacter(characterId);
+import { useLocalStacks } from '../hooks/use-local-stacks';
+import type { iWorkspace } from '../workspaces.types';
+import { NoLocalStacks } from './empty-components';
+import { BranchesErrorRow } from './error-components';
+import { StackRowsSkeleton } from './skeleton-components';
+import { StackRow } from './stack-row';
 
-  if (isPending) return <CharacterDetailSkeleton />;
-  if (error) return <CharacterDetailQueryError />;
-  if (!character) return <CharacterDetailNotFound />;
+export function LocalStacksGroup({ workspaces }: { workspaces: readonly iWorkspace[] }) {
+  const { isPending, failures, stacks } = useLocalStacks(workspaces);
+  const isEmpty = !isPending && failures.length === 0 && stacks.length === 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{character.name}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">{character.description}</p>
-      </CardContent>
-    </Card>
+    <section aria-label="Local stacks" className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <SectionLabel>Local stacks</SectionLabel>
+        <SectionLabel>Commits</SectionLabel>
+      </div>
+      <List>
+        {failures.map(({ workspace, error }) => (
+          <BranchesErrorRow key={workspace.id} workspace={workspace} error={error} />
+        ))}
+        {isPending ? <StackRowsSkeleton /> : null}
+        {stacks.map((stack) => (
+          <StackRow key={`${stack.workspace.id}:${stack.tip.name}`} stack={stack} />
+        ))}
+        {isEmpty ? <NoLocalStacks /> : null}
+      </List>
+    </section>
   );
 }
 ```
@@ -275,97 +300,89 @@ Example dedicated state file:
 
 ```typescript
 // skeleton-components.tsx
-import { Card, CardContent, CardHeader } from '@~/components/ui/card';
-import { Skeleton } from '@~/components/ui/skeleton';
+import { ListRow } from '@~/components/ui/list';
 
-export function CharacterDetailSkeleton() {
-  return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-48" />
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-      </CardContent>
-    </Card>
-  );
+const PLACEHOLDER_ROWS = 3;
+
+export function StackRowsSkeleton() {
+  return Array.from({ length: PLACEHOLDER_ROWS }, (_, index) => (
+    <ListRow key={index} aria-hidden="true" className="hover:bg-transparent">
+      <div className="flex flex-col gap-2">
+        <span className="h-3.5 w-48 animate-pulse rounded-sm bg-raised" />
+        <span className="h-3 w-72 animate-pulse rounded-sm bg-raised" />
+      </div>
+      <span className="h-3 w-16 animate-pulse rounded-sm bg-raised" />
+    </ListRow>
+  ));
 }
 ```
 
 ```typescript
 // error-components.tsx
-import { Alert, AlertDescription, AlertTitle } from '@~/components/ui/alert';
-import { Empty } from '@~/components/ui/empty';
+import { AlertIcon } from '@~/components/icons/icons';
+import { ListRow } from '@~/components/ui/list';
+import { getErrorMessage } from '@~/utils/rpc-errors';
 
-export function CharacterDetailQueryError() {
-  return (
-    <Alert variant="destructive">
-      <AlertTitle>Could not load character</AlertTitle>
-      <AlertDescription>Try refreshing or reopen the character from the list.</AlertDescription>
-    </Alert>
-  );
+import type { iWorkspace } from '../workspaces.types';
+
+interface iBranchesErrorRowProps {
+  workspace: iWorkspace;
+  error: unknown;
 }
 
-export function CharacterDetailNotFound() {
-  return <Empty>Character not found</Empty>;
+export function BranchesErrorRow({ workspace, error }: iBranchesErrorRowProps) {
+  return (
+    <ListRow className="hover:bg-transparent">
+      <div className="flex min-w-0 items-center gap-2 text-[13px] text-muted">
+        <AlertIcon className="text-bad" />
+        <span className="truncate">
+          Could not read the branches of {workspace.name}: {getErrorMessage(error)}
+        </span>
+      </div>
+      <span />
+    </ListRow>
+  );
 }
 ```
 
 ### Error Handling
 
-**Route-level errors** - Handled by `ErrorBoundary` component:
+**Route-level errors** - Handled by `RouteError` and `RouteNotFound` from `@~/components/layout`:
 
 ```typescript
-// In router configuration
-import { ErrorBoundary } from '@~/components/error-boundary';
-
-export const router = createRouter({
-  defaultErrorComponent: ErrorBoundary,
+// router.tsx
+return createRouter({
+  routeTree,
+  context: { tanstackRPC, queryClient },
+  defaultErrorComponent: RouteError,
+  defaultNotFoundComponent: RouteNotFound,
 });
 ```
 
 **Operation feedback** - UI changes should be the primary feedback:
 
 ```typescript
-// ✅ GOOD - Optimistic update, item disappears from list
-function CharacterList({ characters }) {
-  const queryClient = useQueryClient();
-  const { mutate: deleteCharacter } = useDeleteCharacter();
+// GOOD - Optimistic update in useUpdateSettings: the control changes at once and rolls back on error
+function ThemeField() {
+  const settings = useSettings();
+  const { mutate: updateSettings } = useUpdateSettings();
 
-  const handleDelete = (id: string) => {
-    deleteCharacter(
-      { id },
-      {
-        onMutate: async () => {
-          // Optimistically remove from UI
-          await queryClient.cancelQueries({ queryKey: ['characters'] });
-          const previous = queryClient.getQueryData(['characters']);
-          queryClient.setQueryData(['characters'], (old: Character[]) =>
-            old.filter((c) => c.id !== id)
-          );
-          return { previous };
-        },
-        onError: (err, variables, context) => {
-          // Rollback on error + show alert
-          queryClient.setQueryData(['characters'], context?.previous);
-        },
-      }
-    );
-  };
-
-  return characters.map((char) => (
-    <CharacterCard key={char.id} character={char} onDelete={() => handleDelete(char.id)} />
-  ));
+  return (
+    <SegmentedControl
+      label="Theme"
+      options={THEME_MODE_OPTIONS}
+      value={settings.theme}
+      onChange={(theme) => updateSettings({ theme })}
+    />
+  );
 }
 
-// ❌ BAD - Toast spam, no visual feedback of change
-function handleDelete() {
-  deleteCharacter(
-    { id: characterId },
+// BAD - Toast spam, no visual feedback of change
+function handleThemeChange(theme: ThemeMode) {
+  updateSettings(
+    { theme },
     {
-      onSuccess: () => toastSuccess('Character deleted'), // User can't see what changed!
-      onError: (error) => toastError(error.message),
+      onSuccess: () => showToast('Theme saved'), // Nothing on screen shows what changed!
     }
   );
 }
@@ -374,25 +391,25 @@ function handleDelete() {
 **Toast notifications** - **Only use when UI cannot show the change:**
 
 ```typescript
-// ✅ Appropriate: File upload (can't show inline easily)
-import { toastError, toastSuccess } from '@~/components/toastifications';
+import { showToast } from '@~/components/toast/toast-store';
 
-function handleUpload(file: File) {
-  uploadFile(
-    { file },
-    {
-      onSuccess: () => toastSuccess('File uploaded'),
-      onError: (error) => toastError(error.message || 'Upload failed'),
-    }
-  );
-}
+// Appropriate: a failed call has no inline place to show it (every mutation hook)
+onError: (error) => showToast(getErrorMessage(error)),
 
-// ✅ Appropriate: Copy to clipboard confirmation
+// Appropriate: confirming a change made in a dialog that just closed
+onSuccess: () => {
+  onOpenChange(false);
+  showToast(`Removed ${workspace.name}`);
+},
+
+// Appropriate: Copy to clipboard confirmation
 const handleCopy = async () => {
   await navigator.clipboard.writeText(text);
-  toastSuccess('Copied to clipboard');
+  showToast('Copied to clipboard');
 };
 ```
+
+`showToast` shows one short message at a time; a newer message replaces the current one.
 
 **→ See `.agents/skills/tanstack-query-integration/SKILL.md` for optimistic update patterns.**
 **→ See `.agents/skills/server-error-handling/SKILL.md` for error codes and handling patterns.**
@@ -405,29 +422,36 @@ Use nuqs for shareable, bookmarkable UI state (filters, tabs, modals):
 
 ```typescript
 import { parseAsStringEnum, useQueryState } from 'nuqs';
-import { Enumwaii } from '@koneko/enumwaii/enumwaii';
-import z from 'zod';
+import { Enumwaii } from '@chaff/enumwaii/enumwaii';
+
+import { SegmentedControl } from '@~/components/ui/segmented-control';
 
 // These values are intentionally lowercase because they are URL-facing.
-const settingsTabsEnumwaii = new Enumwaii('SettingsTab', ['profile', 'settings', 'billing']);
+const settingsTabsEnumwaii = new Enumwaii('SettingsTab', ['appearance', 'editor', 'repositories']);
 const SETTINGS_TABS = settingsTabsEnumwaii.enum;
-const SETTINGS_TAB_VALUES = settingsTabsEnumwaii.rawValues;
-const settingsTabSchema = settingsTabsEnumwaii.schema;
+const SETTINGS_TAB_LABELS = settingsTabsEnumwaii.derive({
+  [SETTINGS_TABS.appearance]: 'Appearance',
+  [SETTINGS_TABS.editor]: 'Editor',
+  [SETTINGS_TABS.repositories]: 'Repositories',
+});
+const SETTINGS_TAB_OPTIONS = settingsTabsEnumwaii.values.map((value) => ({
+  value,
+  label: SETTINGS_TAB_LABELS(value),
+}));
 
 export function SettingsTabs() {
   const [tab, setTab] = useQueryState(
     'tab',
-    parseAsStringEnum(SETTINGS_TAB_VALUES).withDefault(SETTINGS_TABS.profile)
+    parseAsStringEnum([...settingsTabsEnumwaii.values]).withDefault(SETTINGS_TABS.appearance)
   );
 
   return (
-    <Tabs value={tab} onValueChange={(v) => void setTab(v)}>
-      <TabsList>
-        <TabsTrigger value={SETTINGS_TABS.profile}>Profile</TabsTrigger>
-        <TabsTrigger value={SETTINGS_TABS.settings}>Settings</TabsTrigger>
-        <TabsTrigger value={SETTINGS_TABS.billing}>Billing</TabsTrigger>
-      </TabsList>
-    </Tabs>
+    <SegmentedControl
+      label="Settings section"
+      options={SETTINGS_TAB_OPTIONS}
+      value={tab}
+      onChange={(value) => void setTab(value)}
+    />
   );
 }
 ```
@@ -458,13 +482,16 @@ export function ResourceList() {
 }
 ```
 
-**Setup** - Wrap router with `NuqsAdapter` in `__root.tsx`:
+**Setup** - `NuqsAdapter` already wraps the app in `routes/__root.tsx`:
 
 ```typescript
-import { NuqsAdapter } from 'nuqs/adapters/react';
+import { NuqsAdapter } from 'nuqs/adapters/tanstack-router';
 
 <NuqsAdapter>
-  <Outlet />
+  <AppShell>
+    <Outlet />
+  </AppShell>
+  <ToastViewport />
 </NuqsAdapter>
 ```
 
@@ -473,15 +500,15 @@ import { NuqsAdapter } from 'nuqs/adapters/react';
 Dialogs should reset state when closing:
 
 ```typescript
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@~/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogHeader } from '@~/components/ui/dialog';
 import { useState } from 'react';
 
 interface iCreateDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function CreateDialog({ open, onOpenChange }: iCreateDialogProps) {
+export function CreateDialog({ isOpen, onOpenChange }: iCreateDialogProps) {
   const [formData, setFormData] = useState({ name: '' });
   const { mutate: create, reset: resetMutation } = useCreate();
 
@@ -492,12 +519,10 @@ export function CreateDialog({ open, onOpenChange }: iCreateDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Resource</DialogTitle>
-        </DialogHeader>
-        {/* Form implementation */}
+        <DialogHeader title="Create Resource" />
+        <DialogBody>{/* Form implementation */}</DialogBody>
       </DialogContent>
     </Dialog>
   );
@@ -506,69 +531,33 @@ export function CreateDialog({ open, onOpenChange }: iCreateDialogProps) {
 
 ## Multi-Step Wizards
 
-Use state machine pattern for wizard flows:
+Use state machine pattern for wizard flows, with the steps declared as an `Enumwaii`:
 
 ```typescript
-type WizardStep = 'select-type' | 'configure' | 'confirm';
+const wizardStepsEnumwaii = new Enumwaii('WizardStep', ['SELECT_TYPE', 'CONFIGURE', 'CONFIRM']);
+const WIZARD_STEPS = wizardStepsEnumwaii.enum;
+type WizardStep = InferEnumwaii<typeof wizardStepsEnumwaii>;
 
 export function SetupWizard() {
-  const [step, setStep] = useState<WizardStep>('select-type');
+  const [step, setStep] = useState<WizardStep>(WIZARD_STEPS.SELECT_TYPE);
   const [config, setConfig] = useState<Config | null>(null);
 
   const handleBack = () => {
-    if (step === 'confirm') setStep('configure');
-    if (step === 'configure') setStep('select-type');
+    if (step === WIZARD_STEPS.CONFIRM) setStep(WIZARD_STEPS.CONFIGURE);
+    if (step === WIZARD_STEPS.CONFIGURE) setStep(WIZARD_STEPS.SELECT_TYPE);
   };
 
   const handleNext = () => {
-    if (step === 'select-type') setStep('configure');
-    if (step === 'configure') setStep('confirm');
+    if (step === WIZARD_STEPS.SELECT_TYPE) setStep(WIZARD_STEPS.CONFIGURE);
+    if (step === WIZARD_STEPS.CONFIGURE) setStep(WIZARD_STEPS.CONFIRM);
   };
 
   return (
-    <Card>
-      <CardContent>
-        {step === 'select-type' && <SelectTypeStep onNext={handleNext} />}
-        {step === 'configure' && <ConfigureStep onBack={handleBack} onNext={handleNext} />}
-        {step === 'confirm' && <ConfirmStep onBack={handleBack} onComplete={handleComplete} />}
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-## Responsive Patterns
-
-Use `isMobile` prop for variant implementations:
-
-```typescript
-interface iNavigationProps {
-  items: NavItem[];
-  isMobile?: boolean;
-}
-
-export function Navigation({ items, isMobile = false }: iNavigationProps) {
-  if (isMobile) {
-    return (
-      <nav className="flex flex-col gap-2">
-        {items.map((item) => (
-          <Button key={item.id} variant="ghost" className="w-full justify-start">
-            <item.icon className="mr-2 size-5" />
-            {item.label}
-          </Button>
-        ))}
-      </nav>
-    );
-  }
-
-  return (
-    <nav className="flex items-center gap-2">
-      {items.map((item) => (
-        <Button key={item.id} variant="ghost" size="icon" tooltip={item.label}>
-          <item.icon className="size-5" />
-        </Button>
-      ))}
-    </nav>
+    <DialogBody>
+      {step === WIZARD_STEPS.SELECT_TYPE && <SelectTypeStep onNext={handleNext} />}
+      {step === WIZARD_STEPS.CONFIGURE && <ConfigureStep onBack={handleBack} onNext={handleNext} />}
+      {step === WIZARD_STEPS.CONFIRM && <ConfirmStep onBack={handleBack} onComplete={handleComplete} />}
+    </DialogBody>
   );
 }
 ```
@@ -584,27 +573,11 @@ export function Navigation({ items, isMobile = false }: iNavigationProps) {
 
 ### Prefetch on Hover
 
-Prefetch data before user clicks:
+Prefetch data before user clicks: `createAppRouter()` sets `defaultPreload: 'intent'`, so hovering or focusing a `Link` already runs the target route's loader. Load what a screen needs in its route loader instead of adding hover handlers:
 
 ```typescript
-import { usePrefetchOnHover } from '@~/hooks/use-prefetch-query';
-import { getCharacterQueryOptions } from '../hooks/use-character';
-
-export function CharacterLink({ characterId }: { characterId: string }) {
-  const prefetch = usePrefetchOnHover({
-    queryOptions: () => getCharacterQueryOptions(characterId),
-  });
-
-  return (
-    <Link
-      to="/characters/$characterId"
-      params={{ characterId }}
-      onMouseEnter={prefetch}
-    >
-      View Character
-    </Link>
-  );
-}
+// components/layout/app-rail.tsx: hovering this link runs the loader in routes/index.tsx
+<RailLink to="/" icon={InboxIcon} label="Reviews" />
 ```
 
 ## Accessibility
@@ -636,29 +609,29 @@ Icon-only buttons **must** have labels:
 
 ```typescript
 // Good
-<Button aria-label="Delete character" size="icon">
-  <LuTrash className="size-4" />
+<Button variant="icon" size="icon" aria-label="Appearance" title="Appearance" onClick={() => setIsOpen(true)}>
+  <SunIcon />
 </Button>
 
 // Bad - no label
-<Button size="icon">
-  <LuTrash className="size-4" />
+<Button variant="icon" size="icon" onClick={() => setIsOpen(true)}>
+  <SunIcon />
 </Button>
 ```
 
 ### Focus Management
 
-Dialog/modal components handle focus automatically via Radix primitives. For custom focus:
+Dialog/modal components handle focus automatically via Base UI primitives. For custom focus:
 
 ```typescript
 import { useEffect, useRef } from 'react';
 
-export function SearchDialog({ open }: { open: boolean }) {
+export function SearchDialog({ isOpen }: { isOpen: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
 
   return <input ref={inputRef} />;
 }
@@ -671,25 +644,25 @@ export function SearchDialog({ open }: { open: boolean }) {
 **REQUIRED** - Use design tokens, never hardcoded colors:
 
 ```typescript
-// ✅ CORRECT - Design tokens
-<div className="bg-background text-foreground border-border">
+// CORRECT - Design tokens
+<div className="border-line bg-surface text-fg">
   <h2 className="text-2xl font-semibold">Title</h2>
-  <p className="text-muted-foreground">Description</p>
+  <p className="text-muted">Description</p>
   <Button className="mt-4">Action</Button>
 </div>
 
-// ❌ WRONG - Hardcoded colors
+// WRONG - Hardcoded colors
 <div className="bg-white text-black border-gray-200">
   <h2 className="text-2xl font-semibold">Title</h2>
   <p className="text-gray-500">Description</p>
 </div>
 ```
 
-Common tokens:
-- **Background**: `bg-background`, `bg-muted`, `bg-card`
-- **Text**: `text-foreground`, `text-muted-foreground`
-- **Borders**: `border-border`, `border-input`
-- **Semantic**: `bg-primary`, `bg-destructive`, `bg-success`, `text-primary`, `text-destructive`
+Common tokens (declared in `apps/web/src/index.css`):
+- **Background**: `bg-canvas`, `bg-surface`, `bg-raised`, `bg-hover`, `bg-scrim`
+- **Text**: `text-fg`, `text-fg-soft`, `text-muted`, `text-faint`; `text-code` for code (size and line height follow the setting)
+- **Borders**: `border-line`, `border-line-strong`
+- **Semantic**: `text-accent`, `bg-accent-soft`, `border-accent-line`, `text-good`, `bg-good-soft`, `text-warn`, `bg-warn-soft`, `text-bad`, `bg-bad-soft`; diff `bg-add-bg`, `bg-del-bg`; syntax `text-tok-*`
 
 ### Conditional Classes
 
@@ -701,7 +674,7 @@ import { cn } from '@~/lib/utils';
 <Button
   className={cn(
     'size-12 transition-colors',
-    isActive && 'bg-primary/10 text-primary',
+    isActive && 'bg-accent-soft text-accent',
     isPending && 'opacity-50 cursor-not-allowed'
   )}
 >

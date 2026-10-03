@@ -30,7 +30,7 @@ export type StoryStageMode = InferEnumwaii<typeof storyStageModesEnumwaii>;
 export const storyStageModeSchema = storyStageModesEnumwaii.schema;
 ```
 
-`new Enumwaii(...)` is the only declaration form. Use a unique, stable PascalCase enum name — it is part of the type identity. Place shared, non-sensitive enums in `packages/shared/src/constants` and import them from `@chaff/shared/constants`; feature-local values stay with their feature.
+`new Enumwaii(...)` is the only declaration form. Use a unique, stable PascalCase enum name; it is part of the type identity. Place shared, non-sensitive enums in `packages/common/src/enums/<name>.enums.ts` and import them from `@chaff/common/enums/<name>.enums`; feature-local values stay with their feature.
 
 ## Use members, never raw values
 
@@ -125,11 +125,20 @@ export default [
 
 Enumwaii values are plain strings at runtime, so JSON and oRPC transport preserve them without ceremony, but neither can prove a string was valid before it reached the process.
 
-- For oRPC, use the enum's `schema` in both input and output contracts — input validation promotes an incoming string to the branded type, output validation rejects an invalid repository result before it becomes a DTO.
-- For Drizzle, map the column with `.$type<T>()` for the branded application type, but that is compile-time only. Add a PostgreSQL enum or check constraint as the durable database invariant; if the table is legacy or lacks that constraint, parse the field in the repository mapper before returning it:
+- For oRPC, use the enum's `schema` in both input and output contracts. Input validation promotes an incoming string to the branded type. Outputs are not validated at runtime (`initialOutputValidationIndex: Number.NaN` in `packages/core/src/lib/orpc.ts`), so the output schema only types the result.
+- For Drizzle, map the column with `.$type<T>()` for the branded application type, but that is compile-time only. SQLite has no enum type, so parse the field in the resolver's `overrides` before it leaves the repository (or add a `CHECK` constraint when the table needs a durable invariant):
 
 ```ts
-return { ...row, mode: storyStageModesEnumwaii.parse(row.mode) };
+// packages/core/src/features/settings/settings.resolver.ts
+public toSettingsResponse = createRowResolver<SettingsRow, iSettingsResponse>({
+  omit: ['id', 'updatedAt'],
+  overrides: (row) => ({
+    editor: editorSchema.parse(row.editor),
+    theme: themeModeSchema.parse(row.theme),
+    accent: accentSchema.parse(row.accent),
+    codeSize: codeSizeSchema.parse(row.codeSize),
+  }),
+});
 ```
 
 ## Checklist
@@ -142,4 +151,4 @@ return { ...row, mode: storyStageModesEnumwaii.parse(row.mode) };
 - Enable both enumwaii ESLint rules wherever enums are consumed.
 - Keep enum names unique and stable — the name is part of the type identity.
 
-See [`docs/reference/enumwaii-guide.md`](../../../docs/reference/enumwaii-guide.md) for the full reference and a worked migration example.
+See [`packages/enumwaii/README.md`](../../../packages/enumwaii/README.md) for the full reference.

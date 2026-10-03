@@ -9,16 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root';
-import { Route as Auth_onlyRouteImport } from './routes/_auth_only';
+import { Route as StackRouteImport } from './routes/stack';
+import { Route as SettingsRouteImport } from './routes/settings';
+import { Route as FindingsRouteImport } from './routes/findings';
 import { Route as IndexRouteImport } from './routes/index';
-import { Route as Auth_onlySettingsRouteImport } from './routes/_auth_only/settings';
-import { Route as Auth_onlyProfileRouteImport } from './routes/_auth_only/profile';
-import { Route as Auth_onlyDashboardRouteImport } from './routes/_auth_only/dashboard';
-import { Route as generalTo_dashboardRouteImport } from './routes/(general)/_to_dashboard';
-import { Route as generalTo_dashboardAuthRouteImport } from './routes/(general)/_to_dashboard.auth';
+import { Route as ReviewsSnapshotIdRouteImport } from './routes/reviews.$snapshotId';
+import { Route as ReviewsSnapshotIdIndexRouteImport } from './routes/reviews.$snapshotId.index';
+import { Route as ReviewsSnapshotIdExportRouteImport } from './routes/reviews.$snapshotId.export';
+import { Route as ReviewsSnapshotIdDiffRouteImport } from './routes/reviews.$snapshotId.diff';
 
-const Auth_onlyRoute = Auth_onlyRouteImport.update({
-  id: '/_auth_only',
+const StackRoute = StackRouteImport.update({
+  id: '/stack',
+  path: '/stack',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const FindingsRoute = FindingsRouteImport.update({
+  id: '/findings',
+  path: '/findings',
   getParentRoute: () => rootRouteImport,
 } as any);
 const IndexRoute = IndexRouteImport.update({
@@ -26,84 +38,118 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any);
-const Auth_onlySettingsRoute = Auth_onlySettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => Auth_onlyRoute,
-} as any);
-const Auth_onlyProfileRoute = Auth_onlyProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => Auth_onlyRoute,
-} as any);
-const Auth_onlyDashboardRoute = Auth_onlyDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => Auth_onlyRoute,
-} as any);
-const generalTo_dashboardRoute = generalTo_dashboardRouteImport.update({
-  id: '/(general)/_to_dashboard',
+const ReviewsSnapshotIdRoute = ReviewsSnapshotIdRouteImport.update({
+  id: '/reviews/$snapshotId',
+  path: '/reviews/$snapshotId',
   getParentRoute: () => rootRouteImport,
 } as any);
-const generalTo_dashboardAuthRoute = generalTo_dashboardAuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => generalTo_dashboardRoute,
+const ReviewsSnapshotIdIndexRoute = ReviewsSnapshotIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
+const ReviewsSnapshotIdExportRoute = ReviewsSnapshotIdExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
+} as any);
+const ReviewsSnapshotIdDiffRoute = ReviewsSnapshotIdDiffRouteImport.update({
+  id: '/diff',
+  path: '/diff',
+  getParentRoute: () => ReviewsSnapshotIdRoute,
 } as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
-  '/dashboard': typeof Auth_onlyDashboardRoute;
-  '/profile': typeof Auth_onlyProfileRoute;
-  '/settings': typeof Auth_onlySettingsRoute;
-  '/auth': typeof generalTo_dashboardAuthRoute;
+  '/findings': typeof FindingsRoute;
+  '/settings': typeof SettingsRoute;
+  '/stack': typeof StackRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
+  '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
-  '/dashboard': typeof Auth_onlyDashboardRoute;
-  '/profile': typeof Auth_onlyProfileRoute;
-  '/settings': typeof Auth_onlySettingsRoute;
-  '/auth': typeof generalTo_dashboardAuthRoute;
+  '/findings': typeof FindingsRoute;
+  '/settings': typeof SettingsRoute;
+  '/stack': typeof StackRoute;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
-  '/_auth_only': typeof Auth_onlyRouteWithChildren;
-  '/(general)/_to_dashboard': typeof generalTo_dashboardRouteWithChildren;
-  '/_auth_only/dashboard': typeof Auth_onlyDashboardRoute;
-  '/_auth_only/profile': typeof Auth_onlyProfileRoute;
-  '/_auth_only/settings': typeof Auth_onlySettingsRoute;
-  '/(general)/_to_dashboard/auth': typeof generalTo_dashboardAuthRoute;
+  '/findings': typeof FindingsRoute;
+  '/settings': typeof SettingsRoute;
+  '/stack': typeof StackRoute;
+  '/reviews/$snapshotId': typeof ReviewsSnapshotIdRouteWithChildren;
+  '/reviews/$snapshotId/diff': typeof ReviewsSnapshotIdDiffRoute;
+  '/reviews/$snapshotId/export': typeof ReviewsSnapshotIdExportRoute;
+  '/reviews/$snapshotId/': typeof ReviewsSnapshotIdIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: '/' | '/dashboard' | '/profile' | '/settings' | '/auth';
+  fullPaths:
+    | '/'
+    | '/findings'
+    | '/settings'
+    | '/stack'
+    | '/reviews/$snapshotId'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
+    | '/reviews/$snapshotId/';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/dashboard' | '/profile' | '/settings' | '/auth';
+  to:
+    | '/'
+    | '/findings'
+    | '/settings'
+    | '/stack'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
+    | '/reviews/$snapshotId';
   id:
     | '__root__'
     | '/'
-    | '/_auth_only'
-    | '/(general)/_to_dashboard'
-    | '/_auth_only/dashboard'
-    | '/_auth_only/profile'
-    | '/_auth_only/settings'
-    | '/(general)/_to_dashboard/auth';
+    | '/findings'
+    | '/settings'
+    | '/stack'
+    | '/reviews/$snapshotId'
+    | '/reviews/$snapshotId/diff'
+    | '/reviews/$snapshotId/export'
+    | '/reviews/$snapshotId/';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
-  Auth_onlyRoute: typeof Auth_onlyRouteWithChildren;
-  generalTo_dashboardRoute: typeof generalTo_dashboardRouteWithChildren;
+  FindingsRoute: typeof FindingsRoute;
+  SettingsRoute: typeof SettingsRoute;
+  StackRoute: typeof StackRoute;
+  ReviewsSnapshotIdRoute: typeof ReviewsSnapshotIdRouteWithChildren;
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_auth_only': {
-      id: '/_auth_only';
-      path: '';
-      fullPath: '/';
-      preLoaderRoute: typeof Auth_onlyRouteImport;
+    '/stack': {
+      id: '/stack';
+      path: '/stack';
+      fullPath: '/stack';
+      preLoaderRoute: typeof StackRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/settings': {
+      id: '/settings';
+      path: '/settings';
+      fullPath: '/settings';
+      preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/findings': {
+      id: '/findings';
+      path: '/findings';
+      fullPath: '/findings';
+      preLoaderRoute: typeof FindingsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/': {
@@ -113,85 +159,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    '/_auth_only/settings': {
-      id: '/_auth_only/settings';
-      path: '/settings';
-      fullPath: '/settings';
-      preLoaderRoute: typeof Auth_onlySettingsRouteImport;
-      parentRoute: typeof Auth_onlyRoute;
-    };
-    '/_auth_only/profile': {
-      id: '/_auth_only/profile';
-      path: '/profile';
-      fullPath: '/profile';
-      preLoaderRoute: typeof Auth_onlyProfileRouteImport;
-      parentRoute: typeof Auth_onlyRoute;
-    };
-    '/_auth_only/dashboard': {
-      id: '/_auth_only/dashboard';
-      path: '/dashboard';
-      fullPath: '/dashboard';
-      preLoaderRoute: typeof Auth_onlyDashboardRouteImport;
-      parentRoute: typeof Auth_onlyRoute;
-    };
-    '/(general)/_to_dashboard': {
-      id: '/(general)/_to_dashboard';
-      path: '';
-      fullPath: '';
-      preLoaderRoute: typeof generalTo_dashboardRouteImport;
+    '/reviews/$snapshotId': {
+      id: '/reviews/$snapshotId';
+      path: '/reviews/$snapshotId';
+      fullPath: '/reviews/$snapshotId';
+      preLoaderRoute: typeof ReviewsSnapshotIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    '/(general)/_to_dashboard/auth': {
-      id: '/(general)/_to_dashboard/auth';
-      path: '/auth';
-      fullPath: '/auth';
-      preLoaderRoute: typeof generalTo_dashboardAuthRouteImport;
-      parentRoute: typeof generalTo_dashboardRoute;
+    '/reviews/$snapshotId/': {
+      id: '/reviews/$snapshotId/';
+      path: '/';
+      fullPath: '/reviews/$snapshotId/';
+      preLoaderRoute: typeof ReviewsSnapshotIdIndexRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
+    '/reviews/$snapshotId/export': {
+      id: '/reviews/$snapshotId/export';
+      path: '/export';
+      fullPath: '/reviews/$snapshotId/export';
+      preLoaderRoute: typeof ReviewsSnapshotIdExportRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
+    };
+    '/reviews/$snapshotId/diff': {
+      id: '/reviews/$snapshotId/diff';
+      path: '/diff';
+      fullPath: '/reviews/$snapshotId/diff';
+      preLoaderRoute: typeof ReviewsSnapshotIdDiffRouteImport;
+      parentRoute: typeof ReviewsSnapshotIdRoute;
     };
   }
 }
 
-interface Auth_onlyRouteChildren {
-  Auth_onlyDashboardRoute: typeof Auth_onlyDashboardRoute;
-  Auth_onlyProfileRoute: typeof Auth_onlyProfileRoute;
-  Auth_onlySettingsRoute: typeof Auth_onlySettingsRoute;
+interface ReviewsSnapshotIdRouteChildren {
+  ReviewsSnapshotIdDiffRoute: typeof ReviewsSnapshotIdDiffRoute;
+  ReviewsSnapshotIdExportRoute: typeof ReviewsSnapshotIdExportRoute;
+  ReviewsSnapshotIdIndexRoute: typeof ReviewsSnapshotIdIndexRoute;
 }
 
-const Auth_onlyRouteChildren: Auth_onlyRouteChildren = {
-  Auth_onlyDashboardRoute: Auth_onlyDashboardRoute,
-  Auth_onlyProfileRoute: Auth_onlyProfileRoute,
-  Auth_onlySettingsRoute: Auth_onlySettingsRoute,
+const ReviewsSnapshotIdRouteChildren: ReviewsSnapshotIdRouteChildren = {
+  ReviewsSnapshotIdDiffRoute: ReviewsSnapshotIdDiffRoute,
+  ReviewsSnapshotIdExportRoute: ReviewsSnapshotIdExportRoute,
+  ReviewsSnapshotIdIndexRoute: ReviewsSnapshotIdIndexRoute,
 };
 
-const Auth_onlyRouteWithChildren = Auth_onlyRoute._addFileChildren(
-  Auth_onlyRouteChildren,
-);
-
-interface generalTo_dashboardRouteChildren {
-  generalTo_dashboardAuthRoute: typeof generalTo_dashboardAuthRoute;
-}
-
-const generalTo_dashboardRouteChildren: generalTo_dashboardRouteChildren = {
-  generalTo_dashboardAuthRoute: generalTo_dashboardAuthRoute,
-};
-
-const generalTo_dashboardRouteWithChildren =
-  generalTo_dashboardRoute._addFileChildren(generalTo_dashboardRouteChildren);
+const ReviewsSnapshotIdRouteWithChildren =
+  ReviewsSnapshotIdRoute._addFileChildren(ReviewsSnapshotIdRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  Auth_onlyRoute: Auth_onlyRouteWithChildren,
-  generalTo_dashboardRoute: generalTo_dashboardRouteWithChildren,
+  FindingsRoute: FindingsRoute,
+  SettingsRoute: SettingsRoute,
+  StackRoute: StackRoute,
+  ReviewsSnapshotIdRoute: ReviewsSnapshotIdRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>();
-
-import type { getRouter } from './router.tsx';
-import type { createStart } from '@tanstack/react-start';
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
-  }
-}

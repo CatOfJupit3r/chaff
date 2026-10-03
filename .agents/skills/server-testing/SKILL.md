@@ -1,17 +1,17 @@
 ---
 name: server-testing
-description: Write and run tests for the server using Vitest. Prefer integration tests for features and use unit tests only for utilities and helpers. Use when creating tests for routers, services, models, implementing test utilities, debugging test failures, or running tests. Includes guidance on the "accessed before declaration" error which indicates errors in the CODE being tested, not the test itself.
+description: Write and run tests for the Chaff core using Vitest. Prefer integration tests for features and use unit tests only for utilities and helpers. Use when creating tests for routers, services, repositories, implementing test utilities, debugging test failures, or running tests. Includes guidance on the "accessed before declaration" error which indicates errors in the CODE being tested, not the test itself.
 ---
 
 # Server Testing
 
-Write comprehensive tests for the server using Vitest with a focus on integration testing.
+Write comprehensive tests for the core (`packages/core`) using Vitest with a focus on integration testing.
 
 ## Core Principles
 
 1. **Prefer Integration Tests**: Test features end-to-end through routers and services
 2. **Unit Tests for Utilities Only**: Reserve unit tests for pure functions and helpers
-3. **Use Specialized Fixtures**: Always create and reuse domain-specific fixtures for test setup. Instead of calling endpoints directly (which couples tests to API contracts), build fixtures like `createUser()` (in `test/integration/utilities.ts`) and feature-specific ones such as a hypothetical `createUserWithFindings()`. This makes tests more maintainable and intent-clear
+3. **Use Specialized Fixtures**: Always create and reuse domain-specific fixtures for test setup. Build real git repositories with `createTestGitRepo()` and `cloneTestGitRepo()` (in `test/helpers/git-repo.ts`) and wrap repeated setup in small feature helpers such as `addWorkspace(repo)` in `test/integration/workspaces.test.ts`. This makes tests more maintainable and intent-clear
 4. **Clean Database Between Tests**: Automatic cleanup ensures test isolation
 5. **Type-Safe Testing**: Use oRPC's `call()` for invoking routers with full type safety
 
@@ -28,56 +28,69 @@ Write comprehensive tests for the server using Vitest with a focus on integratio
 ## Running Tests
 
 ```bash
-# Run all tests once
-pnpm run test
+# Type checks, lint, and every test once
+pnpm run verify --tests
+
+# Only the core
+pnpm run verify --tests --filter @chaff/core
 
 # Watch mode (re-run on changes)
-pnpm run test:watch
+pnpm --filter=@chaff/core run test:watch
 
 # UI mode (visual test runner)
-pnpm run test:ui
+pnpm --filter=@chaff/core run test:ui
 ```
 
-All commands should be run from `apps/server/` or the monorepo root.
+All commands should be run from the monorepo root. Trust the PASS/FAIL summary and exit code of `pnpm run verify`.
 
 ## Test Structure
 
 ```
-apps/server/test/
-├── integration/           # Integration tests (preferred)
-│   ├── auth.test.ts
-│   ├── index.test.ts
-│   └── utilities.ts      # Shared test helpers (createUser, createRandomUser)
-├── unit/                 # Unit tests (utilities only)
-│   ├── event-bus.test.ts
-│   └── matchers.test.ts
-└── helpers/              # Test setup and configuration
-    ├── setup.ts          # Database and environment setup
-    ├── instance.ts       # App instance management
-    ├── fixtures.ts       # Reusable fixtures
-    └── matchers.ts       # Custom matchers (toBeNil, etc.)
+packages/core/test/
+  integration/                 # Integration tests (preferred), one file per feature
+    app.test.ts
+    host.test.ts
+    settings.test.ts
+    workspaces.test.ts
+    node-sqlite-driver.test.ts
+  unit/                        # Unit tests (utilities only)
+    concurrency.test.ts
+    error-handling-helper.test.ts
+    event-bus.test.ts
+    matchers.test.ts
+    orpc-error-wrapper.test.ts
+  helpers/                     # Test setup and shared helpers
+    instance.ts                # Boots one core: in-memory SQLite, FakeCoreHost
+    setup.ts                   # afterEach: clear tables, reset the fake host, delete temp folders
+    git-repo.ts                # createTestGitRepo, cloneTestGitRepo, createTempDirectory
+    fake-core-host.ts          # Records folder pickers, opened links, and applied themes
+    orpc-errors.ts             # expectORPCError
+    matchers.ts                # Custom matchers (toBeNil, etc.)
 ```
+
+The renderer and the desktop shell have their own Vitest setups: `apps/web/test/` (jsdom, mirrors `apps/web/src`) and `apps/desktop/test/` (mirrors `apps/desktop/src`).
 
 ## When to Write Which Type of Test
 
 ### Integration Tests (Preferred)
 
 Write integration tests for:
-- ✅ Router endpoints
-- ✅ Service layer logic
-- ✅ Database operations
-- ✅ Authentication/authorization flows
-- ✅ Cross-feature interactions
+- Router endpoints
+- Service layer logic
+- Database operations
+- Git reads against real repositories in temp folders
+- Host interactions, asserted through `fakeHost`
+- Cross-feature interactions
 
 Integration tests provide the most value by testing the full stack as users experience it.
 
 ### Unit Tests (Sparingly)
 
 Only write unit tests for:
-- ✅ Pure utility functions
-- ✅ Data transformers
-- ✅ Custom matchers
-- ✅ Helper functions
+- Pure utility functions
+- Data transformers
+- Custom matchers
+- Helper functions
 
 Avoid unit testing services or routers—use integration tests instead.
 
@@ -85,54 +98,49 @@ Avoid unit testing services or routers—use integration tests instead.
 
 ```typescript
 import { call } from '@orpc/server';
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
+import { errorCodes } from '@chaff/common/enums/errors.enums';
+
+import { createTestGitRepo } from '../helpers/git-repo';
+import type { TestGitRepo } from '../helpers/git-repo';
 import { appRouter } from '../helpers/instance';
-import { createUser } from './utilities';
-import { createUserWithFindings } from './findings.fixtures'; // hypothetical feature fixture
+import { expectORPCError } from '../helpers/orpc-errors';
 
-describe('Feature Name', () => {
-  it('should perform action successfully', async () => {
-    // Setup: Use specialized fixture instead of calling endpoints
-    const { ctx, user } = await createUser();
+async function addWorkspace(repo: TestGitRepo) {
+  return call(appRouter.workspaces.add, { path: repo.path });
+}
+
+describe('workspace branches', () => {
+  it('suggests the branch a branch was cut from', async () => {
+    // Setup: Use specialized fixtures to build the repository
+    const repo = createTestGitRepo();
+    repo.branch('feature/a');
+    repo.commit('a1');
+    const workspace = await addWorkspace(repo);
 
     // Execute: Call the router
-    const result = await call(
-      appRouter.feature.action,
-      { input: 'data' },
-      ctx()
-    );
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
 
     // Assert: Verify the result
-    expect(result).not.toBeNil();
-    expect(result.someField).toBe('expected value');
+    expect(branches.find((branch) => branch.name === 'feature/a')).toMatchObject({
+      suggestedParent: 'main',
+      commitsAhead: 1,
+    });
   });
 
-  it('should handle users with existing findings', async () => {
-    // Use specialized fixture for specific test scenario
-    const { ctx, user } = await createUserWithFindings(3);
-
-    const result = await call(
-      appRouter.feature.restrictedAction,
-      { actionData: 'test' },
-      ctx()
-    );
-
-    expect(result).toBeDefined();
-  });
-
-  it('should reject unauthorized access', async () => {
-    const { ctx } = await createUser();
-
+  it('reports an unknown repository', async () => {
     // Test error case
-    await expect(
-      call(appRouter.feature.restrictedAction, {}, ctx())
-    ).rejects.toThrow();
+    await expectORPCError(call(appRouter.workspaces.branches, { workspaceId: 'missing' }), {
+      code: errorCodes.WORKSPACE_NOT_FOUND,
+    });
   });
 });
 ```
 
-**Key Pattern**: Create specialized fixtures (`createUser`, `createUserWithFindings`, etc.) instead of calling endpoints directly. This keeps tests:
+`call()` takes no context argument: the core has a single local user and no session. A procedure without input is called with `undefined`, for example `call(appRouter.workspaces.list, undefined)`.
+
+**Key Pattern**: Create specialized fixtures (`createTestGitRepo`, `addWorkspace`, etc.) instead of repeating setup steps in every test. This keeps tests:
 - Focused on what's being tested
 - Independent from API implementation details
 - Easier to maintain when fixtures change
@@ -154,7 +162,7 @@ The issue is typically:
 **Do NOT try to fix this in your test file.** Instead:
 - Check the source file being tested for circular imports
 - Look for modules importing each other
-- Verify initialization order in loaders and DI container
+- Verify initialization order in `createChaffCore()` and the DI container
 
 See [references/common-issues.md](references/common-issues.md) for detailed troubleshooting.
 
@@ -178,16 +186,16 @@ Use the shared `expectORPCError` helper from `test/helpers/orpc-errors.ts` when 
 import { expectORPCError } from '../helpers/orpc-errors';
 
 await expectORPCError(
-  call(appRouter.feature.action, input, ctx()),
-  { code: errorCodes.FEATURE_ERROR },
+  call(appRouter.workspaces.remove, { workspaceId: workspace.id }),
+  { code: errorCodes.WORKSPACE_NOT_FOUND },
 );
 ```
 
 ## Test Database
 
-Tests use PGlite (an in-memory PostgreSQL implementation) for isolation:
-- Each integration test project shares one migrated in-memory database
-- Database tables are truncated between tests with cascading foreign-key cleanup
+Integration tests run the real migrations on an in-memory SQLite database:
+- `test/helpers/instance.ts` boots one core per run with `databasePath: ':memory:'`; the integration project runs files one at a time in a single worker (`isolate: false`, `fileParallelism: false`)
+- `test/helpers/setup.ts` deletes every row after each test with `DatabaseService.clearAllTables()`, resets `fakeHost`, and removes temp folders
 - No need to manually clean up—handled by `afterEach` in setup
 
 ## See Also

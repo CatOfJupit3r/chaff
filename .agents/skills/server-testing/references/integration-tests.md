@@ -17,25 +17,27 @@ The most important principle: **Always create specialized fixtures for test setu
 Fixtures **should** call endpoints via `call()`, but tests **should not**. This separation keeps tests clean and focused.
 
 ```typescript
-// Hypothetical `findings` feature used throughout this reference
-
-// ❌ BAD: Test has to know how to set up scenarios
-it('should dismiss a finding', async () => {
+// BAD: Test has to know how to set up scenarios
+it('suggests feature/a as the parent of feature/b', async () => {
   // Creating tight coupling between test and setup logic
-  const review = await call(appRouter.reviews.createReview, { title: 'PR 42' }, ctx());
-  const finding = await call(appRouter.findings.createFinding, { reviewId: review.id, title: 'Unused export' }, ctx());
-  
-  const result = await call(appRouter.findings.dismissFinding, { findingId: finding.id }, ctx());
-  expect(result).toBeDefined();
+  const repo = createTestGitRepo();
+  repo.branch('feature/a');
+  repo.commit('a1');
+  repo.branch('feature/b');
+  repo.commit('b1');
+  const workspace = await call(appRouter.workspaces.add, { path: repo.path });
+
+  const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+  expect(branches.find((branch) => branch.name === 'feature/b')?.suggestedParent).toBe('feature/a');
 });
 
-// ✅ GOOD: Fixture encapsulates setup, test focuses on behavior
-it('should dismiss a finding', async () => {
+// GOOD: Fixture encapsulates setup, test focuses on behavior
+it('suggests feature/a as the parent of feature/b', async () => {
   // Clear intent, fixture handles all the complexity
-  const { ctx, findings } = await createUserWithFindings(1);
-  
-  const result = await call(appRouter.findings.dismissFinding, { findingId: findings[0].id }, ctx());
-  expect(result).toBeDefined();
+  const { workspace } = await createStackedWorkspace();
+
+  const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+  expect(branches.find((branch) => branch.name === 'feature/b')?.suggestedParent).toBe('feature/a');
 });
 ```
 
@@ -53,24 +55,20 @@ it('should dismiss a finding', async () => {
 import { call } from '@orpc/server';
 import { describe, it, expect } from 'vitest';
 
+import { createTestGitRepo } from '../helpers/git-repo';
 import { appRouter } from '../helpers/instance';
-import { createUser } from './utilities';
 
 describe('Feature Name', () => {
   it('should handle typical use case', async () => {
     // Setup
-    const { ctx, user } = await createUser();
+    const repo = createTestGitRepo();
 
     // Execute
-    const result = await call(
-      appRouter.namespace.procedure,
-      { input: 'data' },
-      ctx()
-    );
+    const result = await call(appRouter.workspaces.add, { path: repo.path });
 
     // Assert
     expect(result).not.toBeNil();
-    expect(result.field).toBe('expected');
+    expect(result.defaultBranch).toBe('main');
   });
 });
 ```
@@ -81,87 +79,73 @@ The foundation of maintainable tests is building a library of specialized fixtur
 
 ### Fixture Types to Create
 
-**1. Domain-Specific User Fixtures**
+**1. Repository Fixtures**
 
 ```typescript
-// test/integration/utilities.ts
+// test/helpers/git-repo.ts (exists)
 
-export async function createAdminUser() {
-  const user = await createUser({ /* admin-specific data */ });
-  // Grant admin permissions via endpoint
-  await call(appRouter.admin.grantRole, { userId: user.user.id, role: 'ADMIN' }, user.ctx());
-  return user;
-}
+const repo = createTestGitRepo(); // one commit on main, in a temp folder
+const other = createTestGitRepo('stack-base'); // a different initial branch
+const clone = cloneTestGitRepo(repo); // has origin/HEAD, like a real checkout
 
-export async function createUserWithFindings(count: number) {
-  const user = await createUser();
-  // Create findings via endpoints
-  const findings = await Promise.all(
-    Array.from({ length: count }, (_, i) =>
-      call(appRouter.findings.createFinding, { title: `Finding ${i}` }, user.ctx())
-    )
-  );
-  return { ...user, findings };
-}
-
-export async function createUserWithDismissedFinding() {
-  const user = await createUserWithFindings(1);
-  // Dismiss via endpoint
-  const finding = await call(appRouter.findings.dismissFinding, { findingId: user.findings[0].id }, user.ctx());
-  return { ...user, finding };
-}
+repo.branch('feature/a'); // switch -c
+repo.commit('a1'); // writes a file and commits it, returns the sha
+repo.git('branch', 'feature/b'); // any other git command
 ```
 
 **2. Resource Creation Fixtures**
 
 ```typescript
-export async function createChallengeWithParticipants(count: number) {
-  const creator = await createUser();
-  const challenge = await call(appRouter.challenges.create, { title: '...' }, creator.ctx());
-  
-  const participants = await Promise.all(
-    Array.from({ length: count }).map(() => createUser())
-  );
-  
-  return { creator, challenge, participants };
+export async function addWorkspace(repo: TestGitRepo) {
+  // Create the workspace via the endpoint
+  return call(appRouter.workspaces.add, { path: repo.path });
+}
+
+export async function createStackedWorkspace() {
+  const repo = createTestGitRepo();
+  repo.branch('feature/a');
+  repo.commit('a1');
+  repo.branch('feature/b');
+  repo.commit('b1');
+
+  const workspace = await addWorkspace(repo);
+  return { repo, workspace };
 }
 ```
 
 **3. Specific Scenario Fixtures**
 
 ```typescript
-export async function setupCompletedUserChallenge() {
-  const user = await createUser();
-  const { challenge } = await createChallengeWithParticipants(1);
-  
-  // Complete the challenge via endpoint
-  await call(appRouter.challenges.submit, { challengeId: challenge.id, answer: '...' }, user.ctx());
-  
-  return { user, challenge };
+export async function createWorkspaceWithMissingFolder() {
+  const repo = createTestGitRepo();
+  const workspace = await addWorkspace(repo);
+
+  // The folder disappears after the repository was added
+  rmSync(repo.path, { recursive: true, force: true });
+
+  return { repo, workspace };
 }
 ```
 
 ### Using Fixtures in Tests
 
 ```typescript
-describe('Finding Dismissal', () => {
-  it('should mark the finding as dismissed', async () => {
+describe('workspace availability', () => {
+  it('marks a repository unavailable when its folder is gone', async () => {
     // Use specialized fixture - immediately clear what this test needs
-    const { finding } = await createUserWithDismissedFinding();
+    await createWorkspaceWithMissingFolder();
 
     // Test verifies the state, not the setup
-    expect(finding.isDismissed).toBe(true);
+    const [workspace] = await call(appRouter.workspaces.list, undefined);
+    expect(workspace?.isAvailable).toBe(false);
   });
 
-  it('should reject dismissing another user\'s finding', async () => {
-    const { findings } = await createUserWithFindings(1);
-    // Use basic fixture - this user owns no findings
-    const { ctx } = await createUser();
+  it('still forgets a repository whose folder is gone', async () => {
+    const { workspace } = await createWorkspaceWithMissingFolder();
 
     // Test the actual behavior
-    await expect(
-      call(appRouter.findings.dismissFinding, { findingId: findings[0].id }, ctx())
-    ).rejects.toThrow();
+    await call(appRouter.workspaces.remove, { workspaceId: workspace.id });
+    expect(await call(appRouter.workspaces.list, undefined)).toEqual([]);
   });
 });
 ```
@@ -175,57 +159,54 @@ describe('Finding Dismissal', () => {
 Most tests should use specialized fixtures. The test verifies behavior, the fixture creates the scenario:
 
 ```typescript
-// ✅ GOOD: Fixture creates scenario, test verifies behavior
-it('should list all findings for admin user', async () => {
-  await createUserWithFindings(2);
-  const { ctx } = await createAdminUser();
-  
+// GOOD: Fixture creates scenario, test verifies behavior
+it('lists repositories oldest first', async () => {
+  const first = await addWorkspace(createTestGitRepo());
+  const second = await addWorkspace(createTestGitRepo());
+
   // Test only verifies the outcome
-  const findings = await call(appRouter.findings.listAllFindings, {}, ctx());
-  expect(findings).toHaveLength(2);
+  const workspaces = await call(appRouter.workspaces.list, undefined);
+  expect(workspaces.map((workspace) => workspace.id)).toEqual([first.id, second.id]);
 });
 ```
 
-### 2. Authorization Checks
+### 2. Error Checks
 
-Test that unauthorized access is rejected:
+Test that invalid operations are rejected with the right error code:
 
 ```typescript
-it('should reject listing all findings for a non-admin user', async () => {
-  const { ctx } = await createUser(); // Basic user, no admin role
+it('refuses the same repository twice, even through another folder', async () => {
+  const repo = createTestGitRepo();
+  await addWorkspace(repo);
+  const otherFolder = path.join(repo.path, 'docs');
+  mkdirSync(otherFolder);
 
   // Test the actual rejection behavior
-  await expectORPCError(
-    call(appRouter.findings.listAllFindings, {}, ctx()),
-    { code: errorCodes.UNAUTHORIZED },
-  );
+  await expectORPCError(call(appRouter.workspaces.add, { path: otherFolder }), {
+    code: errorCodes.WORKSPACE_ALREADY_ADDED,
+  });
 });
 ```
 
-### 3. Multiple Users / Interactions
+### 3. Host Interactions
 
-Create specialized fixtures for multi-user scenarios:
+The core reaches the OS only through `iCoreHost`. In tests that host is `fakeHost` (from `test/helpers/instance.ts`): set what it should return, then assert what the core asked it to do:
 
 ```typescript
-it('should handle team with multiple members', async () => {
-  // Use fixture that creates team with members
-  const { owner, member1, member2 } = await createTeamWithMembers();
-  
-  // Test team interaction behavior
-  const teamData = await call(appRouter.teams.getTeam, { teamId: owner.id }, owner.ctx());
-  expect(teamData.members).toHaveLength(2);
+it('returns the folder picked in the native dialog', async () => {
+  fakeHost.pickedDirectory = '/work/repo';
+
+  await expect(call(appRouter.host.pickDirectory, { title: 'Add repository' })).resolves.toEqual({
+    path: '/work/repo',
+  });
+  expect(fakeHost.pickerTitles).toEqual(['Add repository']);
 });
 
-it('should prevent duplicate emails', async () => {
-  const user1 = await createUser();
-
-  await expect(
-    createUser({
-      email: user1.user.email,
-      name: 'Different Name',
-      password: 'password123',
-    })
-  ).rejects.toThrow();
+it('refuses to open a plain http link', async () => {
+  await expectORPCError(call(appRouter.host.openExternal, { url: 'http://example.com' }), {
+    code: errorCodes.UNSUPPORTED_EXTERNAL_URL,
+  });
+  expect(fakeHost.openedUrls).toEqual([]);
 });
 ```
 
@@ -234,13 +215,18 @@ it('should prevent duplicate emails', async () => {
 Use fixtures to set up complex scenarios, then test behavior:
 
 ```typescript
-it('should show completed challenges', async () => {
-  // Fixture handles all setup
-  const { user, challenge } = await createUserWithCompletedChallenge();
+it("prefers origin's default branch over common branch names", async () => {
+  // Fixtures handle all setup
+  const upstream = createTestGitRepo('main');
+  upstream.branch('develop');
+  upstream.commit('develop work');
+  upstream.git('symbolic-ref', 'HEAD', 'refs/heads/develop');
+  const clone = cloneTestGitRepo(upstream);
+  clone.git('branch', '--quiet', 'main', 'origin/main');
 
   // Test verifies the behavior
-  const challenges = await call(appRouter.challenges.getUserChallenges, { status: 'COMPLETED' }, user.ctx());
-  expect(challenges).toContainEqual(expect.objectContaining({ id: challenge.id }));
+  const workspace = await addWorkspace(clone);
+  expect(workspace.defaultBranch).toBe('develop');
 });
 ```
 
@@ -249,59 +235,32 @@ it('should show completed challenges', async () => {
 Test edge cases by using specialized fixtures that handle the scenario:
 
 ```typescript
-// Create a fixture that lists findings for a fresh user
-export async function createUserWithFindingsAccess() {
-  const user = await createUser();
-  // Fixture calls the endpoint
-  const findings = await call(appRouter.findings.listMyFindings, {}, user.ctx());
-  return { ...user, findings };
-}
+// The repository has no main, master, trunk, or develop branch
+it('falls back to the checked-out branch when no usual default exists', async () => {
+  const repo = createTestGitRepo('stack-base');
 
-// Test just verifies the edge case
-it('should return an empty list for a user with no findings', async () => {
-  const { findings } = await createUserWithFindingsAccess();
+  const workspace = await addWorkspace(repo);
 
-  expect(findings).toEqual([]);
+  expect(workspace.defaultBranch).toBe('stack-base');
 });
 ```
 
 ### 6. Validation Testing with Fixtures
 
-Create specialized fixtures for validation scenarios:
+The contract validates input before any service runs. A rejected input is a `BAD_REQUEST` without one of our error codes, so assert on the error itself:
 
 ```typescript
-// Fixture that sets up a finding with a specific summary
-export async function createFindingWithSummary(summary: string) {
-  const user = await createUser();
-  // Fixture calls the endpoint to validate and set the summary
-  const finding = await call(appRouter.findings.createFinding, { title: 'Finding', summary }, user.ctx());
-  return { ...user, finding };
-}
-
-// Test just verifies the fixture created the scenario
-it('should accept summary at max length (500 chars)', async () => {
-  const maxSummary = 'a'.repeat(500);
-  
-  // Fixture ensures the max-length summary exists
-  const { finding } = await createFindingWithSummary(maxSummary);
-  
-  expect(finding.summary.length).toBe(500);
+it('rejects an empty path before touching the disk', async () => {
+  await expect(call(appRouter.workspaces.add, { path: '' })).rejects.toMatchObject({
+    code: 'BAD_REQUEST',
+    message: 'Input validation failed',
+  });
 });
 
-// Test validation failure with a separate fixture
-export async function createInvalidFindingSummary() {
-  const longSummary = 'a'.repeat(501);
-  
-  // Fixture attempts invalid operation and captures error
-  return {
-    promise: createFindingWithSummary(longSummary),
-  };
-}
-
-it('should reject summary exceeding max length', async () => {
-  const { promise } = await createInvalidFindingSummary();
-  
-  await expect(promise).rejects.toThrow();
+it('accepts a workspace id at the max length (64 chars)', async () => {
+  await expectORPCError(call(appRouter.workspaces.branches, { workspaceId: 'a'.repeat(64) }), {
+    code: errorCodes.WORKSPACE_NOT_FOUND, // valid input, unknown workspace
+  });
 });
 ```
 
@@ -310,33 +269,18 @@ it('should reject summary exceeding max length', async () => {
 Test boundary conditions using specialized fixtures:
 
 ```typescript
-// Fixture for empty summary scenario
-export async function createFindingWithEmptySummary() {
-  return createFindingWithSummary('');
-}
+it('rejects a folder that does not exist', async () => {
+  const missingFolder = path.join(createTempDirectory(), 'missing');
 
-it('should handle empty input gracefully', async () => {
-  // Fixture sets up the scenario with empty summary
-  const { finding } = await createFindingWithEmptySummary();
-  
-  // Test verifies the finding was created with no summary
-  expect(finding.summary).toBe('');
+  await expectORPCError(call(appRouter.workspaces.add, { path: missingFolder }), {
+    code: errorCodes.DIRECTORY_NOT_FOUND,
+  });
 });
 
-// Fixture for missing resource scenario
-export async function attemptMissingResourceOperation() {
-  const { ctx } = await createUser();
-  
-  // Fixture tries to operate on a non-existent finding
-  return {
-    promise: call(appRouter.findings.deleteFinding, { findingId: crypto.randomUUID() }, ctx()),
-  };
-}
-
-it('should reject operations on missing resources', async () => {
-  const { promise } = await attemptMissingResourceOperation();
-  
-  await expect(promise).rejects.toThrow();
+it('rejects operations on missing resources', async () => {
+  await expectORPCError(call(appRouter.workspaces.remove, { workspaceId: crypto.randomUUID() }), {
+    code: errorCodes.WORKSPACE_NOT_FOUND,
+  });
 });
 ```
 
@@ -345,39 +289,21 @@ it('should reject operations on missing resources', async () => {
 Use specialized fixtures to encapsulate complex setup:
 
 ```typescript
-// Fixture that creates a review with findings in every severity via API
-export async function createReviewWithAllSeverities() {
-  const user = await createUser();
-  const review = await call(appRouter.reviews.createReview, { title: 'PR 42' }, user.ctx());
-  
-  // Fixture creates one finding per severity via endpoints
-  // (findingSeveritiesEnumwaii is a hypothetical Enumwaii declared in the findings feature)
-  await Promise.all(
-    findingSeveritiesEnumwaii.values.map((severity) =>
-      call(appRouter.findings.createFinding, { reviewId: review.id, title: severity, severity }, user.ctx())
-    )
-  );
-  
-  return { ...user, review };
-}
+describe('workspace branches', () => {
+  it('suggests the nearest branch below each branch of a stack', async () => {
+    // Fixture creates main <- feature/a <- feature/b
+    const { workspace } = await createStackedWorkspace();
 
-describe('Review Summary', () => {
-  it('should count findings per severity', async () => {
-    // Fixture creates a review with every severity
-    const { ctx, review } = await createReviewWithAllSeverities();
-    
-    const summary = await call(appRouter.reviews.getReviewSummary, { reviewId: review.id }, ctx());
-    expect(summary.totalFindings).toBe(findingSeveritiesEnumwaii.values.length);
-  });
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    const parents = Object.fromEntries(
+      branches.map((branch) => [branch.name, [branch.suggestedParent, branch.commitsAhead]]),
+    );
 
-  it('should reject summary for a review the user cannot access', async () => {
-    const { review } = await createReviewWithAllSeverities();
-    // Basic user without access to that review
-    const { ctx } = await createUser();
-    
-    await expect(
-      call(appRouter.reviews.getReviewSummary, { reviewId: review.id }, ctx())
-    ).rejects.toThrow();
+    expect(parents).toEqual({
+      main: [undefined, 0],
+      'feature/a': ['main', 1],
+      'feature/b': ['feature/a', 1],
+    });
   });
 });
 ```
@@ -391,15 +317,16 @@ import { call } from '@orpc/server';
 
 const result = await call(
   appRouter.namespace.procedure,  // The router procedure
-  { input: 'value' },              // Input data
-  ctx()                            // Context (session, etc.)
+  { input: 'value' }               // Input data (undefined when the procedure has none)
 );
 ```
 
+There is no context argument: the core has a single local user and no session.
+
 This provides:
 - Full type safety
-- Automatic validation
-- Context injection
+- Input validation against the contract
+- The same error boundary the app uses
 - Contract enforcement
 
 ## Test Organization
@@ -411,25 +338,23 @@ test/integration/<feature-name>.test.ts
 ```
 
 Examples:
-- `auth.test.ts` (exists)
-- `index.test.ts` (exists)
-- `findings.test.ts` (hypothetical feature)
+- `workspaces.test.ts`
+- `settings.test.ts`
+- `host.test.ts`
 
 ### Describe Blocks
 
 Organize by feature and then by procedure:
 
 ```typescript
-describe('Findings API', () => {
-  describe('getFinding', () => {
-    it('should return the finding for its owner', async () => {});
-    it('should fail with FINDING_NOT_FOUND if the finding does not exist', async () => {});
-  });
+describe('workspaces', () => {
+  it('adds the repository that contains a nested folder', async () => {});
+  it('refuses a folder that is not inside a git repository', async () => {});
+});
 
-  describe('updateFinding', () => {
-    it('should update the finding', async () => {});
-    it('should validate summary max length', async () => {});
-  });
+describe('workspace branches', () => {
+  it('suggests the nearest branch below each branch of a stack', async () => {});
+  it('reports an unknown repository', async () => {});
 });
 ```
 
@@ -440,27 +365,27 @@ describe('Findings API', () => {
 3. **Test happy path first** - Verify the main use case works
 4. **Then test edge cases** - Validation, boundaries, errors
 5. **Use meaningful test names** - Describe what should happen
-6. **Avoid over-mocking** - Test real integrations when possible
+6. **Avoid over-mocking** - Test real integrations when possible: real git, real SQLite
 7. **Keep tests independent** - Don't rely on test execution order
-8. **Use type-safe helpers** - `createUser()`, `call()`, custom fixtures, etc.
+8. **Use type-safe helpers** - `createTestGitRepo()`, `call()`, custom fixtures, etc.
 9. **Verify database state** - Check persistence when relevant
-10. **Test authorization** - Always verify access control
+10. **Test expected failures** - Verify every error code a procedure can return with `expectORPCError`
 
 ## Common Mistakes to Avoid
 
-❌ Don't call multiple endpoints to set up test state (use fixtures instead)
-❌ Don't mock the database in integration tests
-❌ Don't test implementation details
-❌ Don't write flaky tests that depend on timing
-❌ Don't skip error case testing
-❌ Don't use hardcoded IDs—use `createUser()` or custom fixtures instead
-❌ Don't repeat setup code across tests—extract into a reusable fixture
+- Don't call multiple endpoints to set up test state (use fixtures instead)
+- Don't mock the database or git in integration tests
+- Don't test implementation details
+- Don't write flaky tests that depend on timing
+- Don't skip error case testing
+- Don't use hardcoded IDs; use the ones fixtures return
+- Don't repeat setup code across tests; extract it into a reusable fixture
 
-✅ Do create specialized fixtures for each test scenario
-✅ Do use fixtures to express intent (what is this test scenario?)
-✅ Do test the full feature flow
-✅ Do verify both success and error cases
-✅ Do clean up between tests (handled automatically)
-✅ Do test with realistic data
-✅ Do reuse fixtures across multiple tests
-✅ Do update fixtures in one place when APIs change
+- Do create specialized fixtures for each test scenario
+- Do use fixtures to express intent (what is this test scenario?)
+- Do test the full feature flow
+- Do verify both success and error cases
+- Do clean up between tests (handled automatically)
+- Do test with realistic data
+- Do reuse fixtures across multiple tests
+- Do update fixtures in one place when APIs change

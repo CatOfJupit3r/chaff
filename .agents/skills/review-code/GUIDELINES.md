@@ -17,18 +17,19 @@ Types must always be either validated or inferred. Never use type assertions (`a
 **Bad:**
 
 ```typescript
-const user = data as User;
-const id = req.params.id as string;
+const settings = data as iSettingsResponse;
+const workspace = (await this.workspaceRepository.findById(workspaceId)) as iWorkspaceRecord;
 ```
 
 **Good:**
 
 ```typescript
 // Validate with zod
-const user = userSchema.parse(data);
+const settings = settingsSchema.parse(data);
 
-// Infer from return type
-const id = getUserId(); // returns string
+// Narrow instead of asserting
+const workspace = await this.workspaceRepository.findById(workspaceId);
+if (!workspace) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
 ```
 
 **Exception:** Type assertions are acceptable only as a last resort with a comment explaining why.
@@ -41,8 +42,8 @@ Don't define explicit types when TypeScript can infer them automatically, especi
 
 ```typescript
 // Service methods
-public async getUser(userId: string): Promise<UserResponse> {
-  return await UserModel.findById(userId);
+public async getRecord(workspaceId: string): Promise<iWorkspaceRecord | undefined> {
+  return await this.workspaceRepository.findById(workspaceId);
 }
 
 function calculateTotal(items: Item[]): number {
@@ -54,8 +55,8 @@ function calculateTotal(items: Item[]): number {
 
 ```typescript
 // Return type inferred from implementation
-public async getUser(userId: string) {
-  return await UserModel.findById(userId);
+public async getRecord(workspaceId: string) {
+  return await this.workspaceRepository.findById(workspaceId);
 }
 
 function calculateTotal(items: Item[]) {
@@ -63,7 +64,7 @@ function calculateTotal(items: Item[]) {
 }
 ```
 
-**Exception:** Helper/utility functions MAY define explicit return types for clarity.
+**Exception:** Helper/utility functions MAY define explicit return types for clarity, and so may service methods whose return type is a shared response interface (`Promise<iSettingsResponse>`), because that annotation is the check that the service still matches the contract.
 
 ### No `enum`, No `z.enum`, Prefer `Enumwaii`
 
@@ -72,41 +73,45 @@ Use `Enumwaii` from `@chaff/enumwaii/enumwaii` for every reusable closed set. It
 **Bad:**
 
 ```typescript
-enum UserRole {
-    ADMIN = "ADMIN",
-    USER = "USER",
+enum ThemeMode {
+  SYSTEM = 'SYSTEM',
+  DARK = 'DARK',
+  LIGHT = 'LIGHT',
 }
 
-const USER_ROLES = {
-    ADMIN: "ADMIN",
-    USER: "USER",
+const THEME_MODES = {
+  SYSTEM: 'SYSTEM',
+  DARK: 'DARK',
+  LIGHT: 'LIGHT',
 } as const;
 
-export const userRolesSchema = z.enum(['ADMIN', 'USER', 'GUEST']);
+export const themeModeSchema = z.enum(['SYSTEM', 'DARK', 'LIGHT']);
 ```
 
 **Good:**
 
 ```typescript
-import { Enumwaii, type InferEnumwaii } from '@chaff/enumwaii/enumwaii';
+// packages/common/src/enums/appearance.enums.ts
+import { Enumwaii } from '@chaff/enumwaii/enumwaii';
+import type { InferEnumwaii } from '@chaff/enumwaii/enumwaii';
 
-const userRolesEnumwaii = new Enumwaii('UserRole', ['ADMIN', 'USER', 'GUEST']);
-export const USER_ROLES = userRolesEnumwaii.enum;
-export type UserRole = InferEnumwaii<typeof userRolesEnumwaii>;
-export const userRoleSchema = userRolesEnumwaii.schema;
+export const themeModesEnumwaii = new Enumwaii('ThemeMode', ['SYSTEM', 'DARK', 'LIGHT']);
+export const THEME_MODES = themeModesEnumwaii.enum;
+export type ThemeMode = InferEnumwaii<typeof themeModesEnumwaii>;
+export const themeModeSchema = themeModesEnumwaii.schema;
 
 // Usage
-if (user.role === USER_ROLES.ADMIN) { ... }
+if (settings.theme === THEME_MODES.DARK) { ... }
 ```
 
 ### Use Enums Instead of String Literals
 
-When values are reused across server and client, always use enums instead of hardcoding strings.
+When values are reused across the core and the renderer, always use enums instead of hardcoding strings.
 
 **Bad:**
 
 ```typescript
-if (user.role === 'ADMIN') { ... }
+if (settings.theme === 'DARK') { ... }
 const statusMap = {
   SUCCESS: 'success',
   ERROR: 'error',
@@ -116,7 +121,7 @@ const statusMap = {
 **Good:**
 
 ```typescript
-if (user.role === USER_ROLES.ADMIN) { ... }
+if (settings.theme === THEME_MODES.DARK) { ... }
 const statusMap = {
   [STATUS.SUCCESS]: NOTIFICATION_TYPES.SUCCESS,
   [STATUS.ERROR]: NOTIFICATION_TYPES.ERROR,
@@ -154,41 +159,46 @@ CONFIG.api.timeout; // number (literal 5000)
 
 ## Data Fetching & State Management
 
-### TanStack Query Options Must Be Named in UPPERCASE
+### Query Options Are camelCase Module Constants
 
-All query options, mutation options, and query key functions must follow UPPERCASE_SNAKE_CASE naming.
+Query options are built once at module level from `tanstackRPC` and named `<feature>QueryOptions`. Hooks and route loaders share that constant. Mutations live inside `use<Action>` hooks, which get the client from `useQueryClient()`.
 
 **Bad:**
 
 ```typescript
-export const meQueryOptions = queryOptions({ ... });
-export const useDeleteCharacter = () => { ... };
+export const SETTINGS_QUERY_OPTIONS = tanstackRPC.settings.get.queryOptions();
+
+export function useSettings() {
+  // Options rebuilt inside the hook, so loaders and other hooks cannot share them
+  return useSuspenseQuery(tanstackRPC.settings.get.queryOptions()).data;
+}
 ```
 
 **Good:**
 
 ```typescript
-export const ME_QUERY_OPTIONS = queryOptions({ ... });
-export const USE_DELETE_CHARACTER_MUTATION = () => { ... };
-export const GET_CHARACTER_QUERY_KEY = (input: iGetCharacterInput) => ...;
+// apps/web/src/features/settings/hooks/use-settings.ts
+export const settingsQueryOptions = tanstackRPC.settings.get.queryOptions();
+
+export function useSettings() {
+  return useSuspenseQuery(settingsQueryOptions).data;
+}
 ```
 
 **Pattern:**
 
-- Query options: `{FEATURE}_{ACTION}_QUERY_OPTIONS`
-- Mutation options: `{FEATURE}_{ACTION}_MUTATION_OPTIONS`
-- Query keys: `{FEATURE}_{ACTION}_QUERY_KEY`
+- Query options: `<feature>QueryOptions` (`settingsQueryOptions`, `workspacesQueryOptions`)
+- Mutations: `use<Action>` hooks (`useUpdateSettings`, `useRemoveWorkspace`)
 
-### Use TanStack Query `queryKey`/`queryOptions`/`mutationOptions` Methods from oRPC
+### Use the Keys oRPC Generates
 
-Prefer using the built-in `queryKey` method from oRPC contracts for consistency.
-Define them OUTSIDE of hooks and components to avoid unnecessary re-renders and ensure stable references.
+Never hand-write query keys. Read them from the query options constant, or use `.key()` to match a whole procedure or namespace.
 
 **Good:**
 
 ```typescript
-export const listWorldInfoQueryKey = (input?: iListWorldInfoInput) =>
-    tanstackRPC.worldinfo.listWorldInfo.queryKey({ input: input ?? {} });
+queryClient.setQueryData(settingsQueryOptions.queryKey, settings);
+await queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.key() });
 ```
 
 ---
@@ -258,25 +268,30 @@ z.object({
 
 ### Error Codes Must Be Registered
 
-All error codes must be defined in `packages/shared/src/enums/errors.enums.ts` and used with proper error wrappers.
+All error codes must be members of the `errorCodes` Enumwaii in `packages/common/src/enums/errors.enums.ts`, with a message in `errorMessages`, and must be thrown with the error wrappers.
 
 **Good:**
 
 ```typescript
-// In errors.enums.ts
-export const characterErrorCodes = {
-    CHARACTER_NOT_FOUND: "CHARACTER_NOT_FOUND",
-    CHARACTER_NAME_REQUIRED: "CHARACTER_NAME_REQUIRED",
-} as const;
+// In errors.enums.ts: add the code to the Enumwaii list, then its message
+const errorCodesEnumwaii = new Enumwaii('ErrorCode', [
+  // ...
+  'WORKSPACE_NOT_FOUND',
+]);
 
-// In router/service
-import { ORPCNotFoundError } from "@~/lib/orpc-error-wrapper";
-import { characterErrorCodes } from "@chaff/shared";
+export const errorMessages = errorCodesEnumwaii.derive({
+  // ...
+  [errorCodes.WORKSPACE_NOT_FOUND]: 'Repository not found',
+});
 
-if (!character) {
-    throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND);
-}
+// In the service
+import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
+
+if (!record) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
 ```
+
+`derive` throws at load time when a code has no message, so a missing message fails every test run.
 
 ---
 
@@ -289,132 +304,102 @@ Always identify and eliminate N+1 query patterns where a query is executed in a 
 **Bad - N+1 Query:**
 
 ```typescript
-// Fetches stories, then runs 2 queries per story (N+1 problem)
-async listStories(userId: string) {
-    const stories = await StoryModel.find({ userId });
-    
-    for (const story of stories) {
-        story.chatCount = await ChatModel.countDocuments({ storyId: story._id });
-        story.chapterCount = await ChapterModel.countDocuments({ storyId: story._id });
-    }
-    
-    return stories;
+// Lists workspaces, then runs one count query per workspace
+listWithTargetCounts() {
+  const rows = this.db.select().from(workspaces).all();
+
+  return rows.map((workspace) => ({
+    ...workspace,
+    targetCount:
+      this.db
+        .select({ value: count() })
+        .from(reviewTargets)
+        .where(eq(reviewTargets.workspaceId, workspace.id))
+        .get()?.value ?? 0,
+  }));
 }
 ```
 
-**Good - Use Aggregation Pipeline:**
+**Good - One Query with a Join:**
 
 ```typescript
-async listStories(userId: string) {
-    const pipeline = [
-        { $match: { userId } },
-        {
-            $lookup: {
-                from: 'chats',
-                let: { storyId: { $toString: '$_id' } },
-                pipeline: [
-                    { $match: { $expr: { $eq: ['$storyId', '$$storyId'] } } },
-                    { $count: 'count' },
-                ],
-                as: 'chatInfo',
-            },
-        },
-        {
-            $lookup: {
-                from: 'chapters',
-                let: { storyId: { $toString: '$_id' } },
-                pipeline: [
-                    { $match: { $expr: { $eq: ['$storyId', '$$storyId'] } } },
-                    { $count: 'count' },
-                ],
-                as: 'chapterInfo',
-            },
-        },
-        {
-            $addFields: {
-                chatCount: { $ifNull: [{ $arrayElemAt: ['$chatInfo.count', 0] }, 0] },
-                chapterCount: { $ifNull: [{ $arrayElemAt: ['$chapterInfo.count', 0] }, 0] },
-            },
-        },
-    ];
-    
-    return await StoryModel.aggregate(pipeline);
+listWithTargetCounts() {
+  return this.db
+    .select({ ...getTableColumns(workspaces), targetCount: count(reviewTargets.id) })
+    .from(workspaces)
+    .leftJoin(reviewTargets, eq(reviewTargets.workspaceId, workspaces.id))
+    .groupBy(workspaces.id)
+    .all();
 }
 ```
 
-**Alternative - Parallel Queries for Detail Views:**
+**Parallel Work Belongs to Git and the File System:**
+
+SQLite queries run synchronously through `node:sqlite`, so wrapping them in `Promise.all` gains nothing. The slow, independent work in the core is git and file system I/O. Run it in parallel, and bound it with `mapWithConcurrency` (`@~/lib/concurrency`) when the list can be long:
 
 ```typescript
-// When fetching a single entity with related data
-async getStoryDetail(storyId: string) {
-    const story = await StoryModel.findById(storyId);
-    
-    // Fetch all related data in parallel (not in a loop)
-    const [narrative, plotline, chapters, overrides, chatCount] = await Promise.all([
-        story.narrativeId ? NarrativeModel.findById(story.narrativeId) : null,
-        story.plotlineId ? PlotlineModel.findById(story.plotlineId) : null,
-        ChapterModel.find({ storyId: story._id }),
-        OverrideModel.find({ storyId: story._id }),
-        ChatModel.countDocuments({ storyId: story._id }),
-    ]);
-    
-    return { ...story, narrative, plotline, chapters, overrides, chatCount };
-}
+// workspaces.service.ts: one availability check per workspace, all at once
+const records = await this.workspaceRepository.list();
+return Promise.all(records.map(async (record) => this.toResponse(record)));
+
+// branches.service.ts: one git walk per branch, at most GIT_CONCURRENCY at a time
+const suggestions = await mapWithConcurrency(branches, GIT_CONCURRENCY, async (branch) =>
+  this.suggestParent(repoPath, branch, tips, defaultBranch),
+);
 ```
 
 **Detection Checklist:**
 
-- ⚠️ `await` inside a `for`/`forEach`/`map` loop
-- ⚠️ Multiple queries executed sequentially that could be parallel
-- ⚠️ Queries based on results from a previous query in a loop
-- ✅ Use aggregation pipelines with `$lookup` for lists
-- ✅ Use `Promise.all()` for parallel independent queries
-- ✅ Consider denormalizing frequently accessed counts
+- Warning: a query inside a `for`/`forEach`/`map` loop
+- Warning: queries based on results from a previous query in a loop
+- Warning: `await` on git or file system calls inside a loop when the calls are independent
+- Good: joins and `groupBy` for lists with related counts
+- Good: `Promise.all()` or `mapWithConcurrency()` for independent git and file system calls
 
-### Contract Schemas Must Match Models
+### Contract Schemas Must Match Repository Records
 
-Shared contract schemas must include all fields that exist in database models, especially when those fields are needed by clients.
+Shared contract schemas must include every field of the repository record that clients need, with the same optionality. Outputs are not validated at runtime (`initialOutputValidationIndex: Number.NaN` in `lib/orpc.ts`), so TypeScript is the only check that the two still agree.
 
 **Bad:**
 
 ```typescript
-// Model has these fields
-class Chat {
-    storyId?: string;
-    isStoryChat: boolean;
-    originalChatId?: string;
-}
+// The record has these fields
+export type iWorkspaceRecord = Omit<WorkspaceRow, 'defaultBranch'> & {
+  defaultBranch?: string;
+};
 
-// But contract doesn't include them - data will be stripped on output!
-const CHAT_SCHEMA = z.object({
-    _id: z.string(),
-    userId: z.string(),
-    name: z.string(),
-    // Missing: storyId, isStoryChat, originalChatId
+// But the contract leaves one out, so the client never learns about it
+export const workspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  repoPath: z.string(),
+  // Missing: defaultBranch
+  isAvailable: z.boolean(),
+  createdAt: z.date(),
 });
 ```
 
 **Good:**
 
 ```typescript
-const CHAT_SCHEMA = z.object({
-    _id: z.string(),
-    userId: z.string(),
-    name: z.string(),
-    // Include all fields clients need
-    storyId: z.string().optional(),
-    isStoryChat: z.boolean().default(false),
-    originalChatId: z.string().optional(),
+export const workspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  repoPath: z.string(),
+  defaultBranch: z.string().optional(),
+  /** False when the folder was moved or deleted since it was added. */
+  isAvailable: z.boolean(),
+  createdAt: z.date(),
 });
 ```
 
 **Review Checklist:**
 
-- ✅ All model fields that clients need are in the contract schema
-- ✅ Optional fields use `.optional()` or `.default()`
-- ✅ Contract types are imported/reused across related contracts (no `z.any()`)
-- ⚠️ New model fields added → Update contract schema
-- ⚠️ Field used in frontend → Must be in contract schema
+- Good: all record fields that clients need are in the contract schema
+- Good: nullable columns become `.optional()` in the contract, and the resolver turns `null` into `undefined`
+- Good: contract schemas are imported/reused across related contracts (no `z.any()`)
+- Warning: new column added -> update the record type, resolver, and contract schema
+- Warning: field used in the renderer -> must be in the contract schema
 
 ### Type-Safe Data Transformations
 
@@ -423,43 +408,33 @@ When merging or transforming data from multiple sources, ensure type safety with
 **Bad:**
 
 ```typescript
-mergeWithBase(base: CharacterDoc, override: OverrideDoc) {
-    const merged = { ...base };
-    
-    // @ts-expect-error - Type mismatch ignored
-    if (override.emotionSprites) merged.emotionSprites = override.emotionSprites;
-    
-    return merged as MergedCharacter;
+public async update(changes: iSettingsUpdate) {
+  const current = await this.get();
+
+  // Spread keeps every key of `changes`, including ones set to undefined
+  return this.settingsRepository.save({ ...current, ...changes } as iSettingsResponse);
 }
 ```
 
 **Good:**
 
 ```typescript
-mergeWithBase(base: CharacterDoc, override: OverrideDoc): MergedCharacter {
-    const merged: MergedCharacter = {
-        ...base.toObject(),
-        hasOverride: Boolean(override),
-    };
-    
-    // Normalize override sprites to match expected shape
-    if (override.emotionSprites) {
-        merged.emotionSprites = override.emotionSprites.map((sprite) => ({
-            emotion: sprite.emotion,
-            imagePath: sprite.imagePath,
-            imageUrl: sprite.imageUrl,
-            isGenerated: false, // Add missing required fields
-            generatedImageId: undefined,
-        }));
-    }
-    
-    return merged;
+public async update(changes: iSettingsUpdate): Promise<iSettingsResponse> {
+  const current = await this.get();
+  const saved = await this.settingsRepository.save({
+    editor: changes.editor ?? current.editor,
+    theme: changes.theme ?? current.theme,
+    accent: changes.accent ?? current.accent,
+    codeSize: changes.codeSize ?? current.codeSize,
+  });
+  if (saved.theme !== current.theme) await this.host.applyTheme(saved.theme);
+  return saved;
 }
 ```
 
 **Pattern:**
 - Define explicit return type
-- Build typed object incrementally
+- Build typed object field by field
 - Transform data to match expected shape
 - Avoid `@ts-expect-error` and type assertions
 
@@ -474,51 +449,51 @@ Forbidden to use barrel imports (`index.ts`) in favor of importing required code
 **Bad:**
 
 ```typescript
-import { Button, Card, Input } from "./components";
-import { useUser, useAuth } from "./hooks";
+import { Button, Callout, Pill } from '@~/components/ui';
+import { useSettings, useUpdateSettings } from '@~/features/settings/hooks';
 ```
 
 **Good:**
 
 ```typescript
-import { Button } from "./components/button";
-import { Card } from "./components/card";
-import { Input } from "./components/input";
-import { useUser } from "./hooks/use-user";
-import { useAuth } from "./hooks/use-auth";
+import { Button } from '@~/components/ui/button';
+import { Callout } from '@~/components/ui/callout';
+import { Pill } from '@~/components/ui/pill';
+import { useSettings } from '@~/features/settings/hooks/use-settings';
+import { useUpdateSettings } from '@~/features/settings/hooks/use-update-settings';
 ```
 
 **Rationale:** Explicit imports improve tree-shaking, make dependencies clear, and prevent circular dependency issues.
 
-### No Duplicated Constants/Helpers Between Server and Web
+### No Duplicated Constants/Helpers Between Core, Desktop, and Web
 
-Reusable constants and helpers must be extracted to `/packages/shared` instead of duplicating across server and web.
+Reusable constants and helpers must live in `packages/common` instead of being duplicated across the core, the desktop main process, and the renderer.
 
 **Bad:**
 
 ```typescript
-// apps/server/src/constants/limits.ts
-export const MAX_NAME_LENGTH = 200;
+// apps/desktop/src/main/rpc-bridge.ts
+const RPC_PORT_MESSAGE = 'chaff:rpc-port';
 
-// apps/web/src/constants/limits.ts
-export const MAX_NAME_LENGTH = 200;
+// apps/web/src/utils/orpc.ts
+const RPC_PORT_MESSAGE = 'chaff:rpc-port';
 ```
 
 **Good:**
 
 ```typescript
-// packages/shared/src/constants/limits.ts
-export const MAX_NAME_LENGTH = 200;
+// packages/common/src/constants/desktop-bridge.constants.ts
+export const DESKTOP_RPC_PORT_MESSAGE = 'chaff:rpc-port';
 
-// Usage in both apps
-import { MAX_NAME_LENGTH } from "@chaff/shared/constants";
+// Usage everywhere
+import { DESKTOP_RPC_PORT_MESSAGE } from '@chaff/common/constants/desktop-bridge.constants';
 ```
 
-**Note:** Only extract non-sensitive data shared between server and client.
+**Note:** Only extract non-sensitive data shared between packages.
 
 ### No Ad-Hoc In-Memory Caches in Services
 
-There is no shared cache layer in this repo. Do not add per-service `Map`-based caches to paper over slow queries; they leak memory, go stale, and diverge across instances. Fix the query (indexes, narrower selects, batching) first. If a real cache becomes necessary, introduce it as a dedicated `@singleton()` service behind an interface and DI token so every caller shares one implementation.
+There is no shared cache layer in this repo. Do not add per-service `Map`-based caches to paper over slow queries or git calls; they leak memory and go stale. Fix the query (indexes, narrower selects, batching) first. If a real cache becomes necessary, introduce it as a dedicated `@singleton()` service behind an interface and DI token so every caller shares one implementation.
 
 **Bad:**
 
@@ -545,47 +520,39 @@ class MyService {
 }
 ```
 
-### Service Registration: `@singleton` vs `@injectable`
+### Service Registration: `@singleton` by Default
 
-Use `@injectable` by default. Only use `@singleton` when truly needed (database connections, event buses, loggers, global caches).
+Every service, repository, and resolver in the core is a `@singleton()`. The core runs once per app process, so one instance per class is the expected shape, and a class that resolves by its own type needs no registration in `di/container.ts`.
 
-**@singleton** - Use when:
-
-- Service maintains global state (EventBus, PostgresService)
-- Service is expensive to initialize
-- Service manages system resources (LoggerFactory)
-- Event listeners need to be registered once (EventServices)
-
-**@injectable** - Use when:
-
-- Service is stateless or request-scoped
-- Service performs business logic without global state
-- Multiple instances won't cause issues
+- Register a class in `registerServices()` only when callers depend on an interface token (`WORKSPACE_REPOSITORY_TOKEN`, `SETTINGS_REPOSITORY_TOKEN`).
+- Values that come from outside (`CORE_OPTIONS_TOKEN`, `CORE_HOST_TOKEN`) are registered with `useValue` in `createChaffCore`.
+- Use `@injectable()` only for a class that must not share state between callers, and say why in a comment.
 
 **Example:**
 
 ```typescript
-// Singleton - maintains event listeners
 @singleton()
-export class CharactersEventsService {}
-
-// Injectable - stateless business logic
-@injectable()
-export class CharactersService {}
+export class WorkspacesService {
+  constructor(
+    @inject(WORKSPACE_REPOSITORY_TOKEN) private readonly workspaceRepository: iWorkspaceRepository,
+    private readonly gitService: GitService,
+    private readonly branchesService: BranchesService,
+  ) {}
+}
 ```
 
 ### Event Services Pattern
 
-Feature event registration must be done in separate `${Feature}EventService` and initialized in `eventsLoader`.
+The core has an `EventBus` (`features/events/event-bus.ts`) with typed `Listener` events, but no feature listens to it yet. When one does, register its handlers in a separate `<Feature>EventsService` and resolve that service once in `createChaffCore`, not in the feature's main service.
 
 **Bad:**
 
 ```typescript
-// characters.service.ts
-@injectable()
-export class CharactersService {
-  constructor(private eventBus: EventBus) {
-    this.eventBus.on(UserCreated, ...); // Event registration in main service
+// workspaces.service.ts
+@singleton()
+export class WorkspacesService {
+  constructor(private readonly eventBus: EventBus) {
+    this.eventBus.on(WorkspaceRemoved, ...); // Event registration in main service
   }
 }
 ```
@@ -593,30 +560,28 @@ export class CharactersService {
 **Good:**
 
 ```typescript
-// characters-events.service.ts
+// workspaces-events.service.ts
 @singleton()
-export class CharactersEventsService {
-    constructor(
-        private eventBus: EventBus,
-        loggerFactory: LoggerFactory,
-    ) {
-        this.logger = loggerFactory.create("characters-events-service");
-        this.initializeEventListeners();
-    }
+export class WorkspacesEventsService {
+  private readonly logger: Logger;
 
-    private initializeEventListeners() {
-        this.eventBus.on(UserAfterRegisteredListener, async ({ userId }) => {
-            // Handle event
-        });
-    }
+  constructor(
+    private readonly eventBus: EventBus,
+    loggerFactory: LoggerFactory,
+  ) {
+    this.logger = loggerFactory.create('workspaces-events');
+    this.initializeEventListeners();
+  }
+
+  private initializeEventListeners() {
+    this.eventBus.on(WorkspaceRemoved, async ({ workspaceId }) => {
+      // Handle event
+    });
+  }
 }
 
-// loaders/events.loader.ts
-export default async function eventsLoader() {
-    const { CharactersEventsService } =
-        await import("@~/features/characters/characters-events.service");
-    container.resolve(CharactersEventsService);
-}
+// core.ts, inside createChaffCore after the database is open
+container.resolve(WorkspacesEventsService);
 ```
 
 ### DRY - extract duplicated logic into helpers/services when it meets the following criteria:
@@ -636,32 +601,29 @@ function calculatePagination(total: number, page: number, limit: number) {
 }
 ```
 
-### Use `Promise.all` for Parallel Queries
+### Use `Promise.all` for Parallel I/O
 
-When queries are independent, run them in parallel instead of sequentially.
+When git or file system calls are independent, run them in parallel instead of sequentially. Database calls are synchronous and gain nothing from it.
 
 **Good:**
 
 ```typescript
-const [chats, total] = await Promise.all([
-    ChatModel.find(query).limit(limit).skip(offset).lean(),
-    ChatModel.countDocuments(query),
-]);
+const [isAvailable, version] = await Promise.all([isDirectory(record.repoPath), this.gitService.version()]);
 ```
 
 **Bad:**
 
 ```typescript
-const chats = await ChatModel.find(query).limit(limit).skip(offset).lean();
-const total = await ChatModel.countDocuments(query);
+const isAvailable = await isDirectory(record.repoPath);
+const version = await this.gitService.version();
 ```
 
 **When to use:**
 
-- Independent database queries
-- Multiple API calls
-- Parallel validations
+- Independent git commands
+- Independent file system reads or checks
 - Calls don't depend on each other's results
+- Use `mapWithConcurrency` instead when the list is unbounded (one git process per branch, file, or commit)
 
 #### Sequential When Dependencies Exist
 
@@ -670,64 +632,65 @@ Keep operations sequential when they depend on each other.
 **Good:**
 
 ```typescript
-const user = await createUser(userData);
-const profile = await createProfile(user.id);
-const settings = await initializeSettings(profile.id);
+const repoPath = await this.resolveRepositoryRoot(absoluteDirectory);
+const defaultBranch = await this.detectDefaultBranch(repoPath);
+const record = await this.workspaceRepository.create({ name: path.basename(repoPath), repoPath, defaultBranch });
 ```
 
 ### Use Logger Service, Not `console.log`
 
-Always use the injected logger service instead of `console.log/error/warn`.
+Always use a namespaced logger from `LoggerFactory` instead of `console.log/error/warn`.
 
 **Bad:**
 
 ```typescript
-console.log("User created", userId);
-console.error("Failed to save", error);
+console.log('Workspace added', repoPath);
+console.error('git failed', error);
 ```
 
 **Good:**
 
 ```typescript
-// In service/router
-this.logger.info("User created", { userId });
-this.logger.error("Failed to save character", { error, characterId, userId });
+// In a service
+constructor(loggerFactory: LoggerFactory) {
+  this.logger = loggerFactory.create('git');
+}
 
-// In router handler
-const logger = loggerFactory.create("feature-name");
-logger.info("Processing request", { input });
+this.logger.info('Workspace added', { workspaceId, repoPath });
+this.logger.error('git failed', { error, cwd, args });
 ```
+
+Router handlers do not log. The `unexpectedErrorBoundary` in `lib/orpc.ts` already logs every unexpected error under the `rpc` namespace as `<operation> failed`.
 
 **Benefits:**
 
 - Structured logging with context
-- Log levels (info, warn, error, debug)
-- Centralized configuration
-- Production-ready logging
+- Log levels (error, warn, info, debug), set by `LOG_LEVEL`
+- One log file, configured through `iCoreOptions.logFilePath`
 
-### Use Typed Environment Variables
+### Configuration Comes From `iCoreOptions`, Not the Environment
 
-Never access `process.env` or `import.meta.env` directly. Use typed constants.
+There is no `.env` file and no environment schema. Everything the core needs (data folder, migrations folder, database path, log file, app version, host) arrives as `iCoreOptions` in `createChaffCore` and is injected with `CORE_OPTIONS_TOKEN`. The renderer reads nothing from `import.meta.env`; it asks the core.
 
 **Bad:**
 
 ```typescript
-const port = process.env.SERVER_PORT;
-const apiUrl = import.meta.env.VITE_API_URL;
+const dataDir = process.env.CHAFF_DATA_DIR;
+const version = import.meta.env.VITE_APP_VERSION;
 ```
 
 **Good:**
 
 ```typescript
-// Server
-import { env } from "@~/constants/env";
-const port = env.SERVER_PORT;
+// In the core
+constructor(@inject(CORE_OPTIONS_TOKEN) private readonly options: iCoreOptions) {}
+const databasePath = this.options.databasePath ?? path.join(this.options.dataDir, 'chaff.db');
 
-// Web
-import { IS_DEVELOPMENT } from "@~/constants";
-if (IS_DEVELOPMENT) {
-}
+// In the renderer
+const { data: info } = useQuery(tanstackRPC.app.info.queryOptions());
 ```
+
+The only environment reads are `NODE_ENV` and `LOG_LEVEL` in the logger, and `CHAFF_RENDERER_URL` in the desktop main process for development builds.
 
 ### Context Pattern
 
@@ -757,53 +720,6 @@ export const useChatInput = () => {
 };
 ```
 
-### Validate Ownership in Service Layer
-
-Always verify the user owns the resource they're trying to access.
-
-**Good:**
-
-```typescript
-public async getCharacter(userId: string, id: string) {
-  const character = await CharacterModel.findOne({
-    _id: id,
-    userId // Validate ownership
-  });
-
-  if (!character) {
-    throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND);
-  }
-
-  return character;
-}
-```
-
-### Use NOT_FOUND for Access Denial
-
-Return NOT_FOUND instead of FORBIDDEN to prevent information leakage.
-
-**Good:**
-
-```typescript
-// Don't reveal if resource exists when user has no access
-const character = await CharacterModel.findOne({ _id: id, userId });
-if (!character) {
-    throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND); // Could be missing or no access
-}
-```
-
-**Bad:**
-
-```typescript
-const character = await CharacterModel.findOne({ _id: id });
-if (!character) {
-    throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND);
-}
-if (character.userId !== userId) {
-    throw ORPCForbiddenError(characterErrorCodes.CHARACTER_ACCESS_DENIED); // Reveals resource exists
-}
-```
-
 ---
 
 ## Testing
@@ -815,20 +731,21 @@ Tests must validate meaningful behavior, not implementation details or trivial l
 **Bad (useless):**
 
 ```typescript
-import { someEnum } from "@chaff/shared";
+import { THEME_MODES } from '@chaff/common/enums/appearance.enums';
 
 it("should return true when true is passed", () => {
     expect(identity(true)).toBe(true);
 });
 
-it("should have a method called getUser", () => {
-    expect(typeof service.getUser).toBe("function");
+it("should have a method called getRecord", () => {
+    expect(typeof service.getRecord).toBe("function");
 });
 
 it("should have all needed keys in the object", () => {
-    expect(someEnum).toEqual({
-        KEY1: "KEY1",
-        KEY2: "KEY2",
+    expect(THEME_MODES).toEqual({
+        SYSTEM: "SYSTEM",
+        DARK: "DARK",
+        LIGHT: "LIGHT",
     });
 });
 ```
@@ -836,76 +753,73 @@ it("should have all needed keys in the object", () => {
 **Good:**
 
 ```typescript
-it("should create character with pseudonyms", async () => {
-    const character = await createCharacter(ctx, {
-        name: "Seraphina",
-        pseudonym: ["Sera", "Princess"],
-    });
+it('adds the repository that contains a nested folder', async () => {
+  const repo = createTestGitRepo();
+  const nestedFolder = path.join(repo.path, 'src', 'deep');
+  mkdirSync(nestedFolder, { recursive: true });
 
-    expect(character.name).toBe("Seraphina");
-    expect(character.pseudonym).toEqual(["Sera", "Princess"]);
+  const workspace = await call(appRouter.workspaces.add, { path: nestedFolder });
+
+  expect(workspace.repoPath).toBe(realpathSync.native(repo.path));
+  expect(workspace.defaultBranch).toBe('main');
 });
 ```
 
-### No Direct Model Calls in Integration Tests
+### No Direct Database or Service Calls in Integration Tests
 
-Tests must call server functions, not interact with models directly (except when testing specific model behavior).
+Integration tests must go through the router with `call()`, not insert rows or call services directly (except to seed state the router cannot create).
 Calling services should only be done in unit tests for service logic, never in integration tests which should test the full stack.
 
 **Bad:**
 
 ```typescript
-it("should update finding", async () => {
-    const finding = await FindingModel.create({ title: "Test" }); // Direct model call
-    const updatedFinding = await findingsService.updateFinding({
-        id: finding.id,
-        title: "New Title",
-    }); // Call service method
-    expect(updatedFinding.title).toBe("New Title");
+it('forgets a repository', async () => {
+  const db = container.resolve(DatabaseService).getDb();
+  const row = db.insert(workspaces).values({ name: 'repo', repoPath: '/repo' }).returning().get(); // Direct insert
+  await container.resolve(WorkspacesService).remove(row.id); // Direct service call
+  expect(db.select().from(workspaces).all()).toEqual([]);
 });
 ```
 
 **Good:**
 
 ```typescript
-it("should update finding", async () => {
-    const finding = await call(
-        appRouter.findings.createFinding,
-        { title: "Test" },
-        ctx(),
-    );
-    const updatedFinding = await call(
-        appRouter.findings.updateFinding,
-        { id: finding.id, title: "New Title" },
-        ctx(),
-    );
-    expect(finding.title).toBe("Test");
-    expect(updatedFinding.title).toBe("New Title");
+it('forgets a repository', async () => {
+  const workspace = await call(appRouter.workspaces.add, { path: createTestGitRepo().path });
+
+  await call(appRouter.workspaces.remove, { workspaceId: workspace.id });
+
+  expect(await call(appRouter.workspaces.list, undefined)).toEqual([]);
 });
 ```
 
-**Exception:** Direct model calls are acceptable when testing:
+`call()` takes no context: the core has a single local user and no session. Pass `undefined` for procedures without input.
 
-- Model methods/virtuals
-- Database indexes
-- Model-specific validations
-- Custom query builders
+**Exception:** Direct database access is acceptable when:
+
+- Seeding state the router cannot create (a repository whose folder no longer exists)
+- Testing the SQLite driver itself (`node-sqlite-driver.test.ts`)
+- Checking a constraint or cascade the router does not expose
 
 ### Test File Organization
 
 Tests must mirror the feature structure:
 
 ```
-apps/server/test/
-  ├── integration/         # Feature integration tests
-  │   ├── characters.test.ts
-  │   ├── chats.test.ts
-  │   └── worldinfo.test.ts
-  ├── unit/               # Utility unit tests
-  │   ├── template-renderer.test.ts
-  │   └── prompt-builder.test.ts
-  └── helpers/            # Test utilities
-      └── instance.ts
+packages/core/test/
+  integration/           # Feature integration tests, through the router
+    app.test.ts
+    host.test.ts
+    settings.test.ts
+    workspaces.test.ts
+  unit/                  # Utility unit tests
+    concurrency.test.ts
+    event-bus.test.ts
+    orpc-error-wrapper.test.ts
+  helpers/               # Test utilities
+    instance.ts
+    git-repo.ts
+    fake-core-host.ts
 ```
 
 **Prefer integration tests** for features; use unit tests only for utilities and helpers.
@@ -914,34 +828,36 @@ apps/server/test/
 
 ## Error Handling
 
-### No Useless `toastError`/`toastInfo`/`toastSuccess` in React Components
+### No Useless `showToast` Calls in React Components
 
-TanStack Query handles errors automatically. Only use toast for:
+TanStack Query already exposes errors to the component (`error`, `isError`, route error components). Only use `showToast` for:
 
-- Success confirmations after mutations when user NEEDS feedback
-- Non-query related errors (e.g. client-side validation errors, unexpected exceptions)
+- Mutation errors, as `showToast(getErrorMessage(error))` in the mutation hook's `onError`
+- Success confirmations after mutations when the user NEEDS feedback
+- Non-query errors (e.g. client-side validation errors, unexpected exceptions)
 
 ### Use Error Wrappers with Error Codes
 
-All errors must use custom error wrappers from `apps/server/src/lib/orpc-error-wrapper.ts`.
+All errors must use custom error wrappers from `packages/core/src/lib/orpc-error-wrapper.ts`.
 
 **Available wrappers:**
 
-- `ORPCUnauthorizedError` - User not authenticated
-- `ORPCNotFoundError` - Resource not found OR user has no access
-- `ORPCForbiddenError` - User lacks permissions
-- `ORPCValidationError` - Input validation failed
-- `ORPCInternalError` - Server error
+- `ORPCNotFoundError` - Resource not found
+- `ORPCBadRequestError` - Input is valid by shape but cannot be used (folder does not exist, not a git repository)
+- `ORPCUnprocessableContentError` - Request conflicts with stored state (repository already added)
+- `ORPCTooManyRequestsError` - Too many requests
+- `ORPCInternalServerError` - Unexpected failure (code optional)
+
+`ORPCUnauthorizedError` and `ORPCForbiddenError` also exist, but the core has no login or permissions, so they are unused.
 
 **Example:**
 
 ```typescript
-import { ORPCNotFoundError } from "@~/lib/orpc-error-wrapper";
-import { characterErrorCodes } from "@chaff/shared";
+import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
-if (!character || character.userId !== userId) {
-    throw ORPCNotFoundError(characterErrorCodes.CHARACTER_NOT_FOUND);
-}
+const isDeleted = await this.workspaceRepository.delete(workspaceId);
+if (!isDeleted) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
 ```
 
 ---
@@ -965,15 +881,15 @@ If a required component doesn't exist, create it in `@~/components/ui` instead o
 
 ```typescript
 import { Button } from '@~/components/ui/button';
-import { Input } from '@~/components/ui/input';
-import { Textarea } from '@~/components/ui/textarea';
 
 <Button onClick={handleClick}>Submit</Button>
-<Input value={name} onChange={handleChange} />
-<Textarea value={description} />
 ```
 
+`@~/components/ui` has `Button`, `Callout`, `Dialog`, `Field`, `List`, `Logo`, `Pill`, `SectionLabel`, and `SegmentedControl`. There is no `Input` or `Textarea` yet: the first feature that needs one adds it to `@~/components/ui`.
+
 ### Forms Must Use `withForm` HOC
+
+The form infrastructure (`useAppForm`, `withForm`, `useFieldContext`) is not built yet; see the **tanstack-forms** skill. These rules apply once it is.
 
 Forms should be extracted to `withForm` HOC for reusability and consistency.
 
@@ -1082,9 +998,9 @@ Always use kebab-case for file names.
 **Good:**
 
 ```
-character-creator-modal.tsx
-use-list-worldinfo.ts
-characters-events.service.ts
+remove-repository-dialog.tsx
+use-remove-workspace.ts
+drizzle-workspace.repository.ts
 ```
 
 ### Interface Naming
@@ -1094,24 +1010,25 @@ Always prefix interfaces with lowercase `i`.
 **Good:**
 
 ```typescript
-export interface iUserData {}
-export interface iListWorldInfoInput {}
-export interface iOnboardingWizardState {}
+export interface iCoreOptions {}
+export interface iBranchResponse {}
+export interface iWorkspaceRepository {}
 ```
 
 Additionally, for React component props, use `i{ComponentName}Props`. For method parameters, use `i{MethodName}Params`. This provides clear context on what the interface represents.
 
 ### Contract File Naming
 
-Contracts must be named `{feature}.contract.ts` in `packages/shared/src/contract/`.
+Contracts must be named `{feature}.contract.ts` in `packages/server-contract/src/contract/`.
 
 **Good:**
 
 ```
-packages/shared/src/contract/
-  ├── characters.contract.ts
-  ├── chats.contract.ts
-  └── worldinfo.contract.ts
+packages/server-contract/src/contract/
+  app.contract.ts
+  host.contract.ts
+  settings.contract.ts
+  workspaces.contract.ts
 ```
 
 ### Service File Naming
@@ -1121,9 +1038,9 @@ Services must follow the pattern `{feature}.service.ts`.
 **Good:**
 
 ```
-characters.service.ts
-characters-events.service.ts
-worldinfo-scanner.service.ts
+workspaces.service.ts
+branches.service.ts
+settings.service.ts
 ```
 
 ### Router File Naming
@@ -1133,10 +1050,11 @@ Routers must be named `{feature}.router.ts`.
 **Good:**
 
 ```
-apps/server/src/routers/
-  ├── characters.router.ts
-  ├── chats.router.ts
-  └── worldinfo.router.ts
+packages/core/src/routers/
+  app.router.ts
+  host.router.ts
+  settings.router.ts
+  workspaces.router.ts
 ```
 
 ---
@@ -1168,8 +1086,8 @@ function process(data: any) {}
 **Good:**
 
 ```typescript
-// @ts-expect-error - Better Auth plugin types are incomplete, safe to ignore
-const session = await auth.api.getSession();
+// @ts-expect-error - Type test: a raw string must be rejected where a ThemeMode is required
+const changes: iSettingsUpdate = { theme: 'DARK' };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any - Generic callback wrapper needs any for flexibility
 function withCallback<T extends (...args: any[]) => any>(fn: T) {}
@@ -1182,11 +1100,11 @@ function withCallback<T extends (...args: any[]) => any>(fn: T) {}
 All commits must follow conventional commit format:
 
 ```
-feat(characters): add character duplication
-fix(worldinfo): correct scanner regex validation
-refactor(auth): simplify session handling
-docs(readme): update installation instructions
-test(chats): add message deletion tests
+feat(workspaces): suggest a parent branch for each local branch
+fix(desktop): forward the RPC port only from the app window
+refactor(core): move git process handling into GitService
+docs(skills): describe the SQLite repositories
+test(settings): cover theme changes reaching the host
 chore(deps): update dependencies
 ```
 
@@ -1196,7 +1114,7 @@ If you encounter string literals without enums, extract them to shared enums, es
 
 - Value is used in multiple places
 - Value has a specific set of valid values
-- Value is shared between server and client
+- Value is shared between the core and the renderer
 
 **Bad:**
 

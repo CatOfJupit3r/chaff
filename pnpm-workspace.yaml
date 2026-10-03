@@ -4,6 +4,7 @@ packages:
   - configs/*
 allowBuilds:
   '@swc/core': true
+  electron-winstaller: false
   esbuild: true
   unrs-resolver: true
 catalog:
@@ -12,28 +13,18 @@ catalog:
   zod: 4.4.3
   globals: 15.15.0
   typescript: 6.0.3
-  dotenv: 17.4.2
-  lodash-es: 4.18.1
-  '@types/lodash-es': 4.17.12
   '@types/node': 26.1.1
   tsdown: 0.22.4
   tsx: 4.23.0
   '@swc/core': 1.15.43
-  '@swc-node/register': 1.11.1
   unplugin-swc: 1.5.9
   vitest: 4.1.10
   '@vitest/ui': 4.1.10
   vite: 8.1.4
-  hono: 4.12.29
   '@orpc/contract': 1.14.7
   '@orpc/server': 1.14.7
   '@orpc/client': 1.14.7
   '@orpc/tanstack-query': 1.14.7
-  '@orpc/zod': 1.14.7
-  '@orpc/openapi': 1.14.7
-  better-auth: 1.6.23
   '@typescript/native-preview': 7.0.0-dev.20260707.2
 minimumReleaseAgeExclude:
   - eslint-plugin-n@18.2.2
-onlyBuiltDependencies:
-  - '@swc/core'
