@@ -19,7 +19,7 @@ export const ONBOARDING_ITEM_GUIDES = onboardingItemsEnumwaii.derive<iOnboarding
     group: ONBOARDING_GROUPS.START,
     screen: ONBOARDING_SCREENS.REVIEWS,
     title: 'Start a review of your own change',
-    tip: 'Paste a merge or pull request link, or type a local branch, then press Start review. The change is frozen so your decisions survive a rebase.',
+    tip: 'Choose a stack in the sidebar, select a branch, then press Start review. Start a review also accepts a merge or pull request link or a branch name. The change is frozen so your decisions survive a rebase.',
     missing: 'Add a repository first. The start box appears once Chaff knows one.',
   },
   [ONBOARDING_ITEMS.DIGEST]: {

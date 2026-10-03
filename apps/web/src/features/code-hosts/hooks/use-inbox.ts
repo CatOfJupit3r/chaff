@@ -7,7 +7,7 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import { useConnections } from './use-connections';
 
-const inboxFilterParser = parseAsStringLiteral(inboxFilterValues).withDefault(INBOX_FILTERS.review);
+const inboxFilterParser = parseAsStringLiteral(inboxFilterValues).withDefault(INBOX_FILTERS.all);
 
 /** Open merge requests of every linked project, filtered by the choice kept in the URL. */
 export function useInbox() {
@@ -26,5 +26,7 @@ export function useInbox() {
     isLoading: connections.length > 0 && query.isPending,
     filter,
     setFilter,
+    error: query.error,
+    refetch: query.refetch,
   };
 }

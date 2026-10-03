@@ -13,7 +13,7 @@ type DigestRow = typeof digests.$inferSelect;
 @singleton()
 export class DigestResolver {
   public toDigestRecord = createRowResolver<DigestRow, iDigestRecord>({
-    optional: ['progress', 'error', 'finishedAt'],
+    optional: ['model', 'instructions', 'progress', 'error', 'finishedAt'],
     overrides: (row) => ({
       runner: digestRunnerSchema.parse(row.runner),
       status: digestStatusSchema.parse(row.status),

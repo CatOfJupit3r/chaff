@@ -21,9 +21,7 @@ export function useFullDiff(snapshotId: string) {
   const currentFile = files.find((file) => file.path === view.file) ?? files[0];
   const isAllFiles = view.mode === DIFF_MODES.all;
 
-  useScrollSpy(isAllFiles ? scrollRoot : null, (path) => {
-    if (path !== view.file) view.update({ file: path });
-  });
+  useScrollSpy(isAllFiles ? scrollRoot : null, view.followScroll);
 
   const selectFile = (path: string) => {
     view.update({ file: path });

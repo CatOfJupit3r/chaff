@@ -11,6 +11,23 @@ import {
 
 const idSchema = z.string().min(1).max(64);
 
+/** A model id or alias the agent CLI accepts, such as `opus` or `gpt-6-astra`; never starts like a flag. */
+export const digestModelSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(/^[\w.][\w.:/@[\]+ -]*$/);
+
+/** Extra instructions the reviewer gives the agent for one digest. */
+export const digestInstructionsSchema = z.string().trim().min(1).max(4000);
+
+export const digestStartOptionsSchema = z.object({
+  /** Leave out for the agent's own default model. */
+  model: digestModelSchema.optional(),
+  instructions: digestInstructionsSchema.optional(),
+});
+
 export const digestTestSchema = z.object({
   path: z.string(),
   /** 1-based line of the test, when the agent named one. */
@@ -79,6 +96,9 @@ export const digestSchema = z.object({
   id: z.string(),
   snapshotId: z.string(),
   runner: digestRunnerSchema,
+  /** The model asked for; absent when the agent used its default. */
+  model: z.string().optional(),
+  instructions: z.string().optional(),
   status: digestStatusSchema,
   progress: z.string().optional(),
   error: z.string().optional(),
@@ -98,6 +118,14 @@ export const digestRunnerStatusSchema = z.object({
   path: z.string().optional(),
 });
 
+/** A model the agent can be started with. */
+export const agentModelSchema = z.object({
+  /** What is passed as `--model`. */
+  id: digestModelSchema,
+  label: z.string(),
+  description: z.string().optional(),
+});
+
 export const digestsContract = oc.router({
   get: oc
     .route({
@@ -111,9 +139,9 @@ export const digestsContract = oc.router({
     .route({
       summary: 'Write a digest',
       description:
-        'Starts the chosen coding agent in a read-only checkout of the snapshot. It runs in the background; poll `get` for progress.',
+        'Starts the chosen coding agent in a read-only checkout of the snapshot, with the model and extra instructions when given. It runs in the background; poll `get` for progress.',
     })
-    .input(z.object({ snapshotId: idSchema, runner: digestRunnerSchema }))
+    .input(digestStartOptionsSchema.extend({ snapshotId: idSchema, runner: digestRunnerSchema }))
     .output(digestSchema),
 
   cancel: oc
@@ -127,4 +155,13 @@ export const digestsContract = oc.router({
       description: 'Reports which of Claude Code and Codex can be started on this computer.',
     })
     .output(z.array(digestRunnerStatusSchema)),
+
+  models: oc
+    .route({
+      summary: "List an agent's models",
+      description:
+        "The models the agent can run a digest with: Codex's own model list, or Claude Code's model aliases. Empty when the agent isn't installed or can't list them.",
+    })
+    .input(z.object({ runner: digestRunnerSchema }))
+    .output(z.array(agentModelSchema)),
 });

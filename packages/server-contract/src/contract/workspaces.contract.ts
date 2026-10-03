@@ -12,6 +12,7 @@ export const workspaceSchema = z.object({
 });
 
 export const branchSchema = z.object({
+  /** `feature` for a local branch, `origin/feature` for a remote-tracking branch with no local branch. */
   name: z.string(),
   headSha: z.string(),
   subject: z.string(),

@@ -1,8 +1,12 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { buildDigestPrompt } from '@~/features/digests/digest-prompt.utils';
 
+const DIFF_DIRECTORY = path.join('scratch', 'diff');
+
 const INPUT = {
+  diffDirectory: DIFF_DIRECTORY,
   branch: 'feature',
   parentBranch: 'main',
   baseSha: 'a'.repeat(40),
@@ -40,13 +44,26 @@ describe('buildDigestPrompt', () => {
     expect(prompt).toContain('Issue #12: Deliveries are lost on timeouts\nSeen in production.');
   });
 
-  it('lists the files left out of a large diff, for the agent to read in the checkout', () => {
+  it('lists the files left out of a large diff with where their diffs are, for the agent to read', () => {
+    const prompt = buildDigestPrompt({
+      ...INPUT,
+      patch: 'diff --git a/src/small.ts b/src/small.ts\n',
+      outlined: [{ path: 'src/big.ts', additions: 900, deletions: 4, hunks: ['@@ -1,4 +1,900 @@'] }],
+    });
+
+    expect(prompt).toContain('The diff of the files that fit:');
+    expect(prompt).toContain(
+      `- src/big.ts (+900 -4), diff in ${path.join(DIFF_DIRECTORY, 'src/big.ts.diff')}\n    @@ -1,4 +1,900 @@`,
+    );
+  });
+
+  it('leaves the diff out of the prompt when no file fits, and points at the saved diffs', () => {
     const prompt = buildDigestPrompt({
       ...INPUT,
       outlined: [{ path: 'src/big.ts', additions: 900, deletions: 4, hunks: ['@@ -1,4 +1,900 @@'] }],
     });
 
-    expect(prompt).toContain('The diff of the files that fit:');
-    expect(prompt).toContain('- src/big.ts (+900 -4)\n    @@ -1,4 +1,900 @@');
+    expect(prompt).not.toContain('```diff');
+    expect(prompt).toContain(`the whole branch's as ${path.join(DIFF_DIRECTORY, 'all.diff')}`);
   });
 });

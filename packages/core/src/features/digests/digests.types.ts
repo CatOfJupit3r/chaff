@@ -1,7 +1,11 @@
 import type z from 'zod';
 
 import type { DigestRunner, DigestStatus } from '@chaff/common/enums/digest.enums';
-import type { digestContentSchema, digestPreviewSchema } from '@chaff/server-contract/contract/digests.contract';
+import type {
+  digestContentSchema,
+  digestPreviewSchema,
+  digestStartOptionsSchema,
+} from '@chaff/server-contract/contract/digests.contract';
 
 import type { digests } from '@~/db/schema/digests.schema';
 
@@ -13,11 +17,16 @@ export type iDigestContent = z.infer<typeof digestContentSchema>;
 
 export type iDigestPreview = z.infer<typeof digestPreviewSchema>;
 
+/** The model and extra instructions the reviewer asked for, both optional. */
+export type iDigestStartOptions = z.infer<typeof digestStartOptionsSchema>;
+
 export type iDigestRecord = Omit<
   DigestRow,
-  'runner' | 'status' | 'progress' | 'error' | 'content' | 'preview' | 'finishedAt'
+  'runner' | 'model' | 'instructions' | 'status' | 'progress' | 'error' | 'content' | 'preview' | 'finishedAt'
 > & {
   runner: DigestRunner;
+  model?: string;
+  instructions?: string;
   status: DigestStatus;
   progress?: string;
   error?: string;
@@ -66,12 +75,16 @@ export interface iDigestPromptInput {
   units: iPromptUnit[];
   /** The diff of the files that fit in the prompt. */
   patch: string;
-  /** Files left out of `patch` to keep it short; the agent reads them in the checkout. */
+  /** Files left out of `patch` to keep it short; the agent reads their diffs from `diffDirectory`. */
   outlined: iOutlinedFile[];
+  /** Folder holding every file's diff, and the whole branch's, for the agent to read as it needs. */
+  diffDirectory: string;
   /** The merge or pull request the branch is, when it is one. */
   change?: iPromptChange;
   /** The reviewer's project preferences for the repository. */
   preferences: string[];
+  /** What the reviewer asked for on top of the usual digest. */
+  instructions?: string;
 }
 
 export interface iDigestRunInput {
@@ -79,7 +92,11 @@ export interface iDigestRunInput {
   cwd: string;
   /** Scratch folder outside the checkout for files the CLI writes. */
   scratchDir: string;
+  /** Folder outside the checkout with the branch's diffs, which the agent must be able to read. */
+  diffDirectory?: string;
   prompt: string;
+  /** Model to ask the CLI for; its own default when absent. */
+  model?: string;
   /** JSON schema the answer must follow. */
   schema: Record<string, unknown>;
   signal: AbortSignal;

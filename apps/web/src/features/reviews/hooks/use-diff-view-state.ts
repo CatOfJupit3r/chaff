@@ -1,4 +1,4 @@
-import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
+import { debounce, parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
 import type { Values } from 'nuqs';
 import { useMemo } from 'react';
 
@@ -8,6 +8,8 @@ import { diffLayoutValues } from '@chaff/common/enums/diff.enums';
 import { useSettings } from '@~/features/settings/hooks/use-settings';
 
 import { DIFF_MODES, diffModeValues } from '../reviews.enums';
+
+const SCROLL_URL_DEBOUNCE_MS = 400;
 
 function diffViewParsers(layout: DiffLayout) {
   return {
@@ -32,5 +34,10 @@ export function useDiffViewState() {
     setState(patch).catch(() => undefined);
   };
 
-  return { ...state, update };
+  // While scrolling, the state follows at once but the URL is written only once the scrolling settles.
+  const followScroll = (file: string) => {
+    setState({ file }, { limitUrlUpdates: debounce(SCROLL_URL_DEBOUNCE_MS) }).catch(() => undefined);
+  };
+
+  return { ...state, update, followScroll };
 }

@@ -7,6 +7,8 @@ const execFileAsync = promisify(execFile);
 
 /** Output kept from stderr for error messages. */
 const MAX_STDERR_CHARS = 4000;
+/** Largest output read from a listing command; Codex's model catalog is a few hundred kilobytes. */
+const MAX_LISTING_BYTES = 16 * 1024 * 1024;
 
 export interface iAgentProcessOptions {
   command: string;
@@ -21,12 +23,31 @@ export interface iAgentProcessOptions {
 
 export class AgentProcessError extends Error {}
 
+/** How to start an agent command: a `.mjs` script runs on this process's Node, anything else directly. */
+function agentInvocation(command: string, args: string[]) {
+  const isNodeScript = path.extname(command).toLowerCase() === '.mjs';
+  return {
+    executable: isNodeScript ? process.execPath : command,
+    argumentsToPass: isNodeScript ? [command, ...args] : args,
+    env: isNodeScript && process.versions.electron ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env,
+  };
+}
+
+/** Runs a short agent CLI command, such as a listing, and returns its stdout. */
+export async function readAgentOutput(command: string, args: string[], timeoutMs: number) {
+  const { executable, argumentsToPass, env } = agentInvocation(command, args);
+  const { stdout } = await execFileAsync(executable, argumentsToPass, {
+    env,
+    timeout: timeoutMs,
+    windowsHide: true,
+    maxBuffer: MAX_LISTING_BYTES,
+  });
+  return stdout;
+}
+
 /** Runs an agent CLI to completion, streaming stdout line by line. Aborting the signal kills it. */
 export async function runAgentProcess({ command, args, cwd, input, signal, onLine }: iAgentProcessOptions) {
-  const isNodeScript = path.extname(command).toLowerCase() === '.mjs';
-  const executable = isNodeScript ? process.execPath : command;
-  const argumentsToPass = isNodeScript ? [command, ...args] : args;
-  const env = isNodeScript && process.versions.electron ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env;
+  const { executable, argumentsToPass, env } = agentInvocation(command, args);
   return new Promise((resolve: (value?: undefined) => unknown, reject) => {
     const child = spawn(executable, argumentsToPass, {
       cwd,

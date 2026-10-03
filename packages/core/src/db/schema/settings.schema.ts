@@ -56,6 +56,11 @@ export const settings = sqliteTable('settings', {
     .$type<{ runner: DigestRunner; command: string }[]>()
     .notNull()
     .default([]),
+  /** Model each runner writes digests with, by runner; a runner left out uses its own default. */
+  digestModels: text('digest_models', { mode: 'json' })
+    .$type<{ runner: DigestRunner; model: string }[]>()
+    .notNull()
+    .default([]),
   /** Keys the user rebound; other actions keep their default key. */
   shortcuts: text('shortcuts', { mode: 'json' }).$type<iShortcutBinding[]>().notNull().default([]),
   onboarding: text('onboarding', { mode: 'json' })

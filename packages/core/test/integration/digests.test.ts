@@ -24,6 +24,8 @@ describe('digests', () => {
   afterEach(() => {
     delete process.env.FAKE_AGENT_MODE;
     delete process.env.FAKE_AGENT_PROMPT_FILE;
+    delete process.env.FAKE_AGENT_ARGS_FILE;
+    delete process.env.FAKE_AGENT_ADD_DIR_FILE;
   });
 
   it('reports which coding agents are installed', async () => {
@@ -109,9 +111,11 @@ describe('digests', () => {
     expect(cancelled.preview).toBeUndefined();
   });
 
-  it('outlines files that do not fit in the prompt and lets the agent read them in the checkout', async () => {
+  it('outlines files that do not fit in the prompt and gives the agent every diff to read', async () => {
     const promptFile = path.join(testDataDir, 'digest-prompt.txt');
+    const addDirFile = path.join(testDataDir, 'digest-add-dir.json');
     process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+    process.env.FAKE_AGENT_ADD_DIR_FILE = addDirFile;
     const repo = createFeatureRepo();
     repo.commitFiles('generated table', {
       'src/table.ts': Array.from({ length: 6000 }, (_, index) => `export const row${index} = ${index};`).join('\n'),
@@ -123,9 +127,70 @@ describe('digests', () => {
 
     expect(digest.content?.outlinedPaths).toEqual(['src/table.ts']);
     const prompt = readFileSync(promptFile, 'utf8');
-    expect(prompt).toContain('- src/table.ts (+6000 -0)\n    @@ -0,0 +1,6000 @@');
+    expect(prompt).toMatch(/- src\/table\.ts \(\+6000 -0\), diff in .+table\.ts\.diff\n {4}@@ -0,0 \+1,6000 @@/);
     expect(prompt).not.toContain('export const row5999');
     expect(prompt).toContain('+    return attempt * 3;');
+    expect((JSON.parse(readFileSync(addDirFile, 'utf8')) as string[]).toSorted()).toEqual([
+      'all.diff',
+      'config.json.diff',
+      'src/backoff.test.ts.diff',
+      'src/backoff.ts.diff',
+      'src/scheduler.ts.diff',
+      'src/table.ts.diff',
+    ]);
+  });
+
+  it("lists Claude Code's model aliases, and nothing for an agent that isn't installed", async () => {
+    const claude = await call(appRouter.digests.models, { runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    const codex = await call(appRouter.digests.models, { runner: DIGEST_RUNNERS.CODEX });
+
+    expect(claude.map((model) => model.id)).toEqual(['fable', 'opus', 'sonnet', 'haiku']);
+    expect(codex).toEqual([]);
+  });
+
+  it('runs the agent with the chosen model and gives it the extra instructions', async () => {
+    const promptFile = path.join(testDataDir, 'digest-model-prompt.txt');
+    const argsFile = path.join(testDataDir, 'digest-model-args.json');
+    process.env.FAKE_AGENT_PROMPT_FILE = promptFile;
+    process.env.FAKE_AGENT_ARGS_FILE = argsFile;
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    const started = await call(appRouter.digests.start, {
+      snapshotId,
+      runner: DIGEST_RUNNERS.CLAUDE_CODE,
+      model: ' opus ',
+      instructions: 'Point out every retry limit.',
+    });
+    const digest = await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    expect(started).toMatchObject({ model: 'opus', instructions: 'Point out every retry limit.' });
+    expect(digest).toMatchObject({ model: 'opus', instructions: 'Point out every retry limit.' });
+    const args = JSON.parse(readFileSync(argsFile, 'utf8')) as string[];
+    expect(args[args.indexOf('--model') + 1]).toBe('opus');
+    expect(readFileSync(promptFile, 'utf8')).toContain(
+      "The reviewer's extra instructions for this digest. Follow them as long as the answer keeps the shape asked for below:\nPoint out every retry limit.\n\nAnswer with:",
+    );
+  });
+
+  it('leaves the model to the agent when none is given', async () => {
+    const argsFile = path.join(testDataDir, 'digest-default-args.json');
+    process.env.FAKE_AGENT_ARGS_FILE = argsFile;
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    await call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE });
+    const digest = await waitForStatus(snapshotId, DIGEST_STATUSES.READY);
+
+    expect(digest.model).toBeUndefined();
+    expect(JSON.parse(readFileSync(argsFile, 'utf8'))).not.toContain('--model');
+  });
+
+  it('refuses a model that would be read as a command-line flag', async () => {
+    const { snapshotId } = await startFeatureReview(createFeatureRepo());
+
+    await expect(
+      call(appRouter.digests.start, { snapshotId, runner: DIGEST_RUNNERS.CLAUDE_CODE, model: '--dangerously-skip' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(await call(appRouter.digests.get, { snapshotId })).toBeNull();
   });
 
   it('marks the digest failed with what the agent said', async () => {

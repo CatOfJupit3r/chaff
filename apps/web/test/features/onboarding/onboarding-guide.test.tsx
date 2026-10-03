@@ -91,6 +91,7 @@ function settingsWith(onboarding: iOnboardingState) {
     defaultProgression: REVIEW_PROGRESSIONS.changes,
     digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
     agentCommands: [],
+    digestModels: [],
     shortcuts: [],
     onboarding,
   };

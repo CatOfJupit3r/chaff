@@ -1,6 +1,8 @@
+import path from 'node:path';
+
 import { preferencesPromptSection } from '@~/features/preferences/preference-format.utils';
 
-import type { iOutlinedFile } from './digest-patch.utils';
+import { diffFileFor, FILE_DIFF_EXTENSION, WHOLE_DIFF_FILE } from './digest-diff-files.utils';
 import type { iDigestPromptInput, iPromptChange, iPromptUnit } from './digests.types';
 
 function describeUnit(unit: iPromptUnit) {
@@ -22,15 +24,33 @@ ${change.description.trim() || '(no description)'}
 ${issues.length > 0 ? `\nIssues it links to, also documented intent:\n${issues.join('\n\n')}\n` : ''}`;
 }
 
-function describeOutline(outlined: readonly iOutlinedFile[]) {
+function describeDiff({ patch, outlined }: Pick<iDigestPromptInput, 'patch' | 'outlined'>) {
+  if (!patch) return '';
+  return `
+The diff${outlined.length > 0 ? ' of the files that fit' : ''}:
+\`\`\`diff
+${patch}
+\`\`\`
+`;
+}
+
+function describeOutline({ outlined, diffDirectory }: Pick<iDigestPromptInput, 'outlined' | 'diffDirectory'>) {
   if (outlined.length === 0) return '';
   const files = outlined.map(
     (file) =>
-      `- ${file.path} (+${file.additions} -${file.deletions})${file.hunks.map((hunk) => `\n    ${hunk}`).join('')}`,
+      `- ${file.path} (+${file.additions} -${file.deletions}), diff in ${diffFileFor(diffDirectory, file.path)}${file.hunks.map((hunk) => `\n    ${hunk}`).join('')}`,
   );
   return `
-The branch is too large to show whole. These files are left out of the diff above and listed by where they changed; read them in the checkout before writing about their units:
+The branch is too large to show whole, so these files are only listed, with where they changed. Before writing about their units, read the diffs you need from the files named here, and the code around them in the checkout:
 ${files.join('\n')}
+`;
+}
+
+function describeInstructions(instructions: string | undefined) {
+  if (!instructions) return '';
+  return `The reviewer's extra instructions for this digest. Follow them as long as the answer keeps the shape asked for below:
+${instructions}
+
 `;
 }
 
@@ -52,12 +72,9 @@ ${describeChange(input.change)}
 Units of change. Every changed line belongs to exactly one unit. Refer to units only by these ids:
 ${input.units.map(describeUnit).join('\n')}
 
-The diff${input.outlined.length > 0 ? ' of the files that fit' : ''}:
-\`\`\`diff
-${input.patch}
-\`\`\`
-${describeOutline(input.outlined)}
-${preferences ? `${preferences}\n\n` : ''}Answer with:
+Every changed file's diff is saved as \`<path>${FILE_DIFF_EXTENSION}\` under ${input.diffDirectory}, and the whole branch's as ${path.join(input.diffDirectory, WHOLE_DIFF_FILE)}. Read or search them whenever you need to see exactly what changed.
+${describeDiff(input)}${describeOutline(input)}
+${preferences ? `${preferences}\n\n` : ''}${describeInstructions(input.instructions)}Answer with:
 1. overview: two to four plain sentences on what the branch does.
 2. groups: the meaningful behavior or design changes. Give each a short title, the behavior before and after in plain words, and the reason for it in intent. Set intentSource to DOCUMENTED only when a commit message, the merge request, a linked issue or a code comment states the reason; otherwise INFERRED. List the ids of the units that make up the change. Put each unit in at most one group; leave out units you cannot explain rather than forcing them in.
 3. readingOrder: every unit id once, in the order a reviewer should read them: contracts and types before the code that uses them, the mechanism before its integration, and each implementation right before its tests.

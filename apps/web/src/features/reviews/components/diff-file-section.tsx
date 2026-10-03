@@ -10,6 +10,7 @@ import { FILE_SECTION_ATTRIBUTE } from '../hooks/use-scroll-spy';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffStat } from './diff-stat';
 import { FileDiffBody } from './file-diff-body';
+import { FilePath, FileStatusBadge } from './file-status';
 import { MarkFileButton } from './mark-file-button';
 import { DiffSkeleton } from './skeleton-components';
 
@@ -52,7 +53,8 @@ export function DiffFileSection({
         >
           <DownIcon className="size-[13px] group-aria-[expanded=false]:-rotate-90" />
         </button>
-        <span className="font-mono text-fg">{file.path}</span>
+        <FilePath file={file} className="text-fg" />
+        <FileStatusBadge file={file} />
         <DiffStat additions={file.additions} deletions={file.deletions} />
         {file.kind === FILE_KINDS.GENERATED ? (
           <span className="rounded-[4px] border border-line px-1.5 text-[11px] text-faint">generated</span>
@@ -70,7 +72,10 @@ export function DiffFileSection({
         </button>
       </div>
       {isOpen ? (
-        <div style={{ minHeight: isNear ? 0 : Math.min(changedLines, MAX_ESTIMATED_LINES) * ESTIMATED_LINE_HEIGHT }}>
+        <div
+          style={{ minHeight: isNear ? 0 : Math.min(changedLines, MAX_ESTIMATED_LINES) * ESTIMATED_LINE_HEIGHT }}
+          className="[contain-intrinsic-size:auto_480px] [content-visibility:auto]"
+        >
           {isNear ? (
             <FileDiffBody snapshotId={snapshotId} file={file} layout={layout} isWrapped={isWrapped} />
           ) : (

@@ -31,7 +31,7 @@ Chaff keeps the reviewer in charge: it never decides what you see or what is res
 ## How it works
 
 1. **Add a repository.** Pick a folder on disk. Chaff reads it with your own `git` and never writes to it: no checkouts, no new refs, no stash.
-2. **Chaff finds the stacks.** Each local branch gets a suggested parent (the other branch it has the fewest commits on top of), so `feature/async-input <- feature/job-options <- feature/consent` shows up as one stack. Chaff remembers each parent, so a new commit on a lower branch keeps the stack together and marks the branches above it **parent moved** until they are rebased. Branches you never checked out count too: a remote-tracking branch (`origin/...`, or another remote's) with no local branch of its name joins the stack when it sits below or above one of your local branches, so a fresh clone with only the top branch checked out still shows the whole stack, and each branch is compared with its nearest branch below. Remote branches already merged into the default branch, or unrelated to your local branches, are left out.
+2. **Chaff finds the stacks.** Each local branch gets a suggested parent (the other branch it has the fewest commits on top of), so `feature/async-input <- feature/job-options <- feature/consent` shows up as one stack. Chaff remembers each parent, so a new commit on a lower branch keeps the stack together and marks the branches above it **parent moved** until they are rebased.
 3. **Start a review and Chaff freezes a snapshot.** The branch, its parent and their merge base are fetched into Chaff's own bare repository and pinned, so rebasing, amending or deleting the branch does not break the review.
 4. **Chaff breaks the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing is dropped.
 5. **You read the diff in reading order.** Types and contracts come first, tests sit next to the code they test, and config, docs and generated files come last.
@@ -53,7 +53,7 @@ Every repository you add, with its local branch stacks. Paste a merge request li
 
 ### Stack overview
 
-The whole stack top to bottom, each branch with its decisions so far (a branch read from a remote carries a **remote** tag and can be reviewed like any other), and the selected branch beside it: its parent (confirm Chaff's suggestion or pick another), what moved since your snapshot, its units, and the branches that build on it. **Cumulative from main** reviews everything from the stack's base to this branch in one pass.
+The whole stack top to bottom, each branch with its decisions so far, and the selected branch beside it: its parent (confirm Chaff's suggestion or pick another), what moved since your snapshot, its units, and the branches that build on it. **Cumulative from main** reviews everything from the stack's base to this branch in one pass.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stack-overview-dark.png" />
@@ -160,7 +160,7 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
   <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
 </picture>
 
-**AI digest** in the top bar starts one and says which company receives the code before anything runs.
+**AI digest** in the top bar starts one and says which company receives the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
@@ -406,50 +406,54 @@ The width you drag the Full diff's file list to is kept.
 
 ## What works today
 
-| Area                                                                                                                                                                            | Status |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| Electron desktop app, unsigned installers for Windows, macOS and Linux                                                                                                          | Works  |
-| Add repositories from disk, read-only                                                                                                                                           | Works  |
-| Getting started checklist: opens on first run, items check off from real actions in any order, Show me tips, one-time screen hints, skip any time, replay from Settings         | Works  |
-| Local branch stacks with suggested parents, kept together when a lower branch gets new commits                                                                                  | Works  |
-| Remote-tracking branches (all remotes, `origin` first) in local stacks when no local branch has their name, reviewable and noticed after `git fetch`                            | Works  |
-| Frozen snapshots in Chaff's own git store                                                                                                                                       | Works  |
-| Regions, Function and Section units (tree-sitter, 14 languages including Kotlin)                                                                                                | Works  |
-| Full diff: tree or list, one or all files, unified (old and new line numbers) or split, wrap, context; filter by file name or changed code                                      | Works  |
-| New commits, rewritten branches and moved parents detected as they happen (refs are watched); Update                                                                            | Works  |
-| Open in VS Code, Insiders or Cursor                                                                                                                                             | Works  |
-| Light and dark themes, accent, code size                                                                                                                                        | Works  |
-| Code font, line height, UI density, syntax colors per mode                                                                                                                      | Works  |
-| Diff defaults (layout, context lines, whitespace, changes inside a line), file list width, pinned context panel, default progression                                            | Works  |
-| Focus review: one unit at a time, keyboard decisions, undo, Later queue                                                                                                         | Works  |
-| Decisions on every unit, shown in Full diff with line coverage                                                                                                                  | Works  |
-| Findings (Concern, Question, Note) on units or line ranges, Findings screen                                                                                                     | Works  |
-| AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order                                                                         | Works  |
-| Digest reads the MR or PR description and linked issues, outlines branches too large to send whole, streams in while Claude Code writes, and its diagram boxes open their units | Works  |
-| Stack overview with parent editing and cumulative view                                                                                                                          | Works  |
-| GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions                                                                                              | Works  |
-| GitHub pull requests, the same way                                                                                                                                              | Works  |
-| Linking a local branch's review to the merge request it became                                                                                                                  | Works  |
-| History of every review; reviews of deleted branches and merged or closed changes archived with their findings                                                                  | Works  |
-| Findings posted as GitLab draft notes or a pending GitHub review                                                                                                                | Works  |
-| Replies to posted findings pulled back, a reply taken as a question's answer                                                                                                    | Works  |
-| GitLab diff version stored with each merge request snapshot                                                                                                                     | Works  |
-| Working changes (uncommitted work) as a review target                                                                                                                           | Works  |
-| Second pass: interdiffs, re-anchored findings, Verify screen                                                                                                                    | Works  |
-| Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import                                                                                          | Works  |
-| Fix hand-off: a local agent fixes findings in its own checkout, on a branch of Chaff's store                                                                                    | Works  |
-| Project preferences: promoted from findings, exported for CLAUDE.md, given to digests and agents                                                                                | Works  |
-| Swipe decisions in Focus with a finger or pen                                                                                                                                   | Works  |
-| Change units: digest groups as Focus cards; make, split, merge, rename, reorder; Changes, Functions or Sections progression                                                     | Works  |
-| Skip with a reason; a review is complete once every region is decided on or skipped                                                                                             | Works  |
-| Finding severity; findings on several units, a whole branch or a whole stack; concerns shown on the branches above                                                              | Works  |
-| Suggested task for a finding from your coding agent: accept, edit or discard; exported once accepted                                                                            | Works  |
-| Rebindable keys for Focus and Verify                                                                                                                                            | Works  |
-| Jump to (/ or Ctrl K), key list (?), Esc closes panels, E shows the whole file in Focus                                                                                         | Works  |
-| Start a review from a pasted MR or PR link, `!412` / `#412`, or a branch name; switch reviews from the top bar                                                                  | Works  |
-| Open-finding counts on Reviews rows; per-unit progress and +/- before review on the Stack screen                                                                                | Works  |
-| Syntax colors in finding quotes and Usages                                                                                                                                      | Works  |
-| Agent settings: custom command paths, default agent, privacy notice                                                                                                             | Works  |
+| Area | Status |
+| --- | --- |
+| Electron desktop app, unsigned installers for Windows, macOS and Linux | Works |
+| Add repositories from disk, read-only | Works |
+| Getting started checklist: real actions in any order, Show me tips, screen hints, skip any time, replay from Settings | Works |
+| Local branch stacks with suggested parents, kept together when a lower branch gets new commits | Works |
+| Remote-tracking branches (all remotes, origin first) join their local stacks, can be reviewed and are noticed after git fetch | Works |
+| Frozen snapshots in Chaff's own git store | Works |
+| Regions, Function and Section units (tree-sitter, 14 languages including Kotlin) | Works |
+| Full diff: tree or list, one or all files, unified (old and new line numbers) or split, wrap, context; filter by file name or changed code | Works |
+| Diffs highlighted in background workers, files far off screen skip layout, React Compiler on every component | Works |
+| Added, modified, deleted, renamed and type-changed files marked git-style: A/M/D/R/T in the file list with counts, badges and the previous path on file headers and Focus cards | Works |
+| New commits, rewritten branches and moved parents detected as they happen (refs are watched); Update | Works |
+| Open in VS Code, Insiders or Cursor | Works |
+| Light and dark themes, accent, code size | Works |
+| Code font, line height, UI density, syntax colors per mode | Works |
+| Diff defaults (layout, context lines, whitespace, changes inside a line), file list width, pinned context panel, default progression | Works |
+| Focus review: one unit at a time, keyboard decisions, undo, Later queue | Works |
+| Decisions on every unit, shown in Full diff with line coverage | Works |
+| Findings (Concern, Question, Note) on units or line ranges, Findings screen | Works |
+| AI digest via your local Claude Code or Codex, read-only: notes, intent, tests, diagrams, reading order | Works |
+| Digest reads the MR or PR description and linked issues, outlines branches too large to send whole, streams in while Claude Code writes, and its diagram boxes open their units | Works |
+| Digest model picked from the agent's own model list (remembered per agent) and extra instructions for one digest | Works |
+| Digest agent reads per-file diffs on demand instead of one huge prompt on long branches | Works |
+| Stack overview with parent editing and cumulative view | Works |
+| GitLab merge requests and stacked MRs: inbox, snapshots, new versions, discussions | Works |
+| GitHub pull requests, the same way | Works |
+| Linking a local branch's review to the merge request it became | Works |
+| History of every review; reviews of deleted branches and merged or closed changes archived with their findings | Works |
+| Findings posted as GitLab draft notes or a pending GitHub review | Works |
+| Replies to posted findings pulled back, a reply taken as a question's answer | Works |
+| GitLab diff version stored with each merge request snapshot | Works |
+| Working changes (uncommitted work) as a review target | Works |
+| Second pass: interdiffs, re-anchored findings, Verify screen | Works |
+| Export: Markdown and JSON packets, agent prompt, copy one finding, agent report import | Works |
+| Fix hand-off: a local agent fixes findings in its own checkout, on a branch of Chaff's store | Works |
+| Project preferences: promoted from findings, exported for CLAUDE.md, given to digests and agents | Works |
+| Swipe decisions in Focus with a finger or pen | Works |
+| Change units: digest groups as Focus cards; make, split, merge, rename, reorder; Changes, Functions or Sections progression | Works |
+| Skip with a reason; a review is complete once every region is decided on or skipped | Works |
+| Finding severity; findings on several units, a whole branch or a whole stack; concerns shown on the branches above | Works |
+| Suggested task for a finding from your coding agent: accept, edit or discard; exported once accepted | Works |
+| Rebindable keys for Focus and Verify | Works |
+| Jump to (/ or Ctrl K), key list (?), Esc closes panels, E shows the whole file in Focus | Works |
+| Start a review from a pasted MR or PR link, `!412` / `#412`, or a branch name; switch reviews from the top bar | Works |
+| Open-finding counts on Reviews rows; per-unit progress and +/- before review on the Stack screen | Works |
+| Syntax colors in finding quotes and Usages | Works |
+| Agent settings: custom command paths, default agent, privacy notice | Works |
 
 ## Stack
 

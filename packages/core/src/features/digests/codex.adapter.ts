@@ -23,7 +23,7 @@ function describeItem(event: iCodexEvent) {
 /** `codex exec` in its read-only sandbox, with the answer's schema and the final message written to files. */
 @singleton()
 export class CodexAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, scratchDir, prompt, schema, signal, onProgress }: iDigestRunInput) {
+  public async run(command: string, { cwd, scratchDir, prompt, model, schema, signal, onProgress }: iDigestRunInput) {
     const schemaPath = path.join(scratchDir, 'answer.schema.json');
     const answerPath = path.join(scratchDir, 'answer.json');
     await writeFile(schemaPath, JSON.stringify(schema));
@@ -48,6 +48,7 @@ export class CodexAdapter implements iDigestRunnerAdapter {
         answerPath,
         '--cd',
         cwd,
+        ...(model ? ['--model', model] : []),
         '-',
       ],
       onLine: (line) => {

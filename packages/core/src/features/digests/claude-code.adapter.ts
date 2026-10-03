@@ -20,7 +20,10 @@ const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch'
  */
 @singleton()
 export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, prompt, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput) {
+  public async run(
+    command: string,
+    { cwd, diffDirectory, prompt, model, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput,
+  ) {
     let answer: unknown;
     let failure: string | undefined;
     const followAnswer = createStructuredOutputStream();
@@ -49,6 +52,8 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         '--strict-mcp-config',
         '--disable-slash-commands',
         '--no-session-persistence',
+        ...(diffDirectory ? ['--add-dir', diffDirectory] : []),
+        ...(model ? ['--model', model] : []),
       ],
       onLine: (line) => {
         const event = parseClaudeStreamEvent(line);

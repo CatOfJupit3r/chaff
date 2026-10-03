@@ -38,7 +38,6 @@ export function ContentsDiff({ path, oldContents, newContents, layout }: iConten
       oldFile={{ name: path, contents: oldContents }}
       newFile={{ name: path, contents: newContents }}
       options={options}
-      disableWorkerPool
     />
   );
 }

@@ -72,7 +72,6 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped, isExpand
   return (
     <PatchDiff<iDiffNote>
       patch={patch}
-      disableWorkerPool
       lineAnnotations={annotations}
       renderAnnotation={({ metadata }) => {
         if (metadata.finding) return <DiffFindingNote finding={metadata.finding} />;

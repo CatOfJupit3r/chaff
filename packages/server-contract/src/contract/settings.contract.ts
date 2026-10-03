@@ -23,6 +23,8 @@ import {
 import { reviewProgressionSchema } from '@chaff/common/enums/review.enums';
 import { shortcutActionSchema } from '@chaff/common/enums/shortcuts.enums';
 
+import { digestModelSchema } from './digests.contract';
+
 /** The getting-started checklist: whether it is open, the items the user has done, and the screen hints already shown. */
 export const onboardingSchema = z.object({
   status: onboardingStatusSchema,
@@ -40,6 +42,9 @@ export const shortcutBindingsSchema = z.array(z.object({ action: shortcutActionS
 export const agentCommandsSchema = z.array(
   z.object({ runner: digestRunnerSchema, command: z.string().trim().min(1).max(1024) }),
 );
+
+/** The model each runner writes digests with, when the user picked one. */
+export const digestModelsSchema = z.array(z.object({ runner: digestRunnerSchema, model: digestModelSchema }));
 
 export const settingsSchema = z.object({
   /** Editor that file and line links open in. */
@@ -73,6 +78,7 @@ export const settingsSchema = z.object({
   digestRunner: digestRunnerSchema,
   /** Where to find each coding agent when it is not the usual command on PATH. */
   agentCommands: agentCommandsSchema,
+  digestModels: digestModelsSchema,
   shortcuts: shortcutBindingsSchema,
   onboarding: onboardingSchema,
 });

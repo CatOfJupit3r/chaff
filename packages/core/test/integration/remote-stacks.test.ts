@@ -151,6 +151,7 @@ describe('stacks with remote-tracking branches', () => {
     expect(branches.map((branch) => branch.name)).not.toContain('HEAD');
   });
 
+  // Creating 150 commits with real Git processes needs more time on Windows.
   it('leaves out remote branches that are merged or unrelated to the local stacks', async () => {
     const upstream = createUpstreamStack();
     const mainSha = upstream.git('rev-parse', 'main');
@@ -176,7 +177,7 @@ describe('stacks with remote-tracking branches', () => {
     const names = (await listBranches(workspace.id)).map((branch) => branch.name).sort();
 
     expect(names).toEqual(['main', ...STACK.slice(0, 2), 'stack/2-alt', ...STACK.slice(2), 'stack/6']);
-  });
+  }, 30_000);
 
   it('pushes an event when a fetch moves a remote-tracking branch', async () => {
     const upstream = createUpstreamStack();
