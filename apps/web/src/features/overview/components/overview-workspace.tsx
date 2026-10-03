@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { INBOX_FILTER_LABELS, inboxFilterValues } from '@chaff/common/enums/code-host.enums';
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 
 import { MarkdownTitle } from '@~/components/markdown/markdown-title';
 import { Button } from '@~/components/ui/button';
@@ -52,7 +53,13 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
           selectBranch={overview.selectBranch}
         />
         <div className="shrink-0 border-t border-line p-3">
-          <Button size="sm" className="w-full justify-center" disabled={isAdding} onClick={addFromPicker}>
+          <Button
+            data-onboarding={ONBOARDING_ITEMS.ADD_REPOSITORY}
+            size="sm"
+            className="w-full justify-center"
+            disabled={isAdding}
+            onClick={addFromPicker}
+          >
             Add repository
           </Button>
         </div>
@@ -71,7 +78,9 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
               </p>
             ) : null}
           </div>
-          <Button onClick={() => setIsStartOpen(true)}>Start a review</Button>
+          <Button data-onboarding={ONBOARDING_ITEMS.START_REVIEW} onClick={() => setIsStartOpen(true)}>
+            Start a review
+          </Button>
           {inbox.hasConnections ? (
             <div className="flex w-full flex-wrap items-center gap-3 text-xs text-muted">
               <span>Hosted requests</span>
@@ -87,7 +96,7 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
         <div className="min-h-0 flex-1 overflow-y-auto max-md:overflow-visible">
           <OverviewNotices overview={overview} />
           {stack && branch ? (
-            <div data-onboarding-hosted-stack={branch.change ? `${workspace?.id}:${branch.change.project}` : undefined}>
+            <div>
               <StackNeighborhood stack={stack} branch={branch} onSelectBranch={overview.selectBranch} />
               <BranchDetail stack={stack} branch={branch} />
             </div>

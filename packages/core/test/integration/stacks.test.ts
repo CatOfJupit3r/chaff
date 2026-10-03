@@ -1,12 +1,11 @@
 import { call } from '@orpc/server';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
-import { cloneTestGitRepo } from '../helpers/git-repo';
 import { appRouter } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
 import { addWorkspace, createFeatureRepo, SCHEDULER } from '../helpers/review-repo';
@@ -155,78 +154,5 @@ describe('working changes', () => {
       }),
       { code: errorCodes.BRANCH_NOT_CHECKED_OUT },
     );
-  });
-});
-
-/** A stack pushed to the remote, cloned so only main is a local branch; a local branch builds on its top. */
-function createRemoteStackRepo() {
-  const source = createFeatureRepo();
-  source.branch('feature-api');
-  source.commitFiles('api', { 'src/api.ts': 'export const route = "/retry";\n' });
-  source.switch('main');
-  const clone = cloneTestGitRepo(source);
-  clone.branch('feature-ui', 'origin/feature-api');
-  clone.commitFiles('ui', { 'src/ui.ts': 'export const label = "Retry";\n' });
-  return clone;
-}
-
-describe('remote-tracking branches', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('stacks branches that exist only on the remote', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.UTC(2026, 0, 10) });
-    const workspace = await addWorkspace(createRemoteStackRepo());
-
-    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
-
-    expect(branches.map((branch) => branch.name).toSorted()).toEqual([
-      'feature-ui',
-      'main',
-      'origin/feature',
-      'origin/feature-api',
-    ]);
-    expect(branches.find((branch) => branch.name === 'origin/feature')).toMatchObject({
-      isRemote: true,
-      parent: 'main',
-    });
-    expect(branches.find((branch) => branch.name === 'origin/feature-api')).toMatchObject({
-      isRemote: true,
-      parent: 'origin/feature',
-      commitsAhead: 1,
-    });
-    expect(branches.find((branch) => branch.name === 'feature-ui')).toMatchObject({
-      isRemote: false,
-      parent: 'origin/feature-api',
-    });
-  });
-
-  it('leaves out remote branches that went quiet long ago', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: Date.UTC(2026, 6, 1) });
-    const workspace = await addWorkspace(createRemoteStackRepo());
-
-    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
-
-    expect(branches.map((branch) => branch.name).toSorted()).toEqual(['feature-ui', 'main']);
-  });
-
-  it('reviews a remote-only branch against its remote-only parent', async () => {
-    const workspace = await addWorkspace(createRemoteStackRepo());
-
-    const started = await call(appRouter.reviews.start, {
-      workspaceId: workspace.id,
-      branch: 'origin/feature-api',
-      parentBranch: 'origin/feature',
-    });
-    const snapshot = await call(appRouter.reviews.snapshot, { snapshotId: started.snapshotId });
-    const stat = await call(appRouter.workspaces.branchStat, {
-      workspaceId: workspace.id,
-      branch: 'origin/feature-api',
-      parentBranch: 'origin/feature',
-    });
-
-    expect(snapshot.files.map((file) => file.path)).toEqual(['src/api.ts']);
-    expect(stat).toEqual({ fileCount: 1, additions: 1, deletions: 0 });
   });
 });

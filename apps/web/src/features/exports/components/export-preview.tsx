@@ -1,9 +1,11 @@
 import { CHANGE_REQUEST_NOUNS } from '@chaff/common/enums/code-host.enums';
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { CopyIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
+import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import type { iSnapshot } from '@~/features/reviews/reviews.types';
 import { useCopyText } from '@~/hooks/use-copy-text';
 
@@ -42,13 +44,20 @@ export function ExportPreview({ snapshot, packet, statuses, tab, onTab }: iExpor
   return (
     <section
       aria-label="Export preview"
-      data-onboarding-output
       className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2.5">
         <SegmentedControl label="Format" options={tabs} value={tab} onChange={onTab} />
         {isPosting ? null : (
-          <Button size="sm" disabled={!text} onClick={async () => copy(text)}>
+          <Button
+            size="sm"
+            disabled={!text}
+            data-onboarding={ONBOARDING_ITEMS.OUTPUT}
+            onClick={async () => {
+              reportGuideAction(ONBOARDING_ITEMS.OUTPUT);
+              await copy(text);
+            }}
+          >
             <CopyIcon />
             Copy
           </Button>

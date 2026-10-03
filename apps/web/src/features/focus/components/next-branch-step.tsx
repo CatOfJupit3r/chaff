@@ -1,9 +1,12 @@
 import { Link } from '@tanstack/react-router';
 
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+
 import { BranchIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { buttonVariants } from '@~/components/ui/button-variants';
 import { SectionLabel } from '@~/components/ui/section-label';
+import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import { useStartReview } from '@~/features/reviews/hooks/use-start-review';
 import type { iSnapshot } from '@~/features/reviews/reviews.types';
 
@@ -22,10 +25,7 @@ export function NextBranchStep({ snapshot }: { snapshot: iSnapshot }) {
   if (!next) return null;
 
   return (
-    <div
-      data-onboarding-next-branch
-      className="mt-3 flex w-full max-w-[52ch] items-center gap-3 rounded-lg border border-line bg-canvas px-4 py-3 text-left"
-    >
+    <div className="mt-3 flex w-full max-w-[52ch] items-center gap-3 rounded-lg border border-line bg-canvas px-4 py-3 text-left">
       <BranchIcon className="size-4 flex-none text-muted" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <SectionLabel>Next in the stack</SectionLabel>
@@ -36,6 +36,7 @@ export function NextBranchStep({ snapshot }: { snapshot: iSnapshot }) {
         <Link
           to="/reviews/$snapshotId"
           params={{ snapshotId: next.snapshotId }}
+          onClick={() => reportGuideAction(ONBOARDING_ITEMS.NEXT_BRANCH)}
           className={buttonVariants({ variant: 'primary' })}
         >
           Review next branch
@@ -44,13 +45,14 @@ export function NextBranchStep({ snapshot }: { snapshot: iSnapshot }) {
         <Button
           variant="primary"
           disabled={startReview.isPending}
-          onClick={() =>
+          onClick={() => {
+            reportGuideAction(ONBOARDING_ITEMS.NEXT_BRANCH);
             startReview.mutate({
               workspaceId: snapshot.workspaceId,
               branch: next.branch,
               parentBranch: next.parentBranch,
-            })
-          }
+            });
+          }}
         >
           Start review
         </Button>

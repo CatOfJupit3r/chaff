@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 
 import { CHANGE_REQUEST_NOUNS } from '@chaff/common/enums/code-host.enums';
+import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import { ExternalIcon } from '@~/components/icons/icons';
@@ -104,6 +105,7 @@ export function BranchDetail({ stack, branch }: Pick<iStackNavigation, 'stack' |
             </Link>
           ) : null}
           <Button
+            data-onboarding={ONBOARDING_ITEMS.START_REVIEW}
             variant="primary"
             className="mt-6 h-11 w-full justify-center border-accent bg-accent text-on-accent hover:border-accent hover:bg-accent hover:opacity-90"
             disabled={!actions.canOpen || actions.isPending}
