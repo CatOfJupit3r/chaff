@@ -11,8 +11,12 @@ import { GitService } from './git.service';
 
 /** Git writes a ref in several steps (lock file, rename); changes inside this window count as one. */
 const SETTLE_MS = 300;
-/** Folders of loose branch refs; a branch named `feat/x` lives in a subfolder. */
+/**
+ * Folders of loose branch refs: local branches, and remote-tracking branches that `git fetch` moves. A branch
+ * named `feat/x` lives in a subfolder.
+ */
 const REF_FOLDERS = ['refs/heads', 'refs/remotes'];
+const REFS_FOLDER = 'refs';
 /** Files directly in the git folder that move branches. */
 const REF_FILES = new Set(['packed-refs']);
 const CHANGE_EVENT = 'change';
@@ -78,10 +82,19 @@ export class RefWatchService {
       subscriberCount: 1,
     };
     this.repositories.set(gitDirectory, repository);
+    const watchRefFolders = async () =>
+      Promise.all(REF_FOLDERS.map(async (folder) => this.watchRefFolder(repository, path.join(gitDirectory, folder))));
     this.watchFolder(repository, gitDirectory, (name) => REF_FILES.has(name));
-    await Promise.all(
-      REF_FOLDERS.map(async (folder) => this.watchRefFolder(repository, path.join(gitDirectory, folder))),
+    // `refs/remotes` only appears with the first fetch of a repository that had no remote.
+    this.watchFolder(
+      repository,
+      path.join(gitDirectory, REFS_FOLDER),
+      (name) => REF_FOLDERS.some((folder) => path.basename(folder) === name),
+      () => {
+        watchRefFolders().catch(() => undefined);
+      },
     );
+    await watchRefFolders();
     return repository;
   }
 
@@ -95,10 +108,13 @@ export class RefWatchService {
     this.repositories.delete(gitDirectory);
   }
 
-  /** Watches a ref folder and every subfolder in it, and picks up subfolders created later. */
+  /**
+   * Watches a ref folder and every subfolder in it, and picks up subfolders created later. A folder that does
+   * not exist yet is picked up once it is created.
+   */
   private async watchRefFolder(repository: iRepositoryWatch, root: string) {
-    const entries = await readdir(root, { recursive: true, withFileTypes: true }).catch(() => []);
-    if (repository.subscriberCount === 0) return;
+    const entries = await readdir(root, { recursive: true, withFileTypes: true }).catch(() => undefined);
+    if (!entries || repository.subscriberCount === 0) return;
     const folders = [
       root,
       ...entries.filter((entry) => entry.isDirectory()).map((entry) => path.join(entry.parentPath, entry.name)),
