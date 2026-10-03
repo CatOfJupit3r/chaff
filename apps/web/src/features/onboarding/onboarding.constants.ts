@@ -6,7 +6,7 @@ import type { iOnboardingStep } from './onboarding.types';
 export const HOSTED_STACK_GUIDE = {
   description:
     'Merge requests and pull requests are grouped by their branch dependencies here. Follow the parent change before its dependent requests, and use Start or Continue to review each change.',
-  fallback: { selector: 'section[aria-label="Merge requests"]' },
+  fallback: { selector: '[aria-label="Stack navigation"]' },
   unavailable: 'This change may be outside the current inbox filter; change the filter to find its stack.',
 } satisfies Pick<iOnboardingStep, 'description' | 'fallback' | 'unavailable'>;
 
@@ -16,8 +16,8 @@ export const ONBOARDING_GUIDE: readonly iOnboardingStep[] = [
     screen: ONBOARDING_SCREENS.REVIEWS,
     title: 'Pick a change of your own',
     description:
-      'Add a repository from your computer, then pick a GitLab merge request, GitHub pull request, or local branch, including a stack. Use the review box or choose a change from the lists below.',
-    anchor: { selector: '[aria-label="Start a review"]' },
+      'Add a repository, choose a stack in the sidebar, then select a branch. Merge and pull request titles appear on their branches. Start a review also accepts a link or branch name.',
+    anchor: { selector: '[aria-label="Stack navigation"]' },
     fallback: { text: 'Add repository' },
     unavailable: 'Use Add repository to choose a local Git repository first.',
   },
@@ -28,6 +28,7 @@ export const ONBOARDING_GUIDE: readonly iOnboardingStep[] = [
     description:
       'Paste a merge or pull request URL, or enter a branch name and choose its repository. Start review freezes the change so your decisions survive rebases; the guide continues when it opens.',
     anchor: { text: 'Start review' },
+    prepare: { text: 'Start a review' },
     fallback: { text: 'Add repository' },
     unavailable: 'Add a repository first, then start a review of a real change.',
   },

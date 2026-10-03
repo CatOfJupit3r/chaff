@@ -1,4 +1,5 @@
 import { ExternalIcon } from '@~/components/icons/icons';
+import { MarkdownBody } from '@~/components/markdown/markdown-body';
 import { Pill } from '@~/components/ui/pill';
 import { cn } from '@~/lib/utils';
 import { formatRelativeTime } from '@~/utils/relative-time';
@@ -39,7 +40,7 @@ export function DiscussionThread({ discussion, className }: iDiscussionThreadPro
             <div className="text-[12px] text-muted">
               <b className="font-medium text-fg">{note.authorName}</b> · {formatRelativeTime(note.createdAt)}
             </div>
-            <p className="m-0 mt-1 text-[13px] leading-normal whitespace-pre-wrap text-fg">{note.body}</p>
+            <MarkdownBody text={note.body} baseUrl={webUrl} className="mt-1" />
           </li>
         ))}
       </ol>

@@ -68,7 +68,7 @@ export function AppRail() {
   return (
     <nav aria-label="Screens" className="flex flex-col items-center gap-1 border-r border-line bg-canvas py-3.5">
       <Logo className="mb-3.5 text-fg" />
-      <RailLink to="/" icon={InboxIcon} label="Reviews" />
+      <RailLink to="/" icon={InboxIcon} label="Overview" />
       <RailLink to="/stack" search={lastStack ?? {}} icon={StackIcon} label="Stack" />
       {reviewSnapshotId ? (
         <>

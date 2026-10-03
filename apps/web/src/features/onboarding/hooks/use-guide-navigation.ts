@@ -65,7 +65,7 @@ export function useGuideNavigation(
                 selector: `[data-onboarding-hosted-stack="${CSS.escape(`${snapshot.workspaceId}:${snapshot.change.project}`)}"]`,
               },
             };
-            await navigate({ to: '/' });
+            await navigate({ to: '/', search: { repository: snapshot.workspaceId, branch: snapshot.branch } });
           } else {
             await navigate({ to: '/stack', search: { workspace: snapshot.workspaceId, branch: snapshot.branch } });
           }

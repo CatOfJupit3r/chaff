@@ -7,6 +7,8 @@ import { PreferencesSection } from '@~/features/preferences/components/preferenc
 import { AgentsSection } from '@~/features/settings/components/agents-section';
 import { DiffLayoutSection } from '@~/features/settings/components/diff-layout-section';
 import { ShortcutsSection } from '@~/features/settings/components/shortcuts-section';
+import { RepositoriesGroup } from '@~/features/workspaces/components/repositories-group';
+import { useAddWorkspace } from '@~/features/workspaces/hooks/use-add-workspace';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 
 import { useConnections } from '../hooks/use-connections';
@@ -20,6 +22,7 @@ import { RepositoryRemoteRow } from './repository-remote-row';
 export function SettingsScreen() {
   const workspaces = useWorkspaces();
   const connections = useConnections();
+  const { addFromPicker, isAdding } = useAddWorkspace();
 
   return (
     <>
@@ -33,6 +36,7 @@ export function SettingsScreen() {
             <p className="m-0 mt-1 text-muted">Saved on this computer. Tokens stay in your system keychain.</p>
           </div>
           <ConnectionsSection />
+          <RepositoriesGroup workspaces={workspaces} onAdd={addFromPicker} isAdding={isAdding} />
           {workspaces.length > 0 ? (
             <section aria-label="Repository projects" className="flex flex-col gap-2.5">
               <SectionLabel>Repository projects</SectionLabel>

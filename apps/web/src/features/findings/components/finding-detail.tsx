@@ -4,6 +4,7 @@ import { ANCHOR_MATCHES, FINDING_KINDS, IS_ACTIVE_FINDING_STATUS } from '@chaff/
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { ExternalIcon } from '@~/components/icons/icons';
+import { MarkdownBody } from '@~/components/markdown/markdown-body';
 import { Button } from '@~/components/ui/button';
 import { CopyFindingButton } from '@~/features/exports/components/copy-finding-button';
 import { PromoteFindingButton } from '@~/features/preferences/components/promote-finding-button';
@@ -137,7 +138,7 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
       ))}
       <section className="flex flex-col gap-1.5 px-5 py-4">
         <span className="text-[12.5px] text-muted">Your comment · {formatRelativeTime(finding.createdAt)}</span>
-        <p className="m-0 text-[14px] leading-relaxed whitespace-pre-wrap text-fg">{finding.body}</p>
+        <MarkdownBody text={finding.body} baseUrl={finding.post?.url ?? undefined} />
         {finding.answer ? (
           <div className="mt-2 flex flex-col gap-1 border-l-2 border-accent-line pl-3">
             <span className="text-[12.5px] text-muted">Answer</span>

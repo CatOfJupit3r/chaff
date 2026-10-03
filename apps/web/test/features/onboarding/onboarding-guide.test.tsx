@@ -205,7 +205,7 @@ describe('onboarding guide', () => {
     vi.stubGlobal('CSS', { escape: (value: string) => value });
     mountGuide({ status: ONBOARDING_STATUSES.IN_PROGRESS, step: ONBOARDING_STEPS.STACK, reviewId: 'hosted-review' });
     await waitFor(() => expect(screen.getByText(/Merge requests and pull requests are grouped/)).toBeInTheDocument());
-    expect(rpc.navigate).toHaveBeenCalledWith({ to: '/' });
+    expect(rpc.navigate).toHaveBeenCalledWith({ to: '/', search: { repository: 'workspace', branch: 'remote-only' } });
     expect(rpc.navigate).not.toHaveBeenCalledWith(expect.objectContaining({ to: '/stack' }));
   });
 

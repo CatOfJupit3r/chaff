@@ -23,11 +23,3 @@ export function NoRepositories({ onAdd, isAdding }: iNoRepositoriesProps) {
     </List>
   );
 }
-
-export function NoLocalStacks() {
-  return (
-    <p className="m-0 px-4 py-3.5 text-[13px] text-muted">
-      No local branches with commits of their own yet. Branches show up here as soon as they move past their parent.
-    </p>
-  );
-}

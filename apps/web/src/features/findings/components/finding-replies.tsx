@@ -4,6 +4,7 @@ import type { FindingStatus } from '@chaff/common/enums/review.enums';
 import { manualFindingStatuses } from '@chaff/common/helpers/finding-transitions.helper';
 
 import { ExternalIcon } from '@~/components/icons/icons';
+import { MarkdownBody } from '@~/components/markdown/markdown-body';
 import { Button } from '@~/components/ui/button';
 import { useOpenLink } from '@~/features/code-hosts/hooks/use-open-link';
 import { formatRelativeTime } from '@~/utils/relative-time';
@@ -65,7 +66,7 @@ export function FindingReplies({ finding, isPending, onSetStatus }: iFindingRepl
               </Button>
             ) : null}
           </span>
-          <p className="m-0 leading-relaxed whitespace-pre-wrap text-fg">{reply.body}</p>
+          <MarkdownBody text={reply.body} baseUrl={post.url ?? undefined} />
         </div>
       ))}
     </section>
