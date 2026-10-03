@@ -19,6 +19,8 @@ export interface iBranchResponse {
   authorName: string;
   committedAt: Date;
   upstream?: string;
+  /** Remote the branch is read from when it has no local branch, such as `origin`. */
+  remote?: string;
   isDefault: boolean;
   suggestedParent?: string;
   commitsAhead: number;

@@ -5,6 +5,7 @@ import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { useStartReview } from '@~/features/reviews/hooks/use-start-review';
 import type { iReviewTarget } from '@~/features/reviews/reviews.types';
 import type { iStackLink } from '@~/features/reviews/stack-review.utils';
+import { RemoteBranchPill } from '@~/features/workspaces/components/remote-branch-pill';
 import type { iBranch } from '@~/features/workspaces/workspaces.types';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
@@ -60,7 +61,10 @@ export function BranchPanel({
     <section aria-label={link.branch.name} className="overflow-hidden rounded-xl border border-line bg-surface">
       <div className="flex flex-col gap-3 border-b border-line p-5">
         <div>
-          <h2 className="m-0 font-mono text-[16px] font-medium break-all text-fg">{link.branch.name}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="m-0 font-mono text-[16px] font-medium break-all text-fg">{link.branch.name}</h2>
+            <RemoteBranchPill branch={link.branch} />
+          </div>
           <p className="m-0 mt-1 text-[12.5px] text-muted">
             {link.branch.subject} · {link.branch.authorName} · {formatRelativeTime(link.branch.committedAt)}
           </p>
