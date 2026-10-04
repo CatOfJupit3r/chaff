@@ -475,16 +475,30 @@ pnpm run dev
 
 `pnpm run dev` opens Chaff in an Electron window with live reload. Click **Add repository** and pick any folder inside a git repository; its local branch stacks appear on the Reviews screen.
 
-To build an installer for your OS:
+### Install as an app
+
+To use Chaff like any other installed app, build an installer for your OS:
 
 ```bash
 pnpm run package
 ```
 
-This writes a DMG (macOS), an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. Builds are unsigned and do not auto-update:
+This writes a DMG (macOS), an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. Builds are unsigned and do not auto-update; to pick up new changes, run `pnpm run package` again and reinstall.
 
-- **macOS:** right-click Chaff in Applications and choose **Open** the first time.
-- **Windows:** in the SmartScreen prompt choose **More info**, then **Run anyway**.
+On macOS:
+
+1. Open `apps/desktop/release/Chaff-<version>-<arch>.dmg` and drag **Chaff** into **Applications**.
+2. The first time, right-click Chaff in Applications and choose **Open**. If macOS still refuses to open it, clear the quarantine flag:
+
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Chaff.app
+   ```
+
+3. While it runs, right-click its Dock icon and choose **Options > Keep in Dock**. Spotlight and Launchpad find it too.
+
+Closing the window keeps Chaff running; click the Dock icon to bring it back, and quit with Cmd+Q.
+
+On Windows, run the installer; in the SmartScreen prompt choose **More info**, then **Run anyway**. On Linux, make the AppImage executable (`chmod +x`) and run it.
 
 Chaff keeps its database and snapshot store in the OS app data folder: `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS, `~/.config/Chaff` on Linux. `pnpm run dev` uses a separate `Chaff Dev` folder next to it.
 

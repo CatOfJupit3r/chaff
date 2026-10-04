@@ -11,7 +11,7 @@ Setup and first run are in the [README](../README.md#getting-started). This page
 - `packages/common` - shared utilities, types, constants, and helpers
 - `enumwaii` and `eslint-plugin-enumwaii` - npm dependencies for typed enums and their ESLint rules
 - `configs/*` - shared ESLint and Prettier configs
-- `assets/brand` - Chaff icon: `chaff-mark.svg` (single-color, uses `currentColor`) and the dark/light PNG originals
+- `assets/brand` - Chaff icon: `chaff-mark.svg` (single-color, uses `currentColor`), the dark/light PNG originals, and `chaff-app-icon.svg`, the source of the desktop app icon `apps/desktop/build/icon.png`
 - `docs` - this documentation and the screenshots used in the README
 
 ## Workspace commands

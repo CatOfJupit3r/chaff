@@ -46,7 +46,7 @@ Examples:
 - `packages/server-contract` contains the API contracts shared by the core and the renderer.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
 - `docs` contains product notes, roadmaps, and design documentation, if present.
-- `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-fg`, `text-accent`). The desktop app icon is `apps/desktop/build/icon.png`.
+- `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-fg`, `text-accent`). The desktop app icon is `apps/desktop/build/icon.png`, rendered from `chaff-app-icon.svg` (the mark on a rounded plate with the standard macOS margins) with `rsvg-convert -w 1024 -h 1024 assets/brand/chaff-app-icon.svg -o apps/desktop/build/icon.png`.
 
 ## UI, Theming, and Colors
 
