@@ -11,7 +11,7 @@ Setup and first run are in the [README](../README.md#getting-started). This page
 - `packages/common` - shared utilities, types, constants, and helpers
 - `enumwaii` and `eslint-plugin-enumwaii` - npm dependencies for typed enums and their ESLint rules
 - `configs/*` - shared ESLint and Prettier configs
-- `assets/brand` - Chaff icon: `chaff-mark.svg` (single-color, uses `currentColor`) and the dark/light PNG originals
+- `assets/brand` - Chaff icon: `chaff-mark.svg` (single-color, uses `currentColor`), the dark/light PNG originals, and `chaff-app-icon.svg`, the source of the desktop app icon `apps/desktop/build/icon.png`
 - `docs` - this documentation and the screenshots used in the README
 
 ## Workspace commands
@@ -19,6 +19,7 @@ Setup and first run are in the [README](../README.md#getting-started). This page
 - `pnpm run dev` - open Chaff with live reload (renderer on `http://localhost:3030`; core and main-process changes rebuild and restart the app)
 - `pnpm run build` - build every package, including the desktop bundle
 - `pnpm run package` - build an unsigned installer for the current OS
+- `pnpm run install-app` - build Chaff and install it as `/Applications/Chaff.app` (macOS); the `post-merge` and `post-rewrite` hooks run it in the background after every pull on `main` unless `git config chaff.autoInstall false`
 - `pnpm run verify` - type-check and lint the workspace (`--tests` also runs the tests, `--filter <pkg>` scopes it)
 - `pnpm run db:generate` - generate a Drizzle migration from the schema
 - `pnpm run check-types` - TypeScript checks across the workspace

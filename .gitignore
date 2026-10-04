@@ -6,3 +6,6 @@ node_modules
 mongo/data
 .github/skills/react-best-practices/
 .pnpm-store
+
+# macOS Finder metadata
+.DS_Store
