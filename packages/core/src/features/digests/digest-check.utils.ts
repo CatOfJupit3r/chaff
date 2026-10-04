@@ -1,3 +1,4 @@
+import { realpath } from 'node:fs/promises';
 import path from 'node:path';
 
 import { INTENT_SOURCES, TEST_TIERS } from '@chaff/common/enums/digest.enums';
@@ -9,8 +10,11 @@ const MAX_WORTH_CHECKING = 5;
 const MAX_TESTS = 10;
 const UNEXPLAINED_GROUP_ID = 'unexplained';
 
-function toRepoPath(root: string, candidate: string) {
-  const relative = path.relative(root, path.resolve(root, candidate.trim()));
+async function toRepoPath(root: string, candidate: string) {
+  const resolved = path.resolve(root, candidate.trim());
+  const canonicalRoot = await realpath(root);
+  const canonicalCandidate = await realpath(resolved).catch(() => resolved);
+  const relative = path.relative(canonicalRoot, canonicalCandidate);
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return undefined;
   return relative.split(path.sep).join('/');
 }
@@ -31,7 +35,7 @@ function nodeUnits(mermaid: string, shortIds: ReadonlyMap<string, string>) {
  * is downgraded because nothing ran. Test paths are made relative to `root`, the checkout the agent read;
  * a test outside it is dropped.
  */
-export function checkDigest(
+export async function checkDigest(
   answer: iAgentDigest,
   unitIds: readonly string[],
   shortIds: ReadonlyMap<string, string>,
@@ -79,33 +83,32 @@ export function checkDigest(
   const readingOrder = [...ordered, ...unitIds.filter((id) => !ordered.includes(id))];
 
   const seenNotes = new Set<string>();
-  const units: iDigestContent['units'] = answer.units.flatMap((note) => {
+  const units: iDigestContent['units'] = [];
+  for (const note of answer.units) {
     const unitId = resolve(note.unit);
-    if (!unitId || seenNotes.has(unitId)) return [];
+    if (!unitId || seenNotes.has(unitId)) continue;
     seenNotes.add(unitId);
-    return [
-      {
-        unitId,
-        summary: note.summary.trim(),
-        worthChecking: note.worthChecking
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .slice(0, MAX_WORTH_CHECKING),
-        tests: note.tests.slice(0, MAX_TESTS).flatMap((test) => {
-          const relative = toRepoPath(root, test.path);
-          if (!relative) return [];
-          return [
-            {
-              path: relative,
-              line: test.line !== null && test.line > 0 ? test.line : undefined,
-              tier: test.tier === TEST_TIERS.PASSED ? TEST_TIERS.INSPECTED : test.tier,
-              note: test.note.trim(),
-            },
-          ];
-        }),
-      },
-    ];
-  });
+    const tests: iDigestContent['units'][number]['tests'] = [];
+    for (const test of note.tests.slice(0, MAX_TESTS)) {
+      const relative = await toRepoPath(root, test.path);
+      if (!relative) continue;
+      tests.push({
+        path: relative,
+        line: test.line !== null && test.line > 0 ? test.line : undefined,
+        tier: test.tier === TEST_TIERS.PASSED ? TEST_TIERS.INSPECTED : test.tier,
+        note: test.note.trim(),
+      });
+    }
+    units.push({
+      unitId,
+      summary: note.summary.trim(),
+      worthChecking: note.worthChecking
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, MAX_WORTH_CHECKING),
+      tests,
+    });
+  }
 
   const diagrams: iDigestContent['diagrams'] = answer.diagrams
     .filter((diagram) => diagram.mermaid.trim().length > 0)

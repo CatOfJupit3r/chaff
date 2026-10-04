@@ -203,7 +203,7 @@ export class DigestsService {
       stopPreview();
       const parsed = agentDigestSchema.safeParse(answer);
       if (!parsed.success) throw new Error('The agent answered in an unexpected shape');
-      const content = { ...checkDigest(parsed.data, unitIds, shortIds, checkout), outlinedPaths };
+      const content = { ...(await checkDigest(parsed.data, unitIds, shortIds, checkout)), outlinedPaths };
       await this.changeUnitsService.adoptDigest(snapshot.id, content);
       await this.digestRepository.update(digestId, {
         status: DIGEST_STATUSES.READY,
