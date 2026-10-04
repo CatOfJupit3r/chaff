@@ -168,6 +168,7 @@ export const FILE_KIND_FACTS = fileKindsEnumwaii.derive(
 
 export const REVIEW_PROGRESSION_LABELS = reviewProgressionsEnumwaii.derive(
   [REVIEW_PROGRESSIONS.changes, 'Changes'],
+  [REVIEW_PROGRESSIONS.units, 'Units'],
   [REVIEW_PROGRESSIONS.functions, 'Functions'],
   [REVIEW_PROGRESSIONS.sections, 'Sections'],
 );

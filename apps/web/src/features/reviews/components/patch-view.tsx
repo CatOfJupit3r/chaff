@@ -26,6 +26,8 @@ interface iPatchViewProps {
   isWrapped: boolean;
   /** Shows every unchanged line of the file, whatever the diff settings say. */
   isExpanded?: boolean;
+  /** More CSS for the renderer, such as outlines around units. */
+  extraCss?: string;
 }
 
 /**
@@ -33,7 +35,15 @@ interface iPatchViewProps {
  * diff, lines show the decision on their unit, findings and merge request threads sit under the lines they
  * point at, and the + beside a line, or a picked range, opens a note.
  */
-export function PatchView({ snapshotId, file, patch, layout, isWrapped, isExpanded = false }: iPatchViewProps) {
+export function PatchView({
+  snapshotId,
+  file,
+  patch,
+  layout,
+  isWrapped,
+  isExpanded = false,
+  extraCss,
+}: iPatchViewProps) {
   const isDark = useIsDarkMode();
   const { viewerOptions } = useDiffPreferences();
   const loadDiffFiles = useLoadDiffFiles(snapshotId, file);
@@ -61,12 +71,12 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped, isExpand
       diffIndicators: 'classic' as const,
       lineDiffType: viewerOptions.lineDiffType,
       expandUnchanged: isExpanded || viewerOptions.expandUnchanged,
-      unsafeCSS: [UNIFIED_LINE_NUMBERS_CSS, gutterCss].filter(Boolean).join('\n'),
+      unsafeCSS: [UNIFIED_LINE_NUMBERS_CSS, gutterCss, extraCss].filter(Boolean).join('\n'),
       enableLineSelection: startDraft !== undefined,
       enableGutterUtility: startDraft !== undefined,
       onGutterUtilityClick: (range: SelectedLineRange) => startDraft?.(draftFromSelection(file.id, range)),
     }),
-    [isDark, layout, isWrapped, isExpanded, loadDiffFiles, viewerOptions, gutterCss, startDraft, file.id],
+    [isDark, layout, isWrapped, isExpanded, loadDiffFiles, viewerOptions, gutterCss, extraCss, startDraft, file.id],
   );
 
   return (

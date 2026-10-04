@@ -5,7 +5,7 @@ import { DIFF_SIDES, SYMBOL_KINDS, UNIT_KINDS, UNIT_MARKS, UNIT_REVISIONS } from
 import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 import { SNAPSHOT_REPOSITORY_TOKEN, UNIT_MARK_REPOSITORY_TOKEN } from '@~/di/tokens';
-import { ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
+import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
 import { isTestPath } from '../diff/file-kind.utils';
 import { parsePatch } from '../diff/patch.utils';
@@ -50,13 +50,16 @@ export class UnitsService {
     return this.snapshotRepository.listUnits(snapshotId);
   }
 
-  /** The unit's code with its changes, cut from the file, and the newest commit that touched the file. */
-  public async getDetail(snapshotId: string, unitId: string) {
+  /** The code of some units of one file with their changes, cut from the file, and the newest commit that touched it. */
+  public async getDetail(snapshotId: string, unitIds: readonly string[]) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
-    const unit = await this.getUnit(snapshotId, unitId);
+    const units = await Promise.all(unitIds.map(async (unitId) => this.getUnit(snapshotId, unitId)));
+    const fileId = units[0]?.fileId;
+    if (!fileId) throw ORPCNotFoundError(errorCodes.UNIT_NOT_FOUND);
+    if (units.some((unit) => unit.fileId !== fileId)) throw ORPCBadRequestError(errorCodes.UNITS_IN_DIFFERENT_FILES);
     const [file, stored] = await Promise.all([
-      this.snapshotRepository.findFile(snapshotId, unit.fileId),
-      this.snapshotRepository.findPatch(snapshotId, unit.fileId),
+      this.snapshotRepository.findFile(snapshotId, fileId),
+      this.snapshotRepository.findPatch(snapshotId, fileId),
     ]);
     if (!file) throw ORPCNotFoundError(errorCodes.SNAPSHOT_FILE_NOT_FOUND);
 
@@ -77,8 +80,10 @@ export class UnitsService {
     const patch = buildUnitPatch({
       patch: stored.patch,
       lines: parsePatch(stored.patch).lines,
-      oldRange: sideRange(unit.oldStartLine, unit.oldEndLine),
-      newRange: sideRange(unit.newStartLine, unit.newEndLine),
+      units: units.map((unit) => ({
+        oldRange: sideRange(unit.oldStartLine, unit.oldEndLine),
+        newRange: sideRange(unit.newStartLine, unit.newEndLine),
+      })),
       oldContents: contentsOf(file.oldBlobSha),
       newContents: contentsOf(file.newBlobSha),
     });
