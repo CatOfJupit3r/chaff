@@ -483,9 +483,15 @@ To use Chaff like any other installed app, build an installer for your OS:
 pnpm run package
 ```
 
-This writes a DMG (macOS), an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. Builds are unsigned and do not auto-update; to pick up new changes, run `pnpm run package` again and reinstall.
+This writes a DMG (macOS), an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. Builds are unsigned and do not update themselves.
 
-On macOS:
+On macOS, `pnpm run install-app` does all of this in one step: it builds Chaff from your checkout and installs it as `/Applications/Chaff.app`, quitting a running Chaff first and opening it again afterwards. It also keeps the installed app current with the repository: after each `git pull` (merge or rebase) on `main`, a git hook runs `install-app` in the background and shows a notification when the new build is installed. The build log is in `~/Library/Logs/Chaff/install-app.log`. To turn this off for your checkout:
+
+```bash
+git config chaff.autoInstall false
+```
+
+To install from the DMG by hand instead:
 
 1. Open `apps/desktop/release/Chaff-<version>-<arch>.dmg` and drag **Chaff** into **Applications**.
 2. The first time, right-click Chaff in Applications and choose **Open**. If macOS still refuses to open it, clear the quarantine flag:

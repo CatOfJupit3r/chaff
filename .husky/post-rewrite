@@ -1,0 +1,3 @@
+# `git pull --rebase` ends here instead of post-merge; amended commits are skipped.
+[ "$1" = "rebase" ] || exit 0
+. "$(dirname "$0")/post-merge"

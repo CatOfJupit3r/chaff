@@ -19,6 +19,7 @@ Setup and first run are in the [README](../README.md#getting-started). This page
 - `pnpm run dev` - open Chaff with live reload (renderer on `http://localhost:3030`; core and main-process changes rebuild and restart the app)
 - `pnpm run build` - build every package, including the desktop bundle
 - `pnpm run package` - build an unsigned installer for the current OS
+- `pnpm run install-app` - build Chaff and install it as `/Applications/Chaff.app` (macOS); the `post-merge` and `post-rewrite` hooks run it in the background after every pull on `main` unless `git config chaff.autoInstall false`
 - `pnpm run verify` - type-check and lint the workspace (`--tests` also runs the tests, `--filter <pkg>` scopes it)
 - `pnpm run db:generate` - generate a Drizzle migration from the schema
 - `pnpm run check-types` - TypeScript checks across the workspace
