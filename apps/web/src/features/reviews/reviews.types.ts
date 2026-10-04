@@ -8,6 +8,8 @@ export type iSnapshot = ORPCOutputs['reviews']['snapshot'];
 
 export type iSnapshotFile = iSnapshot['files'][number];
 
+export type iFileImage = NonNullable<ORPCOutputs['reviews']['fileImages']['newImage']>;
+
 export type iSnapshotLiveStatus = ORPCOutputs['reviews']['liveStatus'];
 
 /** A folder in the changed-file tree; chains of folders with a single child folder are merged into one. */

@@ -1,16 +1,15 @@
 import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
 
-import { FileNote } from '@~/features/reviews/components/file-notes';
 import { PatchView } from '@~/features/reviews/components/patch-view';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
 import type { iSnapshotFile, iUnit } from '@~/features/reviews/reviews.types';
 
-import { codeNoteFor } from '../code-view.utils';
 import { useCodeExpansion } from '../hooks/use-code-expansion';
 import { useScrollToCodeRow } from '../hooks/use-scroll-to-code-row';
 import { useUnitDetail } from '../hooks/use-unit-detail';
 import { buildUnitAreaCss, buildUnitAreas, firstAreaRowSelector } from '../unit-areas.utils';
 import { CodeFileBar } from './code-file-bar';
+import { FileWithoutLines } from './file-without-lines';
 import { UnitAreaLegend } from './unit-area-legend';
 
 interface iChangeFileCodeProps {
@@ -54,7 +53,7 @@ export function ChangeFileCode({ snapshotId, units, file, onOpenInEditor }: iCha
             extraCss={areaCss}
           />
         ) : null}
-        {detail && !detail.patch ? <FileNote>{codeNoteFor(file)}</FileNote> : null}
+        {detail && !detail.patch ? <FileWithoutLines snapshotId={snapshotId} file={file} /> : null}
       </div>
     </section>
   );

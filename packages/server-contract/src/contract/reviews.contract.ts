@@ -2,6 +2,7 @@ import { eventIterator, oc } from '@orpc/contract';
 import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
+import { imageMimeTypeSchema } from '@chaff/common/enums/file-preview.enums';
 import {
   archiveReasonSchema,
   diffSideSchema,
@@ -189,6 +190,13 @@ export const unitUsageSchema = z.object({
   isInTest: z.boolean(),
 });
 
+const fileImageSchema = z.object({
+  mimeType: imageMimeTypeSchema,
+  /** The image's bytes, base64-encoded. */
+  data: z.string(),
+  byteSize: z.number().int().nonnegative(),
+});
+
 const snapshotIdInput = z.object({ snapshotId: idSchema });
 const unitInput = z.object({ snapshotId: idSchema, unitId: idSchema });
 const fileInput = z.object({ snapshotId: idSchema, fileId: idSchema });
@@ -333,6 +341,34 @@ export const reviewsContract = oc.router({
     })
     .input(fileInput)
     .output(z.object({ oldContents: z.string().nullable(), newContents: z.string().nullable() })),
+
+  fileImages: oc
+    .route({
+      summary: "Get a file's old and new images",
+      description:
+        'Returns both sides of an image file from the snapshot store so the change can be seen drawn. A side is null when the file did not exist there, its path does not name an image format, or it is very large.',
+    })
+    .input(fileInput)
+    .output(z.object({ oldImage: fileImageSchema.nullable(), newImage: fileImageSchema.nullable() })),
+
+  snapshotImage: oc
+    .route({
+      summary: 'Get an image from a snapshot',
+      description:
+        'Returns an image file of the repository as it was on one side of the snapshot, so a Markdown preview can draw the images it links to. Null when the path is missing, does not name an image format, or the image is very large.',
+    })
+    .input(
+      snapshotIdInput.extend({
+        side: diffSideSchema,
+        /** Relative to the repository root. */
+        path: z
+          .string()
+          .min(1)
+          .max(1024)
+          .regex(/^[^\n\r\0]+$/),
+      }),
+    )
+    .output(fileImageSchema.nullable()),
 
   units: oc
     .route({

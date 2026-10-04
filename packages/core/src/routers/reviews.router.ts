@@ -49,6 +49,14 @@ export const reviewsRouter = base.reviews.router({
     container.resolve(ReviewsService).getFileContents(input.snapshotId, input.fileId),
   ),
 
+  fileImages: procedure.reviews.fileImages.handler(async ({ input }) =>
+    container.resolve(ReviewsService).getFileImages(input.snapshotId, input.fileId),
+  ),
+
+  snapshotImage: procedure.reviews.snapshotImage.handler(async ({ input }) =>
+    container.resolve(ReviewsService).getSnapshotImage(input.snapshotId, input.side, input.path),
+  ),
+
   units: procedure.reviews.units.handler(async ({ input }) => container.resolve(UnitsService).list(input.snapshotId)),
 
   unitDetail: procedure.reviews.unitDetail.handler(async ({ input }) =>

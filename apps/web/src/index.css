@@ -306,6 +306,13 @@
   background-image: repeating-linear-gradient(90deg, transparent 0 3px, var(--stripe) 3px 5px);
 }
 
+/* Checkered backdrop behind images so their transparent areas show. */
+@utility bg-checker {
+  background-color: var(--surface);
+  background-image: conic-gradient(var(--hover) 25%, transparent 0 50%, var(--hover) 0 75%, transparent 0);
+  background-size: 16px 16px;
+}
+
 @layer base {
   * {
     border-color: var(--line);

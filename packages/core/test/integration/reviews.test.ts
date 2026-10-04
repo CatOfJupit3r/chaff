@@ -4,7 +4,9 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { IMAGE_MIME_TYPES } from '@chaff/common/enums/file-preview.enums';
 import { DIFF_SIDES, FILE_KINDS, FILE_STATUSES } from '@chaff/common/enums/review.enums';
+import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import { createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
@@ -156,6 +158,56 @@ describe('reviews', () => {
     // Every change, even one without changed lines, is reachable through a unit and a region.
     expect(snapshot.files.every((file) => file.unitCount === 1 && file.regionCount >= 1)).toBe(true);
     expect(snapshot.regionCount).toBe(snapshot.files.reduce((sum, file) => sum + file.regionCount, 0));
+  });
+
+  it('serves both sides of an image file, and nothing for files that are not images', async () => {
+    const oldPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 1]);
+    const newPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 2]);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>\n';
+    const repo = createTestGitRepo();
+    repo.commitFiles('base', { 'assets/logo.png': oldPng, 'notes.txt': 'one\n' });
+    repo.branch('art');
+    repo.commitFiles('art', { 'assets/logo.png': newPng, 'assets/icon.svg': svg, 'notes.txt': 'two\n' });
+    const { snapshotId } = await startFeatureReview(repo, 'art');
+    const { files } = await call(appRouter.reviews.snapshot, { snapshotId });
+    const fileId = (filePath: string) => files.find((file) => file.path === filePath)?.id ?? '';
+
+    const logo = await call(appRouter.reviews.fileImages, { snapshotId, fileId: fileId('assets/logo.png') });
+    const icon = await call(appRouter.reviews.fileImages, { snapshotId, fileId: fileId('assets/icon.svg') });
+    const notes = await call(appRouter.reviews.fileImages, { snapshotId, fileId: fileId('notes.txt') });
+
+    expect(logo).toEqual({
+      oldImage: { mimeType: IMAGE_MIME_TYPES['image/png'], data: oldPng.toString('base64'), byteSize: 10 },
+      newImage: { mimeType: IMAGE_MIME_TYPES['image/png'], data: newPng.toString('base64'), byteSize: 10 },
+    });
+    expect(icon).toEqual({
+      oldImage: null,
+      newImage: {
+        mimeType: IMAGE_MIME_TYPES['image/svg+xml'],
+        data: Buffer.from(svg).toString('base64'),
+        byteSize: svg.length,
+      },
+    });
+    expect(notes).toEqual({ oldImage: null, newImage: null });
+  });
+
+  it('serves an image of the repository by path from either side of the snapshot', async () => {
+    const oldPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1]);
+    const newPng = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 2]);
+    const repo = createTestGitRepo();
+    repo.commitFiles('base', { 'docs/shot.png': oldPng, 'docs/guide.md': '![Shot](shot.png)\n' });
+    repo.branch('docs');
+    repo.commitFiles('docs', { 'docs/shot.png': newPng, 'docs/new.png': newPng });
+    const { snapshotId } = await startFeatureReview(repo, 'docs');
+    const image = async (side: DiffSide, filePath: string) =>
+      call(appRouter.reviews.snapshotImage, { snapshotId, side, path: filePath });
+
+    expect(await image(DIFF_SIDES.OLD, 'docs/shot.png')).toMatchObject({ data: oldPng.toString('base64') });
+    expect(await image(DIFF_SIDES.NEW, 'docs/shot.png')).toMatchObject({ data: newPng.toString('base64') });
+    expect(await image(DIFF_SIDES.OLD, 'docs/new.png')).toBeNull();
+    expect(await image(DIFF_SIDES.NEW, 'docs/guide.md')).toBeNull();
+    expect(await image(DIFF_SIDES.NEW, '../outside.png')).toBeNull();
+    expect(await image(DIFF_SIDES.NEW, './docs/shot.png')).toBeNull();
   });
 
   it('reports new commits without changing the snapshot, and refreshes into a new version', async () => {

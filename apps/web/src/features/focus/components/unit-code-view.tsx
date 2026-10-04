@@ -3,12 +3,10 @@ import { useState } from 'react';
 import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
 
 import { SegmentedControl } from '@~/components/ui/segmented-control';
-import { FileNote } from '@~/features/reviews/components/file-notes';
 import { PatchView } from '@~/features/reviews/components/patch-view';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
 import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/reviews.types';
 
-import { codeNoteFor } from '../code-view.utils';
 import { CODE_SCOPE_LABELS, CODE_SCOPES, codeScopeValues } from '../focus.enums';
 import type { CodeScope } from '../focus.enums';
 import { useCodeExpansion } from '../hooks/use-code-expansion';
@@ -16,6 +14,7 @@ import { useScrollToCodeRow } from '../hooks/use-scroll-to-code-row';
 import { useUnitInterdiff } from '../hooks/use-unit-interdiff';
 import { buildUnitAreaCss, buildUnitAreas, firstAreaRowSelector, hasRowsOutsideUnits } from '../unit-areas.utils';
 import { CodeFileBar } from './code-file-bar';
+import { FileWithoutLines } from './file-without-lines';
 import { UnitInterdiffView } from './unit-interdiff-view';
 
 interface iUnitCodeViewProps {
@@ -72,7 +71,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             extraCss={widePatch ? buildUnitAreaCss(widePatch, areas) : undefined}
           />
         ) : null}
-        {!isSinceReview && detail && !detail.patch ? <FileNote>{codeNoteFor(file)}</FileNote> : null}
+        {!isSinceReview && detail && !detail.patch ? <FileWithoutLines snapshotId={snapshotId} file={file} /> : null}
       </div>
     </>
   );
