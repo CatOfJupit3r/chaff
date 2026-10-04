@@ -263,6 +263,35 @@ describe('merged branches', () => {
   });
 });
 
+describe('remote default branch', () => {
+  it('reads the default branch from the remote while the local copy lags behind it', async () => {
+    const upstream = createTestGitRepo();
+    const clone = cloneTestGitRepo(upstream);
+    upstream.commit('newer main', 'newer.txt');
+    clone.git('fetch', '--quiet', 'origin');
+    clone.branch('feature/next', 'origin/main');
+    clone.commit('next work', 'next.txt');
+    const workspace = await addWorkspace(clone);
+
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    const stat = await call(appRouter.workspaces.branchStat, {
+      workspaceId: workspace.id,
+      branch: 'feature/next',
+      parentBranch: 'main',
+    });
+
+    expect(branches.find((branch) => branch.name === 'main')).toMatchObject({
+      headSha: clone.git('rev-parse', 'origin/main'),
+      remote: undefined,
+    });
+    expect(branches.find((branch) => branch.name === 'feature/next')).toMatchObject({
+      suggestedParent: 'main',
+      commitsAhead: 1,
+    });
+    expect(stat.fileCount).toBe(1);
+  });
+});
+
 describe('branch authorship', () => {
   it("marks the branches with the configured user's own commits", async () => {
     const repo = createTestGitRepo();

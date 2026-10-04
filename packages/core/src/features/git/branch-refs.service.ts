@@ -1,18 +1,14 @@
 import { singleton } from 'tsyringe';
 
-import {
-  LOCAL_BRANCH_PREFIX,
-  orderRemotes,
-  parseBranchRef,
-  preferLocal,
-  REMOTE_BRANCH_PREFIX,
-} from './branch-refs.utils';
+import { orderRemotes, parseBranchRef, preferLocal, REMOTE_BRANCH_PREFIX } from './branch-refs.utils';
 import type { iBranchRef } from './branch-refs.utils';
 import { GitService } from './git.service';
 
 const FIELD_SEPARATOR = '\u0000';
 /** Leading fields of every branch listing: the full ref name and, for a symbolic ref, its target. */
 const REF_FIELDS = ['%(refname)', '%(symref)'];
+/** Last segment of `refs/remotes/<remote>/HEAD`, the ref naming a remote's default branch. */
+const REMOTE_HEAD_SUFFIX = '/HEAD';
 
 /** A listed branch with the extra `for-each-ref` fields that were asked for, in order. */
 export interface iBranchRefRow extends iBranchRef {
@@ -21,7 +17,9 @@ export interface iBranchRefRow extends iBranchRef {
 
 /**
  * Finds the repository's branches among its local and remote-tracking refs. A local branch wins over a
- * remote-tracking branch of the same name, and `origin` wins over other remotes.
+ * remote-tracking branch of the same name, and `origin` wins over other remotes, with one exception: the
+ * remote's default branch (where `refs/remotes/<remote>/HEAD` points) is always read from the remote, so a
+ * long-unpulled local `main` never stands in for the `main` everyone builds on and merges into.
  */
 @singleton()
 export class BranchRefsService {
@@ -44,15 +42,36 @@ export class BranchRefsService {
         'refs/remotes',
       ]),
     ]);
-    const rows = output
+    const lines = output
       .split('\n')
       .filter((line) => line.length > 0)
-      .flatMap((line): iBranchRefRow[] => {
-        const [ref = '', symref = '', ...rest] = line.split(FIELD_SEPARATOR);
-        const branch = symref ? undefined : parseBranchRef(ref, remotes);
-        return branch ? [{ ...branch, fields: rest }] : [];
-      });
-    return preferLocal(rows, remotes);
+      .map((line) => line.split(FIELD_SEPARATOR));
+    const rows = lines.flatMap(([ref = '', symref = '', ...rest]): iBranchRefRow[] => {
+      const branch = symref ? undefined : parseBranchRef(ref, remotes);
+      return branch ? [{ ...branch, fields: rest }] : [];
+    });
+    const remoteDefaults = this.remoteDefaults(lines, rows, remotes);
+    const read = rows.map((row) => {
+      const remoteDefault = row.remote === undefined ? remoteDefaults.get(row.name) : undefined;
+      return remoteDefault ? { name: row.name, ref: remoteDefault.ref, fields: remoteDefault.fields } : row;
+    });
+    return preferLocal(read, remotes);
+  }
+
+  /** Remote-tracking rows of each remote's default branch by branch name; the first remote in order wins a name. */
+  private remoteDefaults(lines: readonly string[][], rows: readonly iBranchRefRow[], remotes: readonly string[]) {
+    const rowsByRef = new Map(rows.map((row) => [row.ref, row]));
+    const targets = new Map<string, string>(
+      lines.flatMap(([ref = '', symref = '']) =>
+        symref && ref.endsWith(REMOTE_HEAD_SUFFIX) ? [[ref.slice(0, -REMOTE_HEAD_SUFFIX.length), symref]] : [],
+      ),
+    );
+    const defaults = new Map<string, iBranchRefRow>();
+    for (const remote of remotes) {
+      const target = rowsByRef.get(targets.get(`${REMOTE_BRANCH_PREFIX}${remote}`) ?? '');
+      if (target && !defaults.has(target.name)) defaults.set(target.name, target);
+    }
+    return defaults;
   }
 
   /** Names of every branch, local or remote-only. */
@@ -60,30 +79,14 @@ export class BranchRefsService {
     return new Set((await this.list(repoPath)).map((branch) => branch.name));
   }
 
-  /** The branch called `name` and its tip: the local branch, else a remote-tracking one; undefined when neither exists. */
+  /** The branch called `name` and its tip, read the way `list` reads it; undefined when there is no such branch. */
   public async resolve(repoPath: string, name: string): Promise<(iBranchRef & { sha: string }) | undefined> {
-    const remotes = await this.remotes(repoPath);
-    const candidates = [
-      `${LOCAL_BRANCH_PREFIX}${name}`,
-      ...remotes.map((remote) => `${REMOTE_BRANCH_PREFIX}${remote}/${name}`),
-    ];
-    const { stdout } = await this.gitService.run(
-      repoPath,
-      ['for-each-ref', `--format=${[...REF_FIELDS, '%(objectname)'].join('%00')}`, ...candidates],
-      { allowFailure: true },
-    );
-    const found = new Map(
-      stdout
-        .split('\n')
-        .map((line) => line.split(FIELD_SEPARATOR))
-        .filter(([ref, symref]) => ref && !symref)
-        .map(([ref = '', , sha = '']) => [ref, sha]),
-    );
-    for (const ref of candidates) {
-      const sha = found.get(ref);
-      const branch = sha ? parseBranchRef(ref, remotes) : undefined;
-      if (sha && branch?.name === name) return { ...branch, sha };
-    }
-    return undefined;
+    const branch = (await this.list(repoPath, ['%(objectname)'])).find((candidate) => candidate.name === name);
+    if (!branch) return undefined;
+    const {
+      fields: [sha = ''],
+      ...ref
+    } = branch;
+    return sha ? { ...ref, sha } : undefined;
   }
 }

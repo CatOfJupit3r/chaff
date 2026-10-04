@@ -45,7 +45,7 @@ describe('overview stack grouping', () => {
       projects: [],
       targets: [],
     });
-    expect(stacks.map((stack) => stack.title).sort()).toEqual(['AB-10326 | IntegrateExtraction', 'CleanupTests']);
+    expect(stacks.map((stack) => stack.title).sort()).toEqual(['AB-10326 | Integrate Extraction', 'Cleanup Tests']);
   });
 
   it('uses the matching hosted review regardless of response order, without losing a separate local review', () => {
