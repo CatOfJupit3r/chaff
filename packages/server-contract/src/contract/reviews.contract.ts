@@ -171,7 +171,7 @@ export const unitInterdiffSchema = z.object({
 });
 
 export const unitDetailSchema = z.object({
-  /** The unit's lines on both sides with its changes marked, as a patch; null for binary or very large files. */
+  /** The units' lines on both sides with their changes marked, as a patch; null for binary or very large files. */
   patch: z.string().nullable(),
   /** Newest commit in the review that touched the unit's file. */
   lastCommit: z.object({ sha: z.string(), author: z.string(), committedAt: z.date() }).optional(),
@@ -193,6 +193,8 @@ const snapshotIdInput = z.object({ snapshotId: idSchema });
 const unitInput = z.object({ snapshotId: idSchema, unitId: idSchema });
 const fileInput = z.object({ snapshotId: idSchema, fileId: idSchema });
 const MAX_CONTEXT_LINES = 50;
+/** Most units whose code is cut from one file together. */
+const MAX_DETAIL_UNITS = 200;
 
 export const setMarksInputSchema = snapshotIdInput.extend({
   marks: z
@@ -342,11 +344,11 @@ export const reviewsContract = oc.router({
 
   unitDetail: oc
     .route({
-      summary: "Get a unit's code",
+      summary: 'Get the code of units in one file',
       description:
-        'Returns the whole unit on both sides with its changes marked, and the newest commit that touched it.',
+        'Returns the given units of one file whole on both sides, cut from the file together with their changes marked, and the newest commit that touched the file. Fails with UNITS_IN_DIFFERENT_FILES when the units are not all in one file.',
     })
-    .input(unitInput)
+    .input(snapshotIdInput.extend({ unitIds: z.array(idSchema).min(1).max(MAX_DETAIL_UNITS) }))
     .output(unitDetailSchema),
 
   unitInterdiff: oc

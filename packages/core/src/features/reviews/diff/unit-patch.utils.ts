@@ -6,12 +6,17 @@ export interface iLineRange {
   end: number;
 }
 
+/** The lines one unit spans on each side; a side the unit is missing from has no range. */
+export interface iUnitRanges {
+  oldRange?: iLineRange;
+  newRange?: iLineRange;
+}
+
 export interface iUnitPatchInput {
   /** The file's patch from `git diff`, header included. */
   patch: string;
   lines: readonly iDiffLine[];
-  oldRange?: iLineRange;
-  newRange?: iLineRange;
+  units: readonly iUnitRanges[];
   /** Full text of each side; context between hunks is read from here. */
   oldContents?: string;
   newContents?: string;
@@ -112,18 +117,21 @@ function withWholeChanges(lines: readonly iAlignedLine[], selected: readonly boo
 }
 
 /**
- * Cuts a file patch down to one unit: every line the unit spans on either side, unchanged lines included,
- * so a function reads whole with its changes marked. Returns undefined when the unit has no line range.
+ * Cuts a file patch down to some of its units: every line they span on either side, unchanged lines included,
+ * so each reads whole with its changes marked. Units next to each other share a hunk. Returns undefined when
+ * none of the units has a line range.
  */
 export function buildUnitPatch(input: iUnitPatchInput): string | undefined {
-  if (!input.oldRange && !input.newRange) return undefined;
+  if (!input.units.some((unit) => (unit.oldRange ?? unit.newRange) !== undefined)) return undefined;
   const headerEnd = input.patch.indexOf(`\n${HUNK_HEADER}`);
   const header = headerEnd === -1 ? input.patch.trimEnd() : input.patch.slice(0, headerEnd);
 
   const aligned = alignFile(input);
   const selected = withWholeChanges(
     aligned,
-    aligned.map((line) => isInRange(line.newLine, input.newRange) || isInRange(line.oldLine, input.oldRange)),
+    aligned.map((line) =>
+      input.units.some((unit) => isInRange(line.newLine, unit.newRange) || isInRange(line.oldLine, unit.oldRange)),
+    ),
   );
   const hunks: iAlignedLine[][] = [];
   let current: iAlignedLine[] = [];

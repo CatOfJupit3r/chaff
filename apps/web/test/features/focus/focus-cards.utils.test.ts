@@ -64,6 +64,13 @@ describe('focus cards', () => {
     expect(buildFocusCards(units, changes, REVIEW_PROGRESSIONS.sections).map((card) => card.id)).toEqual(['e']);
   });
 
+  it('shows every unit on its own card in the Units progression, ignoring Change units', () => {
+    const cards = buildFocusCards(units, [change('x', ['a', 'e'])], REVIEW_PROGRESSIONS.units);
+    expect(cards.map((card) => [card.id, card.units.map((member) => member.id)])).toEqual(
+      units.map((member) => [member.id, [member.id]]),
+    );
+  });
+
   it('gives a change the mark its units share, and none while they differ', () => {
     const [mixed] = buildFocusCards(units, [change('x', ['a', 'c'])], REVIEW_PROGRESSIONS.changes);
     const [same] = buildFocusCards(units, [change('y', ['a', 'a'])], REVIEW_PROGRESSIONS.changes);

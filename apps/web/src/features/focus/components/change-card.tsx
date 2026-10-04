@@ -3,6 +3,7 @@ import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-vie
 import type { iDigest } from '@~/features/digests/digests.types';
 import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
+import { groupUnitsByFile } from '@~/features/reviews/review-coverage.utils';
 import type { iSnapshot } from '@~/features/reviews/reviews.types';
 
 import type { iFocusCard } from '../focus-cards.utils';
@@ -12,6 +13,7 @@ import { useFoundTests } from '../hooks/use-found-tests';
 import { CardFindings } from './card-findings';
 import { CardTestsView } from './card-tests-view';
 import { ChangeCardTop } from './change-card-top';
+import { ChangeFileCode } from './change-file-code';
 import { ChangeMarkNote } from './change-mark-note';
 import { ChangeMemberCode, ChangeMemberUsages } from './change-member-code';
 import { FocusCardShell } from './focus-card-shell';
@@ -31,7 +33,7 @@ interface iChangeCardProps {
   onSwipe?: (exit: CardExit) => unknown;
 }
 
-/** A Change unit: the behavior it changes, then each of its units, decided on together. */
+/** A Change unit: the behavior it changes, then its code file by file, decided on together. */
 export function ChangeCard({
   snapshot,
   card,
@@ -69,15 +71,30 @@ export function ChangeCard({
       <CardFindings findings={findings} />
       <UnitViewTabs view={view} counts={counts} onChange={onViewChange} />
       {view === CARD_VIEWS.code
-        ? card.units.map((unit) => (
-            <ChangeMemberCode
-              key={unit.id}
-              snapshotId={snapshot.id}
-              unit={unit}
-              file={fileOf(unit.fileId)}
-              onOpenInEditor={onOpenInEditor}
-            />
-          ))
+        ? [...groupUnitsByFile(card.units)].map(([fileId, units]) => {
+            const file = fileOf(fileId);
+            const [only] = units;
+            if (only && units.length === 1) {
+              return (
+                <ChangeMemberCode
+                  key={fileId}
+                  snapshotId={snapshot.id}
+                  unit={only}
+                  file={file}
+                  onOpenInEditor={onOpenInEditor}
+                />
+              );
+            }
+            return file ? (
+              <ChangeFileCode
+                key={fileId}
+                snapshotId={snapshot.id}
+                units={units}
+                file={file}
+                onOpenInEditor={onOpenInEditor}
+              />
+            ) : null;
+          })
         : null}
       {view === CARD_VIEWS.usages
         ? card.units.map((unit) => (

@@ -1,23 +1,21 @@
-import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
-import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 
-import { ExternalIcon, FileIcon } from '@~/components/icons/icons';
-import { Button } from '@~/components/ui/button';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
-import { DiffStat } from '@~/features/reviews/components/diff-stat';
 import { FileNote } from '@~/features/reviews/components/file-notes';
 import { PatchView } from '@~/features/reviews/components/patch-view';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
-import { DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/reviews.types';
 
+import { codeNoteFor } from '../code-view.utils';
 import { CODE_SCOPE_LABELS, CODE_SCOPES, codeScopeValues } from '../focus.enums';
 import type { CodeScope } from '../focus.enums';
 import { useCodeExpansion } from '../hooks/use-code-expansion';
+import { useScrollToCodeRow } from '../hooks/use-scroll-to-code-row';
 import { useUnitInterdiff } from '../hooks/use-unit-interdiff';
+import { buildUnitAreaCss, buildUnitAreas, firstAreaRowSelector, hasRowsOutsideUnits } from '../unit-areas.utils';
+import { CodeFileBar } from './code-file-bar';
 import { UnitInterdiffView } from './unit-interdiff-view';
 
 interface iUnitCodeViewProps {
@@ -26,12 +24,6 @@ interface iUnitCodeViewProps {
   file: iSnapshotFile;
   detail: iUnitDetail | undefined;
   onOpenInEditor: (path: string, line?: number) => void;
-}
-
-function noteFor(file: iSnapshotFile) {
-  if (file.isBinary) return 'Binary file; there are no lines to show.';
-  if (file.isTooLarge) return 'This diff is too large to keep; open the file in your editor.';
-  return 'No lines changed in this file; the change is to its name or mode.';
 }
 
 /**
@@ -44,14 +36,19 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
   const [scope, setScope] = useState<CodeScope>(CODE_SCOPES['since-review']);
   const isSinceReview = interdiff.reviewed !== undefined && scope === CODE_SCOPES['since-review'];
   const expansion = useCodeExpansion([unit.id]);
+  const widePatch = detail?.patch && hasRowsOutsideUnits(detail.patch, [unit]) ? detail.patch : undefined;
+  const areas = buildUnitAreas([unit]);
+  const scrollRef = useScrollToCodeRow(widePatch ? firstAreaRowSelector(widePatch, areas) : undefined);
 
   return (
     <>
-      <div className="flex items-center gap-2.5 border-y border-line bg-canvas py-2 pr-3.5 pl-[22px] text-[12.5px] text-muted">
-        <FileIcon className="size-3.5" />
-        <span className="truncate font-mono text-fg">{file.path}</span>
-        <DiffStat additions={file.additions} deletions={file.deletions} />
-        <span className="flex-1" />
+      <CodeFileBar
+        snapshotId={snapshotId}
+        file={file}
+        line={line}
+        onOpenInEditor={onOpenInEditor}
+        expansion={detail?.patch && !isSinceReview ? expansion : undefined}
+      >
         {interdiff.reviewed ? (
           <SegmentedControl
             label="Compare"
@@ -60,32 +57,8 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             onChange={setScope}
           />
         ) : null}
-        {detail?.patch && !isSinceReview ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={expansion.isExpanded}
-            data-onboarding={ONBOARDING_ITEMS.WHOLE_FILE}
-            title="Show every line of the file around the change"
-            onClick={expansion.toggle}
-          >
-            Whole file
-          </Button>
-        ) : null}
-        <Button variant="ghost" size="sm" onClick={() => onOpenInEditor(file.path, line)}>
-          <ExternalIcon />
-          Open in editor
-        </Button>
-        <Link
-          to="/reviews/$snapshotId/diff"
-          params={{ snapshotId }}
-          search={{ file: file.path, mode: DIFF_MODES.file, layout: DIFF_LAYOUTS.unified }}
-          className="inline-flex h-[26px] items-center rounded-sm px-[9px] text-[12px] text-muted hover:bg-hover hover:text-fg"
-        >
-          Open in diff
-        </Link>
-      </div>
-      <div className="max-h-[46vh] scrollbar-gutter-stable overflow-auto bg-canvas">
+      </CodeFileBar>
+      <div ref={scrollRef} className="max-h-[46vh] scrollbar-gutter-stable overflow-auto bg-canvas">
         {isSinceReview ? <UnitInterdiffView unit={unit} file={file} interdiff={interdiff} /> : null}
         {!isSinceReview && detail === undefined ? <DiffSkeleton /> : null}
         {!isSinceReview && detail?.patch ? (
@@ -96,9 +69,10 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             layout={DIFF_LAYOUTS.unified}
             isWrapped={false}
             isExpanded={expansion.isExpanded}
+            extraCss={widePatch ? buildUnitAreaCss(widePatch, areas) : undefined}
           />
         ) : null}
-        {!isSinceReview && detail && !detail.patch ? <FileNote>{noteFor(file)}</FileNote> : null}
+        {!isSinceReview && detail && !detail.patch ? <FileNote>{codeNoteFor(file)}</FileNote> : null}
       </div>
     </>
   );

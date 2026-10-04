@@ -49,6 +49,10 @@
   --primary-hover: #000000;
   --later: #b8b8c3;
   --skip: #8e8e99;
+  --area-1: #2f7fd1;
+  --area-2: #9a55d4;
+  --area-3: #c2620f;
+  --area-4: #12907e;
   --stripe: rgba(255, 255, 255, 0.55);
   --ring: rgba(23, 23, 28, 0.08);
   --scrim: rgba(20, 20, 30, 0.35);
@@ -114,6 +118,10 @@
   --primary-hover: #ffffff;
   --later: #4a4a54;
   --skip: #6a6a75;
+  --area-1: #6aa8ff;
+  --area-2: #c79bff;
+  --area-3: #f0a35e;
+  --area-4: #4fd1bd;
   --stripe: rgba(0, 0, 0, 0.35);
   --ring: rgba(237, 237, 240, 0.08);
   --scrim: rgba(0, 0, 0, 0.6);
@@ -261,6 +269,10 @@
   --color-primary-hover: var(--primary-hover);
   --color-later: var(--later);
   --color-skip: var(--skip);
+  --color-area-1: var(--area-1);
+  --color-area-2: var(--area-2);
+  --color-area-3: var(--area-3);
+  --color-area-4: var(--area-4);
   --color-stripe: var(--stripe);
   --color-ring: var(--ring);
   --color-scrim: var(--scrim);

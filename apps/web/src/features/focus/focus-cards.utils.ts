@@ -24,13 +24,15 @@ const unitCard = (unit: iUnit): iFocusCard => ({ id: unit.id, title: unit.title,
 
 /**
  * The cards Focus walks for a progression. Changes puts each Change unit first and then every unit no change
- * covers, so nothing is out of reach; Functions and Sections show one kind of unit each.
+ * covers, so nothing is out of reach; Units shows every unit on its own card, and Functions and Sections one
+ * kind of unit each.
  */
 export function buildFocusCards(
   units: readonly iUnit[],
   changes: readonly iChangeUnit[],
   progression: ReviewProgression,
 ): iFocusCard[] {
+  if (progression === REVIEW_PROGRESSIONS.units) return units.map(unitCard);
   if (progression === REVIEW_PROGRESSIONS.functions) {
     return units.filter((unit) => unit.kind === UNIT_KINDS.FUNCTION).map(unitCard);
   }

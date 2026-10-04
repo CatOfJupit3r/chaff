@@ -33,7 +33,7 @@ function MemberTitle({ unit }: { unit: iUnit }) {
 
 /** A unit of a change, as code. */
 export function ChangeMemberCode({ snapshotId, unit, file, onOpenInEditor }: iChangeMemberProps) {
-  const { data: detail } = useUnitDetail(snapshotId, unit.id);
+  const { data: detail } = useUnitDetail(snapshotId, [unit.id]);
   if (!file) return null;
   return (
     <section aria-label={unit.title}>

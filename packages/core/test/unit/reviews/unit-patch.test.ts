@@ -14,7 +14,7 @@ describe('buildUnitPatch', () => {
   it('keeps only the lines of an added unit when the file has other changes', () => {
     const newContents = 'one\ntwo\nadded1\nadded2\nthree\nfour\n';
     const patch = unitPatch('@@ -1,4 +1,6 @@\n one\n two\n+added1\n+added2\n three\n four\n', {
-      newRange: { start: 3, end: 4 },
+      units: [{ newRange: { start: 3, end: 4 } }],
       oldContents: 'one\ntwo\nthree\nfour\n',
       newContents,
     });
@@ -24,7 +24,7 @@ describe('buildUnitPatch', () => {
 
   it('shows a removed unit from the old side only', () => {
     const patch = unitPatch('@@ -1,4 +1,2 @@\n keep\n-gone1\n-gone2\n end\n', {
-      oldRange: { start: 2, end: 3 },
+      units: [{ oldRange: { start: 2, end: 3 } }],
       oldContents: 'keep\ngone1\ngone2\nend\n',
       newContents: 'keep\nend\n',
     });
@@ -38,8 +38,7 @@ describe('buildUnitPatch', () => {
     const patch = unitPatch(
       '@@ -1,5 +1,6 @@\n import a\n-import b\n-import c\n+import x\n+import y\n+import z\n \n code\n',
       {
-        oldRange: { start: 1, end: 2 },
-        newRange: { start: 1, end: 2 },
+        units: [{ oldRange: { start: 1, end: 2 }, newRange: { start: 1, end: 2 } }],
         oldContents,
         newContents,
       },
@@ -50,7 +49,23 @@ describe('buildUnitPatch', () => {
     );
   });
 
+  it('cuts several units of a file into one patch, sharing a hunk where they meet', () => {
+    const oldContents = 'a\nb\nc\nd\ne\nf\n';
+    const newContents = 'A\nB\nc\nd\ne\nF\n';
+    const patch = unitPatch('@@ -1,6 +1,6 @@\n-a\n-b\n+A\n+B\n c\n d\n e\n-f\n+F\n', {
+      units: [
+        { oldRange: { start: 1, end: 1 }, newRange: { start: 1, end: 1 } },
+        { oldRange: { start: 2, end: 2 }, newRange: { start: 2, end: 2 } },
+        { oldRange: { start: 6, end: 6 }, newRange: { start: 6, end: 6 } },
+      ],
+      oldContents,
+      newContents,
+    });
+
+    expect(patch).toBe(`${HEADER}\n@@ -1,2 +1,2 @@\n-a\n-b\n+A\n+B\n@@ -6,1 +6,1 @@\n-f\n+F\n`);
+  });
+
   it('returns nothing for a unit without a line range', () => {
-    expect(unitPatch('@@ -1 +1 @@\n-a\n+b\n', {})).toBeUndefined();
+    expect(unitPatch('@@ -1 +1 @@\n-a\n+b\n', { units: [{}] })).toBeUndefined();
   });
 });

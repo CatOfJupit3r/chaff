@@ -95,7 +95,7 @@ describe('review units', () => {
     const { snapshotId } = await startFeatureReview(repo);
     const unit = await unitByTitle(snapshotId, 'plan');
 
-    const { patch, lastCommit } = await call(appRouter.reviews.unitDetail, { snapshotId, unitId: unit.id });
+    const { patch, lastCommit } = await call(appRouter.reviews.unitDetail, { snapshotId, unitIds: [unit.id] });
 
     expect(lastCommit).toMatchObject({ sha: repo.git('rev-parse', 'feature'), author: 'Test Author' });
     expect(patch).toContain('diff --git a/src/plan.ts b/src/plan.ts');
@@ -132,11 +132,40 @@ describe('review units', () => {
     ]);
   });
 
+  it('cuts several units of one file into one patch, and refuses units of different files', async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feature');
+    repo.commitFiles('add helpers', {
+      'src/math.ts': [
+        "import { clamp } from './clamp';",
+        '',
+        'export function double(value: number) {',
+        '  return clamp(value * 2);',
+        '}',
+        '',
+      ].join('\n'),
+      'src/other.ts': 'export const other = 1;\n',
+    });
+    const { snapshotId } = await startFeatureReview(repo);
+    const units = await call(appRouter.reviews.units, { snapshotId });
+    const [imports, double] = [await unitByTitle(snapshotId, 'Imports'), await unitByTitle(snapshotId, 'double')];
+    const other = units.find((unit) => unit.fileId !== double.fileId);
+    if (!other) throw new Error('No unit in another file');
+
+    const { patch } = await call(appRouter.reviews.unitDetail, { snapshotId, unitIds: [imports.id, double.id] });
+
+    expect(patch).toContain("+import { clamp } from './clamp';");
+    expect(patch).toContain('+  return clamp(value * 2);');
+    await expectORPCError(call(appRouter.reviews.unitDetail, { snapshotId, unitIds: [double.id, other.id] }), {
+      code: errorCodes.UNITS_IN_DIFFERENT_FILES,
+    });
+  });
+
   it('cuts the patch to the unit when the file has other changes', async () => {
     const { snapshotId } = await startFeatureReview(createFeatureRepo());
     const unit = await unitByTitle(snapshotId, 'Scheduler.next');
 
-    const { patch } = await call(appRouter.reviews.unitDetail, { snapshotId, unitId: unit.id });
+    const { patch } = await call(appRouter.reviews.unitDetail, { snapshotId, unitIds: [unit.id] });
 
     expect(patch?.slice(patch.indexOf('@@'))).toBe(
       [

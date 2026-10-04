@@ -49,7 +49,7 @@ export function UnitCard({
   onSwipe,
 }: iUnitCardProps) {
   const file = snapshot.files.find((candidate) => candidate.id === unit.fileId);
-  const { data: detail } = useUnitDetail(snapshot.id, unit.id);
+  const { data: detail } = useUnitDetail(snapshot.id, [unit.id]);
   const { data: usages } = useUnitUsages(snapshot.id, unit.id);
   const content = readyContent(digest);
   const note = findUnitNote(content, unit.id);

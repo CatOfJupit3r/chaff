@@ -240,10 +240,10 @@ export type ChangeUnitSource = InferEnumwaii<typeof changeUnitSourcesEnumwaii>;
 export const changeUnitSourceSchema = emToZodSchema(changeUnitSourcesEnumwaii);
 
 /**
- * The order Focus walks a review in: Change units with the units no change covers after them, every Function
- * unit, or every Section unit. Lowercase because it appears in the URL.
+ * The order Focus walks a review in: Change units with the units no change covers after them, every unit on
+ * its own card, every Function unit, or every Section unit. Lowercase because it appears in the URL.
  */
-export const reviewProgressionsEnumwaii = em(['changes', 'functions', 'sections']);
+export const reviewProgressionsEnumwaii = em(['changes', 'units', 'functions', 'sections']);
 
 export const REVIEW_PROGRESSIONS = reviewProgressionsEnumwaii.enum;
 export type ReviewProgression = InferEnumwaii<typeof reviewProgressionsEnumwaii>;
