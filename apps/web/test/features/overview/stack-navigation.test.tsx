@@ -5,13 +5,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { StackNeighborhood } from '@~/features/overview/components/stack-neighborhood';
 import { StackOutline } from '@~/features/overview/components/stack-outline';
+import type { useStackList } from '@~/features/overview/hooks/use-stack-list';
+import { INCLUSIVE_STACK_FILTERS } from '@~/features/overview/overview.constants';
 import type { iOverviewBranch, iOverviewStack } from '@~/features/overview/overview.types';
+import { listStacks } from '@~/features/overview/stack-list.utils';
 
 import { workspace } from '../workspaces/workspace-fixtures';
 
 const longStack: iOverviewStack = {
   id: 'delivery',
   title: 'Delivery reliability',
+  tipBranch: 'branch-20',
   workspace,
   base: 'main',
   hasCycle: false,
@@ -24,6 +28,7 @@ const longStack: iOverviewStack = {
 const otherStack: iOverviewStack = {
   id: 'signatures',
   title: 'Webhook signatures',
+  tipBranch: 'signature',
   workspace,
   base: 'main',
   hasCycle: false,
@@ -32,6 +37,7 @@ const otherStack: iOverviewStack = {
 
 function NavigationExample() {
   const [stack, setStack] = useState(longStack);
+  const [query, setQuery] = useState('');
   const [selectedName, setSelectedName] = useState('branch-7');
   const branch = stack.branches.find((item) => item.name === selectedName) ?? stack.branches[0];
   const selectBranch = async (next: iOverviewBranch) => {
@@ -43,11 +49,27 @@ function NavigationExample() {
     setSelectedName(next.branches[0]?.name ?? '');
     return new URLSearchParams();
   };
+  const stackList: ReturnType<typeof useStackList> = {
+    query,
+    setQuery,
+    isShowingHidden: false,
+    setIsShowingHidden: vi.fn(),
+    filters: INCLUSIVE_STACK_FILTERS,
+    setFilters: vi.fn(),
+    toggleHidden: vi.fn(),
+    ...listStacks({
+      stacks: [longStack, otherStack],
+      filters: INCLUSIVE_STACK_FILTERS,
+      hiddenStacks: [],
+      query,
+      isShowingHidden: false,
+    }),
+  };
   if (!branch) return null;
   return (
     <>
       <StackOutline
-        stacks={[longStack, otherStack]}
+        stackList={stackList}
         stack={stack}
         branch={branch}
         selectStack={selectStack}

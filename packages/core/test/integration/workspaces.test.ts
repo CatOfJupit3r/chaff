@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, realpathSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_STACK_FILTERS } from '@chaff/common/constants/stack-filters.constants';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import { STACK_ACTIVITIES } from '@chaff/common/enums/stack-filters.enums';
 
 import { cloneTestGitRepo, createTempDirectory, createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
@@ -230,6 +232,71 @@ describe('workspace branches', () => {
 
   it('reports an unknown repository', async () => {
     await expectORPCError(call(appRouter.workspaces.branches, { workspaceId: 'missing' }), {
+      code: errorCodes.WORKSPACE_NOT_FOUND,
+    });
+  });
+});
+
+describe('merged branches', () => {
+  it('stacks a branch on the default branch instead of the merged branches in its history', async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feature/old');
+    repo.commit('old work', 'old.txt');
+    repo.switch('main');
+    repo.git('merge', '--quiet', '--no-ff', '--no-edit', 'feature/old');
+    repo.branch('feature/next');
+    repo.commit('next work', 'next.txt');
+    repo.switch('main');
+    repo.commit('later on main', 'main.txt');
+    const workspace = await addWorkspace(repo);
+
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    const parents = Object.fromEntries(
+      branches.map((branch) => [branch.name, [branch.suggestedParent, branch.commitsAhead]]),
+    );
+
+    expect(parents).toEqual({
+      main: [undefined, 0],
+      'feature/next': ['main', 1],
+      'feature/old': ['main', 0],
+    });
+  });
+});
+
+describe('branch authorship', () => {
+  it("marks the branches with the configured user's own commits", async () => {
+    const repo = createTestGitRepo();
+    repo.git('config', 'user.email', 'author@example.com');
+    repo.git('config', 'user.name', 'Test Author');
+    repo.branch('feature/mine');
+    repo.commit('my work', 'mine.txt');
+    repo.branch('feature/theirs', 'main');
+    repo.commit('their work', 'theirs.txt');
+    repo.git('commit', '--quiet', '--amend', '--no-edit', '--author=Someone Else <someone@example.com>');
+    const workspace = await addWorkspace(repo);
+
+    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    const authored = Object.fromEntries(branches.map((branch) => [branch.name, branch.isAuthoredByUser]));
+
+    expect(authored).toEqual({ main: false, 'feature/mine': true, 'feature/theirs': false });
+  });
+});
+
+describe('stack view', () => {
+  it('starts with the default filters and keeps what the user saves', async () => {
+    const workspace = await addWorkspace(createTestGitRepo());
+    expect(workspace).toMatchObject({ hiddenStacks: [], stackFilters: DEFAULT_STACK_FILTERS });
+
+    await call(appRouter.workspaces.updateStackView, { workspaceId: workspace.id, hiddenStacks: ['feature/old'] });
+    const stackFilters = { ...DEFAULT_STACK_FILTERS, activity: STACK_ACTIVITIES.ANY, isMineOnly: true };
+    await call(appRouter.workspaces.updateStackView, { workspaceId: workspace.id, stackFilters });
+
+    const [listed] = await call(appRouter.workspaces.list, undefined);
+    expect(listed).toMatchObject({ hiddenStacks: ['feature/old'], stackFilters });
+  });
+
+  it('refuses an unknown repository', async () => {
+    await expectORPCError(call(appRouter.workspaces.updateStackView, { workspaceId: 'missing', hiddenStacks: [] }), {
       code: errorCodes.WORKSPACE_NOT_FOUND,
     });
   });

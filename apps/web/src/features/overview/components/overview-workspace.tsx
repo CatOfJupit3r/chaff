@@ -46,7 +46,7 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
           </SelectInput>
         </div>
         <StackOutline
-          stacks={overview.stacks}
+          stackList={overview.stackList}
           stack={stack}
           branch={branch}
           selectStack={overview.selectStack}

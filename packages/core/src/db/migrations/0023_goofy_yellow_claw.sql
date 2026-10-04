@@ -1,0 +1,2 @@
+ALTER TABLE `workspaces` ADD `hidden_stacks` text DEFAULT '[]' NOT NULL;--> statement-breakpoint
+ALTER TABLE `workspaces` ADD `stack_filters` text DEFAULT '{"activity":"MONTH","review":"ALL","source":"ALL","isMineOnly":false}' NOT NULL;

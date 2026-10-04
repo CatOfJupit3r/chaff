@@ -16,11 +16,15 @@ export interface iOverviewBranch {
 export interface iOverviewStack {
   id: string;
   title: string;
+  /** Branch nothing else in the stack builds on; it names the stack when the stack is hidden. */
+  tipBranch: string;
   workspace: iWorkspace;
   base?: string;
   branches: iOverviewBranch[];
   hasCycle: boolean;
 }
+
+export type iStackFilters = iWorkspace['stackFilters'];
 
 export interface iOverviewSources {
   workspaces: readonly iWorkspace[];

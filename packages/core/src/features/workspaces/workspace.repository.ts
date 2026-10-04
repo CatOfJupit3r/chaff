@@ -9,6 +9,10 @@ export interface iWorkspaceRepository {
     workspaceId: string,
     remote: Pick<iWorkspaceRecord, 'remoteConnectionId' | 'remoteProject'>,
   ) => Promise<iWorkspaceRecord | undefined>;
+  updateStackView: (
+    workspaceId: string,
+    view: Partial<Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters'>>,
+  ) => Promise<iWorkspaceRecord | undefined>;
   updateKnownParents: (workspaceId: string, knownParents: iWorkspaceRecord['knownParents']) => Promise<unknown>;
   delete: (workspaceId: string) => Promise<boolean>;
 }

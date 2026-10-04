@@ -37,6 +37,17 @@ describe('overview stack grouping', () => {
     });
   });
 
+  it('titles branches without a merge request by their name, ticket first', () => {
+    const local = [branch('AB-10326-integrate-extraction', { remote: 'origin' }), branch('cleanup-tests')];
+    const stacks = buildOverviewStacks({
+      workspaces: [workspace],
+      localStacks: buildLocalStacks(workspace, local),
+      projects: [],
+      targets: [],
+    });
+    expect(stacks.map((stack) => stack.title).sort()).toEqual(['AB-10326 | IntegrateExtraction', 'CleanupTests']);
+  });
+
   it('uses the matching hosted review regardless of response order, without losing a separate local review', () => {
     const local = reviewTarget('retry', { latestSnapshot: snapshotSummary('2026-10-01') });
     const hosted = reviewTarget('retry', {

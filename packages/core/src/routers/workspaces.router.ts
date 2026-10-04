@@ -12,6 +12,10 @@ export const workspacesRouter = base.workspaces.router({
     container.resolve(WorkspacesService).remove(input.workspaceId),
   ),
 
+  updateStackView: procedure.workspaces.updateStackView.handler(async ({ input }) =>
+    container.resolve(WorkspacesService).updateStackView(input),
+  ),
+
   branches: procedure.workspaces.branches.handler(async ({ input }) =>
     container.resolve(WorkspacesService).listBranches(input.workspaceId),
   ),
