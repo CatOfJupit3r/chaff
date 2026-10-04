@@ -57,6 +57,8 @@ function toRawBranch({ name, ref, remote, fields }: iBranchRefRow): iRawBranch {
 interface iSuggestionContext {
   /** Branch names by the commit at their tip. */
   tips: ReadonlyMap<string, string[]>;
+  /** Tips already merged into the default branch or its upstream; such branches have landed and parent nothing. */
+  mergedTips: ReadonlySet<string>;
   /** Full ref name of each branch by its name. */
   refs: ReadonlyMap<string, string>;
   defaultBranch: string | undefined;
@@ -101,20 +103,28 @@ export class BranchesService {
       tips.set(branch.headSha, [...(tips.get(branch.headSha) ?? []), branch.name]);
     }
     const refs = new Map(branches.map((branch) => [branch.name, branch.ref]));
-
-    const suggestions = await mapWithConcurrency(
-      branches,
-      GIT_CONCURRENCY,
-      async (branch): Promise<iParentSuggestion> =>
-        branch.name === defaultBranch
-          ? { commitsAhead: 0 }
-          : this.suggestParent(repoPath, branch, {
-              tips,
-              refs,
-              defaultBranch,
-              knownParent: knownParents.get(branch.name),
-            }),
+    const integrationRefs = await this.integrationRefs(
+      repoPath,
+      branches.find((branch) => branch.name === defaultBranch),
     );
+    const [mergedTips, authorPatterns] = await Promise.all([
+      this.mergedTips(repoPath, integrationRefs),
+      this.authorPatterns(repoPath),
+    ]);
+
+    const suggestions = await mapWithConcurrency(branches, GIT_CONCURRENCY, async (branch) => {
+      if (branch.name === defaultBranch) return { commitsAhead: 0, isAuthoredByUser: false };
+      const suggestion = await this.suggestParent(repoPath, branch, {
+        tips,
+        mergedTips,
+        refs,
+        defaultBranch,
+        knownParent: knownParents.get(branch.name),
+      });
+      const isAuthoredByUser =
+        suggestion.commitsAhead > 0 && (await this.hasUserCommits(repoPath, branch, authorPatterns, integrationRefs));
+      return { ...suggestion, isAuthoredByUser };
+    });
 
     return branches
       .map(({ ref: _ref, ...branch }, index) => ({
@@ -122,6 +132,7 @@ export class BranchesService {
         isDefault: branch.name === defaultBranch,
         suggestedParent: suggestions[index]?.parent,
         commitsAhead: suggestions[index]?.commitsAhead ?? 0,
+        isAuthoredByUser: suggestions[index]?.isAuthoredByUser ?? false,
       }))
       .sort(
         (left, right) =>
@@ -189,12 +200,13 @@ export class BranchesService {
    * branch's own tip, another branch only qualifies if it is the default branch or sorts before this one,
    * which keeps two branches on the same commit from suggesting each other. The parent suggested last time
    * wins ties, and stays the parent after it gets commits this branch doesn't have, as long as this branch
-   * still holds commits of its own (beyond the default branch) and no other branch is nearer.
+   * still holds commits of its own (beyond the default branch) and no other branch is nearer. Branches already
+   * merged into the default branch are skipped, so long-merged branches never chain into one giant stack.
    */
   private async suggestParent(
     repoPath: string,
     branch: iRawBranch,
-    { tips, refs, defaultBranch, knownParent }: iSuggestionContext,
+    { tips, mergedTips, refs, defaultBranch, knownParent }: iSuggestionContext,
   ): Promise<iParentSuggestion> {
     const history = await this.gitService.output(repoPath, [
       'rev-list',
@@ -207,7 +219,12 @@ export class BranchesService {
     const candidates = shas
       .flatMap((sha, index) =>
         (tips.get(sha) ?? [])
-          .filter((name) => name !== branch.name && (index > 0 || name === defaultBranch || name < branch.name))
+          .filter(
+            (name) =>
+              name !== branch.name &&
+              (name === defaultBranch || !mergedTips.has(sha)) &&
+              (index > 0 || name === defaultBranch || name < branch.name),
+          )
           .map((name) => ({ name, sha })),
       )
       .slice(0, MAX_PARENT_CANDIDATES);
@@ -265,6 +282,61 @@ export class BranchesService {
       if (onDefault.exitCode === 0) return undefined;
     }
     return { name: parent, commitsAhead: await this.countCommits(repoPath, forkSha, branch.headSha) };
+  }
+
+  /** The default branch and its upstream when that still exists: every finished branch is merged into one of them. */
+  private async integrationRefs(repoPath: string, defaultRow: iRawBranch | undefined) {
+    if (!defaultRow) return [];
+    if (!defaultRow.upstream) return [defaultRow.ref];
+    const { exitCode } = await this.gitService.run(
+      repoPath,
+      ['rev-parse', '--verify', '--quiet', `${defaultRow.upstream}^{commit}`],
+      { allowFailure: true },
+    );
+    return exitCode === 0 ? [defaultRow.ref, defaultRow.upstream] : [defaultRow.ref];
+  }
+
+  /** Tips of every branch whose last commit is already in one of the integration refs. */
+  private async mergedTips(repoPath: string, integrationRefs: readonly string[]) {
+    if (integrationRefs.length === 0) return new Set<string>();
+    const output = await this.gitService.output(repoPath, [
+      'for-each-ref',
+      '--format=%(objectname)',
+      ...integrationRefs.map((ref) => `--merged=${ref}`),
+      'refs/heads',
+      'refs/remotes',
+    ]);
+    return new Set(output.split('\n').filter(Boolean));
+  }
+
+  /** The repository's configured author email and name, matched against commit authors. */
+  private async authorPatterns(repoPath: string) {
+    const results = await Promise.all(
+      ['user.email', 'user.name'].map(async (key) =>
+        this.gitService.run(repoPath, ['config', '--get', key], { allowFailure: true }),
+      ),
+    );
+    return results.flatMap(({ stdout, exitCode }) => (exitCode === 0 && stdout.trim() ? [stdout.trim()] : []));
+  }
+
+  /** Whether the configured user wrote any of the branch's commits that the integration refs don't have yet. */
+  private async hasUserCommits(
+    repoPath: string,
+    branch: iRawBranch,
+    authorPatterns: readonly string[],
+    integrationRefs: readonly string[],
+  ) {
+    if (authorPatterns.length === 0) return false;
+    const output = await this.gitService.output(repoPath, [
+      'rev-list',
+      '--max-count=1',
+      '--fixed-strings',
+      ...authorPatterns.map((pattern) => `--author=${pattern}`),
+      branch.headSha,
+      ...integrationRefs.map((ref) => `^${ref}`),
+      '--',
+    ]);
+    return output.length > 0;
   }
 
   private async countCommits(repoPath: string, from: string, to: string) {

@@ -23,6 +23,7 @@ import type {
   iBranchResponse,
   iBranchStatInput,
   iGitBranch,
+  iStackViewInput,
   iWorkspaceRecord,
   iWorkspaceResponse,
 } from './workspaces.types';
@@ -75,6 +76,13 @@ export class WorkspacesService {
     if (!isDeleted) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
     await this.snapshotStoreService.removeStore(workspaceId);
     return { workspaceId };
+  }
+
+  /** Saves the stack list's filters and hidden stacks; fields left out keep their value. */
+  public async updateStackView({ workspaceId, ...view }: iStackViewInput): Promise<iWorkspaceResponse> {
+    const record = await this.workspaceRepository.updateStackView(workspaceId, view);
+    if (!record) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
+    return this.toResponse(record);
   }
 
   /**

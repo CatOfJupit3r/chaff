@@ -1,6 +1,24 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
+import { MAX_HIDDEN_STACKS } from '@chaff/common/constants/stack-filters.constants';
+import {
+  stackActivitySchema,
+  stackReviewFilterSchema,
+  stackSourceSchema,
+} from '@chaff/common/enums/stack-filters.enums';
+
+const branchNameSchema = z.string().min(1).max(255);
+
+/** How a repository's stack list is narrowed down. */
+export const stackFiltersSchema = z.object({
+  activity: stackActivitySchema,
+  review: stackReviewFilterSchema,
+  source: stackSourceSchema,
+  /** Only stacks with commits by the repository's configured git user. */
+  isMineOnly: z.boolean(),
+});
+
 export const workspaceSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -8,11 +26,14 @@ export const workspaceSchema = z.object({
   defaultBranch: z.string().optional(),
   /** False when the folder was moved or deleted since it was added. */
   isAvailable: z.boolean(),
+  /** Tip branches of the stacks the user hid from the stack list. */
+  hiddenStacks: z.array(z.string()),
+  stackFilters: stackFiltersSchema,
   createdAt: z.date(),
 });
 
 export const branchSchema = z.object({
-  /** `feature` for a local branch, `origin/feature` for a remote-tracking branch with no local branch. */
+  /** Branch name without the remote, also for a remote-tracking branch with no local branch (see `remote`). */
   name: z.string(),
   headSha: z.string(),
   subject: z.string(),
@@ -37,6 +58,8 @@ export const branchSchema = z.object({
   isParentConfirmed: z.boolean(),
   /** The parent, other than the default branch, has commits this branch doesn't contain yet. */
   isParentMoved: z.boolean(),
+  /** The repository's configured git user wrote at least one of the commits the default branch doesn't have yet. */
+  isAuthoredByUser: z.boolean(),
   /** Folder of the worktree the branch is checked out in, if any. */
   worktreePath: z.string().optional(),
   /** The branch is checked out and has uncommitted changes. */
@@ -70,6 +93,20 @@ export const workspacesContract = oc.router({
     .input(workspaceIdInput)
     .output(z.object({ workspaceId: z.string() })),
 
+  updateStackView: oc
+    .route({
+      summary: "Change a repository's stack list",
+      description:
+        'Saves the filters of the stack list and the stacks hidden from it, by tip branch. Fields left out keep their value.',
+    })
+    .input(
+      workspaceIdInput.extend({
+        hiddenStacks: z.array(branchNameSchema).max(MAX_HIDDEN_STACKS).optional(),
+        stackFilters: stackFiltersSchema.optional(),
+      }),
+    )
+    .output(workspaceSchema),
+
   branches: oc
     .route({
       summary: 'List branches',
@@ -87,8 +124,8 @@ export const workspacesContract = oc.router({
     })
     .input(
       workspaceIdInput.extend({
-        branch: z.string().min(1).max(255),
-        parentBranch: z.string().min(1).max(255),
+        branch: branchNameSchema,
+        parentBranch: branchNameSchema,
       }),
     )
     .output(

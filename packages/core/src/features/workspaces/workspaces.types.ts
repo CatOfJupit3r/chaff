@@ -24,6 +24,7 @@ export interface iBranchResponse {
   isDefault: boolean;
   suggestedParent?: string;
   commitsAhead: number;
+  isAuthoredByUser: boolean;
   parent?: string;
   isParentConfirmed: boolean;
   isParentMoved: boolean;
@@ -36,6 +37,10 @@ export type iGitBranch = Omit<
   iBranchResponse,
   'parent' | 'isParentConfirmed' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
 >;
+
+export type iStackViewInput = Partial<Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters'>> & {
+  workspaceId: string;
+};
 
 export interface iBranchStatInput {
   workspaceId: string;

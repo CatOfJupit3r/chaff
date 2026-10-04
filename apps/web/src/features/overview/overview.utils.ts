@@ -1,5 +1,6 @@
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
+import { formatBranchTitle } from './branch-title.utils';
 import { OVERVIEW_REVIEW_PROGRESS } from './overview.enums';
 import type { iOverviewBranch, iOverviewSources, iOverviewStack } from './overview.types';
 
@@ -7,7 +8,7 @@ function collectBranches(workspaceId: string, sources: iOverviewSources) {
   const branches = new Map<string, iOverviewBranch>();
   for (const stack of sources.localStacks.filter((candidate) => candidate.workspace.id === workspaceId)) {
     for (const local of stack.branches) {
-      branches.set(local.name, { name: local.name, title: local.subject || local.name, parent: local.parent, local });
+      branches.set(local.name, { name: local.name, title: formatBranchTitle(local.name), parent: local.parent, local });
     }
   }
   for (const project of sources.projects.filter((candidate) => candidate.workspaceId === workspaceId)) {
@@ -16,7 +17,7 @@ function collectBranches(workspaceId: string, sources: iOverviewSources) {
       branches.set(remote.sourceBranch, {
         ...local,
         name: remote.sourceBranch,
-        title: remote.title || remote.sourceBranch,
+        title: remote.title || formatBranchTitle(remote.sourceBranch),
         parent: remote.targetBranch,
         remote,
         change: {
@@ -80,6 +81,7 @@ export function buildOverviewStacks(sources: iOverviewSources): iOverviewStack[]
       stacks.push({
         id: `${workspace.id}:${tip.name}`,
         title: tip.title,
+        tipBranch: tip.name,
         workspace,
         base: chain[0]?.parent ?? workspace.defaultBranch,
         branches: chain,
@@ -121,4 +123,12 @@ export function matchesOverviewSearch(branch: iOverviewBranch, query: string) {
   return `${branch.name} ${branch.title} ${branch.change?.number ?? ''}`
     .toLocaleLowerCase()
     .includes(query.toLocaleLowerCase());
+}
+
+export function isStackTitleMatch(stack: iOverviewStack, query: string) {
+  return stack.title.toLocaleLowerCase().includes(query.toLocaleLowerCase());
+}
+
+export function matchesStackSearch(stack: iOverviewStack, query: string) {
+  return isStackTitleMatch(stack, query) || stack.branches.some((branch) => matchesOverviewSearch(branch, query));
 }

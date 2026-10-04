@@ -8,6 +8,7 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import type { iOverviewBranch, iOverviewStack } from '../overview.types';
 import { buildOverviewStacks, initialStackBranch } from '../overview.utils';
+import { useStackList } from './use-stack-list';
 
 export const overviewReviewsQueryOptions = tanstackRPC.reviews.list.queryOptions({ input: {} });
 
@@ -30,10 +31,11 @@ export function useOverview(workspaces: readonly iWorkspace[]) {
     projects: inbox.projects,
     targets: reviews.data ?? [],
   });
+  const stackList = useStackList({ workspace, stacks });
   const stack =
     stacks.find((candidate) => candidate.id === selection.stack) ??
     stacks.find((candidate) => candidate.branches.some((item) => item.name === selection.branch)) ??
-    stacks[0];
+    stackList.listed[0]?.stack;
   const branch =
     stack?.branches.find((candidate) => candidate.name === selection.branch) ??
     (stack ? initialStackBranch(stack) : undefined);
@@ -44,6 +46,7 @@ export function useOverview(workspaces: readonly iWorkspace[]) {
   return {
     workspace,
     stacks,
+    stackList,
     stack,
     branch,
     selectStack,
