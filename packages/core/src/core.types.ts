@@ -1,3 +1,5 @@
+import type { Readable, Writable } from 'node:stream';
+
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 
 import type { iCoreHost } from './host/core-host.types';
@@ -21,7 +23,14 @@ export interface iCoreOptions {
   host: iCoreHost;
 }
 
+/** Coding agents reaching Chaff through its MCP server. */
+export interface iAgentAccess {
+  /** Serves one agent, running in the folder, over newline-delimited JSON-RPC; resolves once connected. */
+  serve: (input: Readable, output: Writable, folder: string) => Promise<void>;
+}
+
 export interface iChaffCore {
   router: typeof appRouter;
+  agentAccess: iAgentAccess;
   close: () => void;
 }

@@ -88,6 +88,7 @@ function settingsWith(onboarding: iOnboardingState) {
     inlineDiff: INLINE_DIFFS.WORD,
     navigatorWidth: NAVIGATOR_WIDTH.default,
     isContextPanelPinned: false,
+    isAgentAccessEnabled: false,
     defaultProgression: REVIEW_PROGRESSIONS.changes,
     digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
     agentCommands: [],

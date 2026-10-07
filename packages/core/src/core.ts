@@ -11,6 +11,7 @@ import { DigestRevisionsService } from './features/digests/revisions/digest-revi
 import { FindingTasksService } from './features/findings/finding-tasks.service';
 import { FixesService } from './features/fixes/fixes.service';
 import { configureLogger } from './features/logger/logger';
+import { AgentAccessService } from './features/mcp/agent-access.service';
 import { SettingsService } from './features/settings/settings.service';
 import { appRouter } from './routers/app-router';
 
@@ -40,8 +41,13 @@ export async function createChaffCore(options: iCoreOptions): Promise<iChaffCore
     const assistantService = container.resolve(AssistantService);
     await assistantService.failInterrupted();
 
+    const agentAccessService = container.resolve(AgentAccessService);
+
     return {
       router: appRouter,
+      agentAccess: {
+        serve: async (input, output, folder) => agentAccessService.serve(input, output, folder),
+      },
       close: () => {
         digestsService.stopAll();
         fixesService.stopAll();

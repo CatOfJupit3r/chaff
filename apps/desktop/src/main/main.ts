@@ -4,6 +4,8 @@ import path from 'node:path';
 import { createChaffCore } from '@~/core';
 import type { iChaffCore } from '@~/core.types';
 
+import { AgentAccessServer } from './agent-access-server';
+import { agentAccessSocketPath } from './agent-access-socket.utils';
 import { APP_PATHS } from './app-paths';
 import { APP_ORIGIN, registerAppScheme, serveRenderer } from './app-protocol';
 import { ElectronCoreHost } from './electron-core-host';
@@ -22,6 +24,7 @@ const isTrustedUrl = createTrustedUrlCheck(RENDERER_URL);
 
 let mainWindow: BrowserWindow | null = null;
 let core: iChaffCore | null = null;
+let agentAccessServer: AgentAccessServer | null = null;
 
 function showMainWindow() {
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -52,6 +55,8 @@ async function start() {
     host: new ElectronCoreHost(() => mainWindow, path.join(app.getPath('userData'), SECRETS_FILE)),
   });
   serveCoreOverIpc(core.router, isTrustedUrl);
+  agentAccessServer = new AgentAccessServer(agentAccessSocketPath(app.getPath('userData')), core.agentAccess);
+  await agentAccessServer.listen();
 
   if (DEV_RENDERER_URL) applyDevelopmentCsp(DEV_RENDERER_URL);
   else serveRenderer(APP_PATHS.renderer);
@@ -70,7 +75,10 @@ if (app.requestSingleInstanceLock()) {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });
-  app.on('will-quit', () => core?.close());
+  app.on('will-quit', () => {
+    agentAccessServer?.close();
+    core?.close();
+  });
 
   start().catch(async (error: unknown) => {
     core?.close();

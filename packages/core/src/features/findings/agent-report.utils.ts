@@ -6,7 +6,7 @@ import {
   REPORT_SKIP_REASONS,
   agentReportStatusesEnumwaii,
 } from '@chaff/common/enums/export.enums';
-import type { ReportSkipReason } from '@chaff/common/enums/export.enums';
+import type { AgentReportStatus, ReportSkipReason } from '@chaff/common/enums/export.enums';
 import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 import type { FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
 import { canAgentSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
@@ -78,6 +78,11 @@ const REPORTED_TARGETS = agentReportStatusesEnumwaii.derive<{ kinds: readonly Fi
     { kinds: [FINDING_KINDS.CONCERN, FINDING_KINDS.QUESTION], status: FINDING_STATUSES.REOPENED },
   ],
 );
+
+/** The status a reported status moves a finding to. */
+export function reportedTargetStatus(reported: AgentReportStatus) {
+  return REPORTED_TARGETS.get(reported).status;
+}
 
 /** Moves that need the agent to say why: an answer, or the reason to reopen. */
 const NOTED_STATUSES = new Set<FindingStatus>([FINDING_STATUSES.ANSWERED, FINDING_STATUSES.REOPENED]);

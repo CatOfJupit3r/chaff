@@ -10,8 +10,9 @@ export default {
   directories: { output: 'release', buildResources: 'build' },
   files: ['dist/**/*', 'package.json', '!dist/**/*.map'],
   asar: true,
-  // The tree-sitter runtime reads its .wasm files with fs at run time.
-  asarUnpack: ['dist/tree-sitter/**'],
+  // The tree-sitter runtime reads its .wasm files with fs at run time; coding agents start the MCP bridge
+  // with the app's binary in Node mode, which needs it as a plain file.
+  asarUnpack: ['dist/tree-sitter/**', 'dist/mcp-bridge.cjs'],
   npmRebuild: false,
   nodeGypRebuild: false,
   publish: null,
