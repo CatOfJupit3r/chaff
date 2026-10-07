@@ -1,140 +1,68 @@
 ---
 name: feature-implementation-workflow
 description: >
-  Budget-aware workflow for implementing a full-stack feature from a roadmap phase. Use when given a roadmap path and phase number to implement. Covers roadmap reading, task slicing, relevant skill loading, implementation with validation checkpoints, evidence-backed reporting, and roadmap checkbox updates.
+  Workflow for implementing a full-stack Chaff feature contract-first: explore, load the skills the work touches, implement in layer order (schema, contract, core, renderer, tests), validate each checkpoint with `pnpm run verify`, and finish with an evidence-backed report. Use for any feature or change that crosses the core and the renderer.
 ---
 
 # Feature Implementation Workflow
 
-Agent-driven workflow for implementing a roadmap phase. The agent is given a roadmap file path and a phase number, reads the roadmap for context, loads relevant skills, slices broad work into small checkpoints when needed, implements the work, validates each checkpoint, and marks roadmap items complete only when evidence supports completion.
+How to take a feature from request to a verified change. The contract is the only API surface between the core and the renderer, so it is settled first and both sides are built against it.
 
-## Entry Point
+## Step 1: Pin Down The Scope
 
-The user provides:
+Before writing code, write down in a sentence or two:
 
-1. **Roadmap path** — e.g. `docs/roadmaps/active/ai-improvements.roadmap.md`
-2. **Phase number or packet scope** — e.g. `Phase 4` or a specific unchecked checkbox
-3. Optional execution mode:
-   - `Codex plan only`
-   - `Claude implementation handoff`
-   - `Codex implementation`
-   - `Codex verification`
-   - `mixed-agent workflow`
+- the behavior the user should see when it is done,
+- what is explicitly out of scope,
+- how you will know it works (tests, a check in the running app, or both).
 
-Start by reading the full roadmap file to understand scope, acceptance criteria, and what is already implemented.
+If the request is broad, split it into small slices that each leave the app working, and do them one at a time. A slice is small enough when its validation is one or two commands and its diff can be reviewed in one sitting.
 
-## Step 0: Choose The Right Mode
+## Step 2: Explore The Code
 
-Before writing code, decide whether the request should be implemented directly or split.
+Delegate the first sweep to an `Explore` subagent instead of reading broadly inline. Ask it to locate the files, patterns and existing implementations the feature touches and to return paths with one-line descriptions, not file contents. Use the report to learn:
 
-Use `roadmap-task-slicing` first when:
-
-- the phase has more than 2-3 unchecked implementation items,
-- the phase touches multiple packages or architectural layers,
-- the user wants to conserve Codex usage,
-- Claude Code or another implementation agent will do the bulk work,
-- previous agent work needs stronger verification.
-
-Use `agent-implementation-proof` when delegating implementation to another coding agent.
-
-Use `codex-diff-verification` when reviewing a branch, PR, or diff after another agent has made changes.
-
-For small, low-risk tasks, continue with this workflow directly.
-
-## Step 1: Read The Roadmap
-
-```text
-read_file: docs/roadmaps/active/ai-improvements.roadmap.md
-```
-
-Extract from the roadmap:
-
-- the phase's items and their current completion status,
-- any items already marked completed (skip those),
-- the phase exit criteria,
-- acceptance criteria that apply to the phase,
-- verification commands,
-- referenced files, schemas, docs, or existing code,
-- non-goals and explicit deferrals.
-
-If a phase contains sub-items, treat each unchecked item as an atomic unit of work unless the roadmap explicitly requires them to ship together.
-
-If roadmap text differs from the actual source code, trust source code over the roadmap and note the discrepancy.
-
-## Step 2: Load Relevant Skills
-
-Load skills lazily to conserve context: instead of front-loading every referenced skill, load only the skills whose domain the phase's checklist items actually touch, and load each one at the point you start that work. Use the decision heuristic below.
-
-| Work type | Load skill |
-|---|---|
-| Broad roadmap phase or budget-sensitive implementation | `roadmap-task-slicing` |
-| Delegating implementation to Claude Code or another agent | `agent-implementation-proof` |
-| Reviewing another agent's branch, PR, or diff | `codex-diff-verification` |
-| Database schema or migrations | `drizzle-orm` |
-| New oRPC contracts / API endpoints | `orpc-contract-creation` |
-| Server router handlers | `server-router-implementation` |
-| Error handling | `server-error-handling` |
-| DI setup, new services | `dependency-injection-setup` |
-| TanStack Query hooks / mutations | `tanstack-query-integration` |
-| React components, forms, routes | `react-component-patterns` |
-| Forms with TanStack Form + Zod | `tanstack-forms` |
-| Tests | `server-testing` |
-
-Do not load every skill. Load the smallest useful set.
-
-## Step 3: Explore Relevant Code
-
-To keep the working context lean, delegate the initial reconnaissance to an `Explore` subagent instead of reading broadly inline. Ask it to "locate the files, patterns, and existing implementations this phase touches; return paths and one-line descriptions, not file contents." Use its report to understand:
-
-- existing patterns for the feature area,
-- where new files should be placed,
-- what should be reused,
-- what must not be rebuilt,
+- the existing patterns for this feature area,
+- where new files belong,
+- what to reuse and what must not be rebuilt,
 - which tests already cover the surface.
 
-Then do targeted reads only for the exact files you will edit. Do not rely on roadmap claims alone.
+Then read only the files you will edit. If an issue, a plan or a comment disagrees with the source, trust the source and note the difference.
 
-## Step 4: Slice Or Implement
+## Step 3: Load Only The Skills The Work Touches
 
-### If The Phase Is Broad
+Load each skill at the point you start that kind of work, not all up front.
 
-Use `roadmap-task-slicing` and produce atomic work packets before editing code.
+| Work type | Skill |
+|---|---|
+| Closed sets of strings (status, kind, mode) | `enumwaii` (mandatory) |
+| Database schema or migrations | `drizzle-orm` |
+| New oRPC contracts / API endpoints | `orpc-contract-creation` |
+| Core router handlers | `server-router-implementation` |
+| Feature module boundaries (service, repository, resolver) | `server-module` |
+| Error handling | `server-error-handling` |
+| DI setup, new services | `dependency-injection-setup` |
+| TanStack Query hooks and mutations | `tanstack-query-integration` |
+| React components and routes | `react-component-patterns` |
+| Forms with TanStack Form and Zod | `tanstack-forms` |
+| Tests | `server-testing` |
+| Handing work to another coding agent | `agent-implementation-proof` |
+| Reviewing a diff before handoff | `review-code` |
 
-Each packet should include:
+## Step 4: Implement In Layer Order
 
-- one clear outcome,
-- likely files,
-- acceptance criteria,
-- validation commands,
-- executor recommendation,
-- non-goals,
-- what may be marked complete after validation.
+1. Schema and migration, if the data layer changes (`pnpm run db:generate`).
+2. Shared contracts, constants, enums and error codes.
+3. Core: repositories, resolvers, services and router handlers.
+4. Renderer query and mutation hooks.
+5. UI components and routes.
+6. Tests for the behavior you added or changed.
 
-Prefer this loop:
+Follow `AGENTS.md` throughout: theme tokens for every color, `enumwaii` for closed string sets, no barrel files, explicit visibility on class members.
 
-1. Codex or planning agent slices the phase.
-2. Claude Code implements one packet with `agent-implementation-proof`.
-3. Local validation runs narrow checks.
-4. Codex verifies the diff with `codex-diff-verification`.
-5. Claude Code fixes any review findings.
-6. Final validation runs.
+## Step 5: Validate Each Checkpoint
 
-### If The Task Is Small Enough To Implement Directly
-
-Implement each unchecked roadmap item in order. Always follow `AGENTS.md` and loaded skills.
-
-Implementation order for full-stack items:
-
-1. Schema / migration, if data layer changes.
-2. Shared contracts, constants, schemas, and error codes.
-3. Server router handlers, repositories, resolvers, and services.
-4. Frontend query/mutation hooks.
-5. UI components, routes, and forms.
-6. Tests and roadmap updates.
-
-## Step 5: Validate Incrementally
-
-After each meaningful unit of work, run the narrowest relevant validation command. Route all verification through `pnpm run verify`, which reports honest PASS/FAIL and a trustworthy exit code. Scope it while iterating:
+After each meaningful unit of work, run the narrowest check that covers it. Route all verification through `pnpm run verify`, which reports honest PASS/FAIL with an exit code you can trust:
 
 ```bash
 pnpm run verify --filter web
@@ -143,107 +71,39 @@ pnpm run verify --filter desktop
 pnpm run verify --filter @chaff/server-contract
 ```
 
-Run the unscoped command when changes cross packages:
+Run it unscoped when a change crosses packages, and add `--tests` to run the suite:
 
 ```bash
-pnpm run verify
+pnpm run verify --tests
 ```
 
-Do not interleave formatting with edits — run `pnpm run prettify` once at the end of the phase, never between edits, to avoid stale-file races.
+Fix the root cause when something fails before moving on; don't carry failures into the next slice. Run `pnpm run prettify` once at the end, not between edits.
 
-Use `server-testing` to choose tests, and add `--tests` to `pnpm run verify` to run them. Do not write tests that only verify framework behavior or static rendering without meaningful behavior.
+For behavior a test can't show (a screen, a flow across windows), check it in the running app with `pnpm run dev` and say what you clicked through.
 
-If type errors or tests fail, fix the root cause before continuing. Do not accumulate validation debt across roadmap items.
+## Step 6: Evidence-Backed Report
 
-## Step 6: Mark Roadmap Items Completed
-
-A roadmap checkbox may be marked `[x]` only after:
-
-1. the implementation is present,
-2. the relevant acceptance criteria are satisfied,
-3. the narrow validation command passed,
-4. any required test or manual QA evidence is recorded,
-5. no known blocker remains for that checkbox.
-
-Use the roadmap's own checkbox format. Example:
-
-```markdown
-- [ ] Implement usage tracking for AI runs
-```
-
-becomes:
-
-```markdown
-- [x] Implement usage tracking for AI runs
-```
-
-Mark items one at a time as they are completed. Do not batch-mark at the end.
-
-If a roadmap item is too large or blocked, implement what is possible, leave the checkbox unchecked, and report the blocker.
-
-## Step 7: Final Validation Checkpoint
-
-After all items in the selected scope are done, run the full verification and format once:
-
-```bash
-pnpm run verify
-pnpm run prettify
-```
-
-For cross-package or full-stack work, add `--tests` to `pnpm run verify` (or run the relevant tests from `server-testing`).
-
-Fix remaining issues before declaring the selected scope complete.
-
-If validation cannot be run, say exactly what was not run and why. Do not claim completion without validation evidence.
-
-## Step 8: Evidence-Backed Report
-
-End with a report that can be audited.
+End with a report someone else can audit:
 
 ```md
 ## Completion Report
 
 ### Implemented
-- <item> — evidence: <files>, validation: <command/result>
-
-### Already Done / Skipped
-- <item> — reason: <why skipped>
+- <behavior> — evidence: <files>, validation: <command and result>
 
 ### Not Done / Blocked
 - <item> — reason: <blocker or deferral>
 
 ### Commands Run
-- `<command>` — pass/fail/not run
-
-### Roadmap Updates
-- Marked complete: <checkboxes>
-- Left unchecked: <checkboxes and why>
+- `<command>` — pass / fail / not run
 
 ### Remaining Risk
-- <risk or none>
+- <risk, or none>
 ```
 
-## Skill-to-Work Mapping Quick Reference
-
-When you encounter these patterns, load the corresponding skill if not already loaded:
-
-- broad phase, too many checkboxes, token budget concern -> `roadmap-task-slicing`
-- Claude Code handoff, another agent will implement -> `agent-implementation-proof`
-- branch/PR/diff review, false-completion check -> `codex-diff-verification`
-- `z.enum`, creating reusable enums -> `enumwaii`
-- `sqliteTable(`, `drizzle`, migration -> `drizzle-orm`
-- `oc.route(`, `.input(`, `.output(`, contract file -> `orpc-contract-creation`
-- `procedure.`, `.handler(` -> `server-router-implementation`
-- `ORPCNotFoundError`, `ORPCBadRequestError`, `errorCodes` -> `server-error-handling`
-- `@singleton()`, `@injectable()`, `container.resolve(`, `LoggerFactory` -> `dependency-injection-setup`
-- `tanstackRPC.`, `queryOptions`, `mutationOptions` -> `tanstack-query-integration`
-- `useAppForm`, `withForm`, `withFieldGroup` -> `tanstack-forms`
-- `test(`, `describe(`, `call(appRouter.`, `expectORPCError` -> `server-testing`
+If validation could not be run, say exactly what was not run and why. Never claim completion without validation evidence.
 
 ## Notes
 
-- Prefer small, evidence-backed packets over giant phase implementations.
-- Never skip validation between broad units of work.
-- If a roadmap item is already marked `[x]`, skip it entirely unless the user asks for verification.
-- If source code contradicts roadmap current-state text, trust source code and note the discrepancy.
-- Do not let the same agent both make broad changes and self-certify completion when trust matters.
+- Prefer small, verified slices over one large change.
+- Do not let the same agent make a broad change and also be its only reviewer when correctness matters; hand the diff to a separate `review-code` pass.

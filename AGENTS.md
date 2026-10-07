@@ -45,7 +45,8 @@ Examples:
 - `packages/core` (`@chaff/core`) is the Chaff core: oRPC routers, services, the Drizzle schema on SQLite, and git access. It is a library with no HTTP server and no Electron imports; the desktop app bundles it into its main process and starts it with `createChaffCore()` from `src/core.ts`.
 - `packages/server-contract` contains the API contracts shared by the core and the renderer.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
-- `docs` contains product notes, roadmaps, and design documentation, if present.
+- `docs` contains the development guide, the architecture notes (`how-it-works.md`), and the screenshots and clips used by the README and the project page.
+- `site` is the project page deployed to GitHub Pages; `scripts/site-videos` records its clips from the packaged app.
 - `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-fg`, `text-accent`). The desktop app icon is `apps/desktop/build/icon.png`, rendered from `chaff-app-icon.svg` (the mark on a rounded plate with the standard macOS margins) with `rsvg-convert -w 1024 -h 1024 assets/brand/chaff-app-icon.svg -o apps/desktop/build/icon.png`.
 
 ## UI, Theming, and Colors
@@ -132,7 +133,7 @@ Examples:
 - Reviews are frozen as snapshots: the branch and its parent are fetched into a bare store per repository (`stores/<workspaceId>.git` next to `chaff.db`) and pinned under `refs/chaff/snapshots/<id>`, so a review keeps working after the branch is rebased or deleted. Units come from tree-sitter grammars (`@vscode/tree-sitter-wasm`), which the desktop build copies to `dist/tree-sitter`.
 - Repositories are read with the system `git` from PATH. Chaff never writes to a user's repository: no checkouts, branch or ref changes, index or stash writes. Fetching into the store reads the repository; every write goes to the store.
 - Aliases: `@~/` resolves to `packages/core/src` or `apps/web/src` depending on the package (in `apps/desktop` it points at the core, so desktop code uses relative imports); `@chaff/common` surfaces shared utilities and types, while `@chaff/server-contract` surfaces API contracts.
-- Node.js 24.13 is required (Electron 44 embeds Node 24 as well); use nvm or similar to manage Node versions.
+- Node.js 24 (24.13 or newer) is required; Electron 44 embeds Node 24 as well. Use nvm or similar to manage Node versions.
 - pnpm 11.5.0 is the package manager; use `corepack enable` to activate it.
 
 ## Desktop Security
@@ -140,17 +141,6 @@ Examples:
 - The renderer runs with `contextIsolation`, `sandbox`, no `nodeIntegration`, and a strict content security policy (`apps/desktop/src/main/content-security-policy.ts`). Never loosen these, and never add a preload API beyond the MessagePort hand-off.
 - Anything that needs the OS (dialogs, opening links, native theme) goes through the core's `iCoreHost` (`packages/core/src/host/core-host.types.ts`), implemented in `apps/desktop/src/main/electron-core-host.ts`. `openExternal` only allows `https:` and editor URL schemes.
 - Secrets such as a GitLab token stay in the main process (encrypted with Electron `safeStorage`) and are never sent to the renderer.
-
-## Environment (Windows)
-
-The default shell is Windows PowerShell 5.1. Assume these rules unless told otherwise:
-
-- No `&&` / `||` chaining — use `;` or `if ($?) { ... }`.
-- No Unix coreutils: use `Select-Object -Last N` (not `tail`), `Select-Object -First N` (not `head`), `Select-String` (not `grep`), `New-Item` (not `touch`), `(Get-Command x).Source` (not `which`).
-- `rm` is permission-denied by policy — always use `Remove-Item -Recurse -Force` directly.
-- pnpm writes progress to stderr, and PS 5.1 wraps native stderr as `NativeCommandError`, so error-looking output does NOT mean failure. Trust exit codes.
-- Always use absolute paths rooted at the repository root; never rely on the current working directory, and do not prefix commands with `cd`.
-- Canonical command forms: `pnpm run check-types`, `pnpm run lint`, `pnpm run db:generate`, `pnpm --filter=@chaff/core run <script>`.
 
 ## Testing
 
@@ -209,7 +199,6 @@ apps/desktop/test/                    # mirrors apps/desktop/src
 - If a task spans backend and frontend, coordinate the contract first and then implement the UI against that contract.
 - Run `pnpm run verify` before handing work off. If you are changing code, ALWAYS run it to catch type and lint issues early; trust its exit code over raw pnpm stderr.
 - For any task of the form "replace/remove/rename X everywhere": first enumerate ALL matches with grep (including tests, fixtures, docs, and generated-adjacent files) into an explicit checklist; work the checklist down; finish by re-running the same grep and pasting its empty result as proof. Do not report completion without the zero-match re-run.
-- If you are implementing a roadmap, then always make sure to mark the relevant roadmap items as "completed".
 
 <!-- intent-skills:start -->
 # Skill mappings - when working in these areas, load the linked skill file into context.
@@ -219,20 +208,12 @@ skills:
     load: ".agents/skills/enumwaii/SKILL.md"
   - task: "Organizing or implementing server features with service, repository, resolver, and nested module boundaries"
     load: ".agents/skills/server-module/SKILL.md"
-  - task: "Creating new roadmaps from ideas, research, stale plans, or architectural direction"
-    load: ".agents/skills/roadmap-creation-workflow/SKILL.md"
   - task: "Setting up dependency injection with tsyringe for server services"
     load: ".agents/skills/dependency-injection-setup/SKILL.md"
   - task: "Implementing a full-stack feature from contracts to UI following contract-first development"
     load: ".agents/skills/feature-implementation-workflow/SKILL.md"
-  - task: "Splitting a broad roadmap phase into small, budget-aware agent work packets before implementation"
-    load: ".agents/skills/roadmap-task-slicing/SKILL.md"
   - task: "Delegating implementation to Claude Code or another coding agent while requiring evidence-backed completion reports"
     load: ".agents/skills/agent-implementation-proof/SKILL.md"
-  - task: "Reviewing an agent-made branch, pull request, or diff against roadmap acceptance criteria to detect false completion"
-    load: ".agents/skills/codex-diff-verification/SKILL.md"
-  - task: "Auditing whether a roadmap phase is actually implemented, or archiving a completed roadmap"
-    load: ".agents/skills/roadmap-phase-audit/SKILL.md"
   - task: "Creating new oRPC contracts for API endpoints with Zod validation"
     load: ".agents/skills/orpc-contract-creation/SKILL.md"
   - task: "Building accessible React components with UI primitives, nuqs, and design tokens"
