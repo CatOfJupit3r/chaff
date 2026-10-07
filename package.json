@@ -1,6 +1,7 @@
 {
   "name": "chaff",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "pnpm --parallel --filter=web --filter=desktop --filter=@chaff/common --filter=@chaff/server-contract run dev",

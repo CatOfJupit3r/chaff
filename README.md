@@ -543,6 +543,10 @@ opens Chaff in an Electron window with live reload. Click **Add repository** and
 
 Chaff keeps its database and snapshot store in the OS app data folder: `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS, `~/.config/Chaff` on Linux. `pnpm run dev` uses a separate `Chaff Dev` folder next to it.
 
+## License
+
+[AGPL-3.0](LICENSE). Use it, change it, share it; if you ship a modified Chaff, share your changes too.
+
 ## Contributing
 
 [docs/development.md](docs/development.md) covers the repository layout, workspace commands, commit hooks and conventions. Agents (Claude Code and other `AGENTS.md`-aware tools) start from [AGENTS.md](AGENTS.md) and the skills in `.agents/skills/`.

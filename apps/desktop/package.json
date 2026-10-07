@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Chaff, a stack-aware review workspace for AI-written changes",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "main": "dist/main.mjs",
   "scripts": {

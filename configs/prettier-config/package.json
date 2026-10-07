@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "description": "Shared Prettier configuration for chaff monorepo",
+  "license": "AGPL-3.0-only",
   "main": "./prettier.config.mjs",
   "exports": {
     ".": "./prettier.config.mjs"

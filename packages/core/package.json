@@ -1,5 +1,6 @@
 {
   "name": "@chaff/core",
+  "license": "AGPL-3.0-only",
   "main": "src/core.ts",
   "type": "module",
   "scripts": {

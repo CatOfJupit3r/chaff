@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "description": "Shared ESLint configuration for chaff monorepo",
+  "license": "AGPL-3.0-only",
   "exports": {
     ".": "./src/index.mjs"
   },
