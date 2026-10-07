@@ -27,7 +27,8 @@ export class AgentScopeService {
     private readonly gitService: GitService,
   ) {}
 
-  public async resolve({ folder, repo, branch }: iAgentPlace): Promise<iAgentScope> {
+  public async resolve({ folder, repo, branch, targetId }: iAgentPlace): Promise<iAgentScope> {
+    if (targetId) return this.pinnedScope(targetId);
     const directory = path.resolve(folder, repo ?? '.');
     const repoPath = await this.repositoryRoot(directory);
     const workspace = (await this.workspacesService.list()).find((candidate) => candidate.repoPath === repoPath);
@@ -40,6 +41,16 @@ export class AgentScopeService {
       if (target) return { workspace, branch: reviewedBranch, target };
     }
     throw new AgentAccessError(`There is no review of ${reviewedBranch} in Chaff. Start one in Chaff first.`);
+  }
+
+  /** The review a session Chaff started is pinned to, whatever folder it runs in. */
+  private async pinnedScope(targetId: string): Promise<iAgentScope> {
+    const target = await this.reviewTargetRepository.findById(targetId);
+    const workspace = target
+      ? (await this.workspacesService.list()).find((candidate) => candidate.id === target.workspaceId)
+      : undefined;
+    if (!target || !workspace) throw new AgentAccessError('The review this run was started for no longer exists.');
+    return { workspace, branch: target.branch, target };
   }
 
   /** The main working tree of the repository the directory belongs to. */

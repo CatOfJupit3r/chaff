@@ -46,7 +46,7 @@ export async function createChaffCore(options: iCoreOptions): Promise<iChaffCore
     return {
       router: appRouter,
       agentAccess: {
-        serve: async (input, output, folder) => agentAccessService.serve(input, output, folder),
+        serve: async (input, output, session) => agentAccessService.serve(input, output, session),
       },
       close: () => {
         digestsService.stopAll();

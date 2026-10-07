@@ -1,7 +1,9 @@
 import { singleton } from 'tsyringe';
 
+import { claudeMcpArgs } from '@~/features/agents/agent-mcp.utils';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 import { describeClaudeProgress, parseClaudeStreamEvent } from '@~/features/agents/claude-code-events.utils';
+import { CHAFF_TOOLS } from '@~/features/mcp/mcp.enums';
 
 import type { iFixRunInput, iFixRunnerAdapter } from './fixes.types';
 
@@ -11,11 +13,12 @@ const DENIED_TOOLS = 'Bash,NotebookEdit,WebFetch,WebSearch';
 
 /**
  * Claude Code in headless mode, accepting its own edits inside the checkout. Project settings and MCP
- * servers are ignored, so the repository cannot add hooks or tools to the run.
+ * servers are ignored, so the repository cannot add hooks or tools to the run; only the Chaff server is
+ * loaded, while agent access is on.
  */
 @singleton()
 export class ClaudeCodeFixAdapter implements iFixRunnerAdapter {
-  public async run(command: string, { cwd, prompt, signal, onProgress }: iFixRunInput) {
+  public async run(command: string, { cwd, prompt, chaffServer, signal, onProgress }: iFixRunInput) {
     let summary: string | undefined;
     let failure: string | undefined;
 
@@ -38,6 +41,7 @@ export class ClaudeCodeFixAdapter implements iFixRunnerAdapter {
         '--setting-sources',
         'user',
         '--strict-mcp-config',
+        ...(chaffServer ? claudeMcpArgs(chaffServer, [CHAFF_TOOLS.chaff_findings, CHAFF_TOOLS.chaff_reply]) : []),
         '--disable-slash-commands',
         '--no-session-persistence',
       ],

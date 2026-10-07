@@ -3,6 +3,7 @@ import type { Readable, Writable } from 'node:stream';
 import { singleton } from 'tsyringe';
 
 import { FindingsMcpService } from './findings-mcp.service';
+import type { iAgentSession } from './mcp.types';
 
 /** The agent that connected most recently, by the name its client gives. */
 export interface iAgentConnection {
@@ -22,9 +23,9 @@ export class AgentAccessService {
     return this.lastConnection;
   }
 
-  /** Serves one agent, running in the folder, over a stream of newline-delimited JSON-RPC messages. */
-  public async serve(input: Readable, output: Writable, folder: string) {
-    const server = this.findingsMcpService.createServer(folder);
+  /** Serves one agent's session over a stream of newline-delimited JSON-RPC messages. */
+  public async serve(input: Readable, output: Writable, session: iAgentSession) {
+    const server = this.findingsMcpService.createServer(session);
     const transport = new StdioServerTransport(input, output);
     input.once('close', () => {
       server.close().catch(() => undefined);

@@ -24,7 +24,8 @@ import { AgentAccessError } from './agent-access.error';
 import { AgentScopeService } from './agent-scope.service';
 import { formatFindingsForAgent } from './findings-for-agent.utils';
 import { AGENT_INSTRUCTIONS, SERVER_NAME } from './mcp.constants';
-import type { iAgentPlace } from './mcp.types';
+import { CHAFF_TOOLS } from './mcp.enums';
+import type { iAgentPlace, iAgentSession } from './mcp.types';
 
 const MAX_MESSAGE_LENGTH = 20_000;
 const MAX_COMMITS = 100;
@@ -73,14 +74,14 @@ export class FindingsMcpService {
     private readonly settingsService: SettingsService,
   ) {}
 
-  /** A server for an agent running in the folder. */
-  public createServer(folder: string) {
+  /** A server for one agent's session. */
+  public createServer(session: iAgentSession) {
     const server = new McpServer(
       { name: SERVER_NAME, version: this.options.appVersion },
       { instructions: AGENT_INSTRUCTIONS },
     );
     server.registerTool(
-      'chaff_findings',
+      CHAFF_TOOLS.chaff_findings,
       {
         title: 'Read review findings',
         description:
@@ -88,17 +89,17 @@ export class FindingsMcpService {
         inputSchema: findingsShape,
         annotations: { readOnlyHint: true },
       },
-      async (input) => this.answer(async () => this.listFindings({ folder, ...input })),
+      async (input) => this.answer(async () => this.listFindings({ ...session, ...input })),
     );
     server.registerTool(
-      'chaff_reply',
+      CHAFF_TOOLS.chaff_reply,
       {
         title: 'Reply on a finding',
         description:
           'Answers on a finding in Chaff: a message, optionally moving it to fix_proposed, answered or reopened. Only the reviewer verifies or closes findings.',
         inputSchema: replyShape,
       },
-      async (input) => this.answer(async () => this.reply({ folder, ...input })),
+      async (input) => this.answer(async () => this.reply({ ...session, ...input })),
     );
     return server;
   }

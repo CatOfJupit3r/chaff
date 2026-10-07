@@ -16,6 +16,7 @@ import { toPromptUnits } from '@~/features/digests/digest-prompt-units.utils';
 import { DigestsService } from '@~/features/digests/digests.service';
 import type { iPromptUnit } from '@~/features/digests/digests.types';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
+import { AgentRunServerService } from '@~/features/mcp/agent-run-server.service';
 import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
@@ -59,6 +60,7 @@ export class AssistantService {
     private readonly digestsService: DigestsService,
     private readonly agentAdaptersService: AgentAdaptersService,
     private readonly agentCheckoutService: AgentCheckoutService,
+    private readonly agentRunServerService: AgentRunServerService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('assistant');
@@ -149,7 +151,8 @@ export class AssistantService {
         run.snapshot,
         { directory: ANSWERS_DIRECTORY, runId: run.exchangeId },
         async (checkout) => {
-          const prompt = await this.preparePrompt(run, checkout);
+          const chaffServer = await this.agentRunServerService.forReview(run.target.id);
+          const prompt = await this.preparePrompt(run, checkout, chaffServer !== undefined);
           progress.push(`Starting ${DIGEST_RUNNER_LABELS.get(agent.runner)}`);
           const answer = await agent.adapter.run(agent.command, {
             cwd: checkout.checkout,
@@ -158,6 +161,7 @@ export class AssistantService {
             prompt,
             model: agent.model,
             schema: AGENT_ANSWER_JSON_SCHEMA,
+            chaffServer,
             signal,
             onProgress: progress.push,
             onPartialAnswer: (partial) => {
@@ -195,7 +199,7 @@ export class AssistantService {
     }
   }
 
-  private async preparePrompt(run: iAnswerRun, checkout: iAgentCheckout) {
+  private async preparePrompt(run: iAnswerRun, checkout: iAgentCheckout, hasChaffTools: boolean) {
     const [units, files, digest] = await Promise.all([
       this.snapshotRepository.listUnits(run.snapshot.id),
       this.snapshotRepository.listFiles(run.snapshot.id),
@@ -213,6 +217,7 @@ export class AssistantService {
       patch: this.cardPatch(checkout.patch, cardUnits),
       digest: digest?.status === DIGEST_STATUSES.READY ? digest.content : undefined,
       earlier: run.earlier,
+      hasChaffTools,
       question: run.question.question,
     });
   }

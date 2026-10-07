@@ -16,7 +16,7 @@ import { featureReview } from '../helpers/review-repo';
 /** An MCP client talking to the server an agent in the folder would get. */
 async function agentIn(folder: string) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await container.resolve(FindingsMcpService).createServer(folder).connect(serverTransport);
+  await container.resolve(FindingsMcpService).createServer({ folder }).connect(serverTransport);
   const client = new Client({ name: 'test-agent', version: '1.0.0' });
   await client.connect(clientTransport);
   const run = async (name: string, args: Record<string, unknown> = {}) => {

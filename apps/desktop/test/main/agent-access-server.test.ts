@@ -14,10 +14,10 @@ const CLEANUPS: (() => void)[] = [];
 /** A server whose sessions echo every byte back, recording the folder each agent named. */
 async function startServer() {
   const userDataDir = mkdtempSync(path.join(tmpdir(), 'chaff-agents-'));
-  const folders: string[] = [];
+  const sessions: { folder: string; targetId?: string }[] = [];
   const server = new AgentAccessServer(agentAccessSocketPath(userDataDir), {
-    serve: async (input: Readable, output: Writable, folder: string) => {
-      folders.push(folder);
+    serve: async (input: Readable, output: Writable, session: { folder: string; targetId?: string }) => {
+      sessions.push(session);
       input.on('data', (chunk: Buffer) => output.write(chunk));
     },
   });
@@ -26,7 +26,7 @@ async function startServer() {
     server.close();
     rmSync(userDataDir, { recursive: true, force: true });
   });
-  return { socketPath: agentAccessSocketPath(userDataDir), folders };
+  return { socketPath: agentAccessSocketPath(userDataDir), sessions };
 }
 
 async function connect(socketPath: string) {
@@ -42,24 +42,24 @@ afterEach(() => {
 
 describe.skipIf(process.platform === 'win32')('agent access server', () => {
   it('hands the session everything after the handshake, even when it arrives in the same write', async () => {
-    const { socketPath, folders } = await startServer();
+    const { socketPath, sessions } = await startServer();
     const socket = await connect(socketPath);
 
-    socket.write(`${JSON.stringify({ folder: '/work/repo' })}\n{"jsonrpc":"2.0","id":1}\n`);
+    socket.write(`${JSON.stringify({ folder: '/work/repo', targetId: 'review-1' })}\n{"jsonrpc":"2.0","id":1}\n`);
     const [echoed] = (await once(socket, 'data')) as [Buffer];
 
-    expect(folders).toEqual(['/work/repo']);
+    expect(sessions).toEqual([{ folder: '/work/repo', targetId: 'review-1' }]);
     expect(echoed.toString('utf8')).toBe('{"jsonrpc":"2.0","id":1}\n');
   });
 
   it('hangs up on a connection that does not start with a handshake', async () => {
-    const { socketPath, folders } = await startServer();
+    const { socketPath, sessions } = await startServer();
     const socket = await connect(socketPath);
 
     socket.write('{"jsonrpc":"2.0","method":"initialize"}\n');
     await once(socket, 'close');
 
-    expect(folders).toEqual([]);
+    expect(sessions).toEqual([]);
   });
 
   it('lets only the current user open the socket', async () => {

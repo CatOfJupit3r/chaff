@@ -2,6 +2,7 @@ import type { Readable, Writable } from 'node:stream';
 
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 
+import type { iAgentSession } from './features/mcp/mcp.types';
 import type { iCoreHost } from './host/core-host.types';
 import type { appRouter } from './routers/app-router';
 
@@ -35,8 +36,8 @@ export interface iAgentBridge {
 
 /** Coding agents reaching Chaff through its MCP server. */
 export interface iAgentAccess {
-  /** Serves one agent, running in the folder, over newline-delimited JSON-RPC; resolves once connected. */
-  serve: (input: Readable, output: Writable, folder: string) => Promise<void>;
+  /** Serves one agent's session over newline-delimited JSON-RPC; resolves once connected. */
+  serve: (input: Readable, output: Writable, session: iAgentSession) => Promise<void>;
 }
 
 export interface iChaffCore {

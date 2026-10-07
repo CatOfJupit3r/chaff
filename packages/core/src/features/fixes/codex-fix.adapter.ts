@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { singleton } from 'tsyringe';
 
+import { codexMcpArgs } from '@~/features/agents/agent-mcp.utils';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 
 import type { iFixRunInput, iFixRunnerAdapter } from './fixes.types';
@@ -23,7 +24,7 @@ function describeItem(event: iCodexEvent) {
 /** `codex exec` in its workspace-write sandbox: it may change files in the checkout and nowhere else. */
 @singleton()
 export class CodexFixAdapter implements iFixRunnerAdapter {
-  public async run(command: string, { cwd, scratchDir, prompt, signal, onProgress }: iFixRunInput) {
+  public async run(command: string, { cwd, scratchDir, prompt, chaffServer, signal, onProgress }: iFixRunInput) {
     const answerPath = path.join(scratchDir, 'fix.answer.md');
     let failure: string | undefined;
 
@@ -34,6 +35,7 @@ export class CodexFixAdapter implements iFixRunnerAdapter {
       input: prompt,
       args: [
         'exec',
+        ...(chaffServer ? codexMcpArgs(chaffServer) : []),
         '--sandbox',
         'workspace-write',
         '--skip-git-repo-check',
