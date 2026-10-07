@@ -3,6 +3,7 @@ import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import type {
   AnchorMatch,
   DiffSide,
+  FindingAuthor,
   FindingEventSource,
   FindingKind,
   FindingScope,
@@ -15,6 +16,7 @@ import type {
   findingAnchorLocations,
   findingAnchors,
   findingEvents,
+  findingMessages,
   findingPosts,
   findingReplies,
   findings,
@@ -28,6 +30,7 @@ type FindingEventRow = typeof findingEvents.$inferSelect;
 type FindingPostRow = typeof findingPosts.$inferSelect;
 type FindingTaskRow = typeof findingTasks.$inferSelect;
 type FindingReplyRow = typeof findingReplies.$inferSelect;
+type FindingMessageRow = typeof findingMessages.$inferSelect;
 
 /** The finding restated as a task for a coding agent, apart from the comment. */
 export type iFindingTaskRecord = Omit<
@@ -85,6 +88,20 @@ export type iFindingReplyRecord = Omit<FindingReplyRow, 'id' | 'findingId'>;
 
 export type iNewFindingReply = Omit<FindingReplyRow, 'id'>;
 
+/** A message in the finding's discussion in Chaff. */
+export type iFindingMessageRecord = Omit<FindingMessageRow, 'findingId' | 'author'> & { author: FindingAuthor };
+
+export type iNewFindingMessage = Pick<FindingMessageRow, 'findingId' | 'snapshotId' | 'body'> & {
+  author: FindingAuthor;
+};
+
+/** A message for the finding's discussion, and the status it moves the finding to, if any. */
+export interface iReplyInput {
+  author: FindingAuthor;
+  body: string;
+  status?: FindingStatus;
+}
+
 /** Who moved a finding, and what they said about it. */
 export interface iStatusChange {
   answer?: string;
@@ -120,6 +137,8 @@ export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer' | 'se
   task?: iFindingTaskRecord;
   /** Answers on the host since it was posted, oldest first. */
   replies: iFindingReplyRecord[];
+  /** The discussion in Chaff, oldest first. */
+  messages: iFindingMessageRecord[];
   /** Branch of the review the finding was written in. */
   branch: string;
   parentBranch: string;

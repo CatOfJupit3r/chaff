@@ -1,11 +1,15 @@
 import { Link } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
 
+import { DiscussionSummary } from '@~/features/findings/components/discussion-summary';
 import { FindingBadges } from '@~/features/findings/components/finding-badges';
+import { FindingDiscussion } from '@~/features/findings/components/finding-discussion';
 import type { iFinding } from '@~/features/findings/findings.types';
 import { findingTitle } from '@~/features/findings/findings.utils';
 import { cn } from '@~/lib/utils';
+import { pluralize } from '@~/utils/pluralize';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
 import { primaryNoteLabel } from '../finding-placements.utils';
@@ -13,8 +17,9 @@ import type { iFindingPlacement } from '../line-notes.context';
 
 const OPEN_IN_FINDINGS_CLASS = 'rounded-sm px-1.5 py-0.5 text-[12px] text-muted hover:bg-hover hover:text-fg';
 
-/** A saved finding under the line it points at. */
+/** A saved finding under the line it points at; its discussion opens in place. */
 export function DiffFindingNote({ finding }: { finding: iFinding }) {
+  const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
   return (
     <div className="mx-4 my-2 max-w-[640px] rounded-md border border-line-strong bg-surface font-sans shadow-modal">
       <div className="flex flex-wrap items-center gap-2 px-3.5 pt-2.5 text-[12.5px] text-muted">
@@ -25,6 +30,14 @@ export function DiffFindingNote({ finding }: { finding: iFinding }) {
         </Link>
       </div>
       <p className="m-0 px-3.5 pt-1.5 pb-3 text-[13.5px] leading-normal whitespace-pre-wrap text-fg">{finding.body}</p>
+      <div className="border-t border-line px-3.5 py-2">
+        <DiscussionSummary
+          finding={finding}
+          isOpen={isDiscussionOpen}
+          onToggle={() => setIsDiscussionOpen(!isDiscussionOpen)}
+        />
+      </div>
+      {isDiscussionOpen ? <FindingDiscussion finding={finding} className="border-t border-line px-3.5 py-3" /> : null}
     </div>
   );
 }
@@ -37,6 +50,9 @@ export function DiffFindingPointer({ placement, fileId }: { placement: iFindingP
       <span className="flex-none font-mono">F-{finding.number}</span>
       <span className="flex-none text-fg">{FINDING_KIND_LABELS.get(finding.kind)}</span>
       <span className="min-w-[12ch] flex-1 truncate text-fg-soft">{findingTitle(finding)}</span>
+      {finding.messages.length > 0 ? (
+        <span className="flex-none">{pluralize(finding.messages.length, 'reply', 'replies')}</span>
+      ) : null}
       <span title={`${primary.path}:${primary.line}`} className="flex-none font-mono text-[11.5px] text-faint">
         Note at {primaryNoteLabel(primary, fileId)}
       </span>

@@ -13,6 +13,8 @@ import type { DiffSide, FindingScope, FindingSeverity, FindingStatus } from '@ch
 import { canSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
 
 import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { EventBus } from '@~/features/events/event-bus';
+import { FINDINGS_CHANGED } from '@~/features/events/finding-events';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import { lowerTargets, stackTargets } from '@~/features/reviews/review-targets/stack-targets.utils';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
@@ -33,6 +35,7 @@ import type {
   iFindingRecord,
   iListFindingsInput,
   iNewFindingAnchor,
+  iReplyInput,
 } from './findings.types';
 
 const MAX_FILE_BYTES = 5_000_000;
@@ -54,6 +57,7 @@ export class FindingsService {
     @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
     private readonly reviewsService: ReviewsService,
     private readonly snapshotStoreService: SnapshotStoreService,
+    private readonly eventBus: EventBus,
   ) {}
 
   public async list(input: iListFindingsInput) {
@@ -119,6 +123,30 @@ export class FindingsService {
     const updated = await this.findingRepository.setStatus(findingId, snapshotId, status, { answer });
     if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
     return updated;
+  }
+
+  /**
+   * Adds a message to the finding's discussion, recorded against the review's newest snapshot. A status given
+   * with it moves the finding in the same step, under the same rules as moving it by hand.
+   */
+  public async reply(findingId: string, { author, body, status }: iReplyInput) {
+    const finding = await this.getFinding(findingId);
+    if (status && !canSetFindingStatus(finding.kind, finding.status, status)) {
+      throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
+    }
+    const snapshotId = await this.latestSnapshotId(finding);
+    const updated = await this.findingRepository.addMessage(
+      { findingId, snapshotId, author, body },
+      status ? { status, change: { source: author } } : undefined,
+    );
+    if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
+    await this.eventBus.emit(FINDINGS_CHANGED, { findingIds: [findingId] });
+    return updated;
+  }
+
+  /** The ids of findings each time a reply or a coding agent's report changes them, until the signal aborts. */
+  public async *watch(signal: AbortSignal) {
+    yield* this.eventBus.stream(FINDINGS_CHANGED, signal);
   }
 
   /** Turns an active question into an open concern, keeping its comment and anchors. */

@@ -5,6 +5,7 @@ import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import {
   anchorMatchSchema,
   diffSideSchema,
+  findingAuthorSchema,
   findingEventSourceSchema,
   findingKindSchema,
   findingScopeSchema,
@@ -17,6 +18,7 @@ import type {
   findingAnchorLocations,
   findingAnchors,
   findingEvents,
+  findingMessages,
   findingPosts,
   findings,
   findingTasks,
@@ -27,6 +29,7 @@ import type {
   iAnchorLocationRecord,
   iFindingAnchorRecord,
   iFindingEventRecord,
+  iFindingMessageRecord,
   iFindingPostRecord,
   iFindingRecord,
   iFindingTaskRecord,
@@ -38,6 +41,7 @@ type LocationRow = typeof findingAnchorLocations.$inferSelect & { version: numbe
 type FindingEventRow = typeof findingEvents.$inferSelect;
 type FindingPostRow = typeof findingPosts.$inferSelect;
 type FindingTaskRow = typeof findingTasks.$inferSelect;
+type FindingMessageRow = typeof findingMessages.$inferSelect;
 
 @singleton()
 export class FindingResolver {
@@ -50,6 +54,11 @@ export class FindingResolver {
   public toLocationRecord = createRowResolver<LocationRow, iAnchorLocationRecord>({
     optional: ['fileId', 'unitId', 'startLine', 'endLine'],
     overrides: (row) => ({ match: anchorMatchSchema.parse(row.match) }),
+  });
+
+  public toMessageRecord = createRowResolver<FindingMessageRow, iFindingMessageRecord>({
+    omit: ['findingId'],
+    overrides: (row) => ({ author: findingAuthorSchema.parse(row.author) }),
   });
 
   public toEventRecord = createRowResolver<FindingEventRow, iFindingEventRecord>({

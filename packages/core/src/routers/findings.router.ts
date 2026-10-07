@@ -1,5 +1,7 @@
 import { container } from 'tsyringe';
 
+import { FINDING_AUTHORS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+
 import { AgentReportService } from '@~/features/findings/agent-report.service';
 import { FindingTasksService } from '@~/features/findings/finding-tasks.service';
 import { FindingsService } from '@~/features/findings/findings.service';
@@ -45,6 +47,18 @@ export const findingsRouter = base.findings.router({
   importReport: procedure.findings.importReport.handler(async ({ input }) =>
     container.resolve(AgentReportService).import(input.workspaceId, input.report),
   ),
+
+  reply: procedure.findings.reply.handler(async ({ input }) =>
+    container.resolve(FindingsService).reply(input.findingId, {
+      author: FINDING_AUTHORS.REVIEWER,
+      body: input.body,
+      status: input.shouldReopen ? FINDING_STATUSES.REOPENED : undefined,
+    }),
+  ),
+
+  watch: procedure.findings.watch.handler(async function* watchFindings({ signal }) {
+    yield* container.resolve(FindingsService).watch(signal ?? new AbortController().signal);
+  }),
 
   remove: procedure.findings.remove.handler(async ({ input }) => {
     await container.resolve(FindingsService).remove(input.findingId);

@@ -9,6 +9,7 @@ import {
   findingAnchorLocations,
   findingAnchors,
   findingEvents,
+  findingMessages,
   findingPosts,
   findingReplies,
   findings,
@@ -22,6 +23,7 @@ import { FindingResolver } from './finding.resolver';
 import type {
   iFindingTaskChange,
   iListFindingsInput,
+  iNewFindingMessage,
   iNewFindingReply,
   iNewAnchorLocation,
   iNewFinding,
@@ -96,14 +98,20 @@ export class DrizzleFindingRepository implements iFindingRepository {
   }
 
   public async setStatus(findingId: string, snapshotId: string, status: FindingStatus, change: iStatusChange = {}) {
-    const { answer, source, note, commits } = change;
     this.databaseService.getDb().transaction((transaction) => {
-      transaction
-        .update(findings)
-        .set(answer === undefined ? { status } : { status, answer })
-        .where(eq(findings.id, findingId))
-        .run();
-      transaction.insert(findingEvents).values({ findingId, snapshotId, status, source, note, commits }).run();
+      this.writeStatus(transaction, findingId, snapshotId, status, change);
+    });
+    return this.findById(findingId);
+  }
+
+  public async addMessage(
+    message: iNewFindingMessage,
+    statusChange?: { status: FindingStatus; change?: iStatusChange },
+  ) {
+    const { findingId, snapshotId } = message;
+    this.databaseService.getDb().transaction((transaction) => {
+      transaction.insert(findingMessages).values(message).run();
+      if (statusChange) this.writeStatus(transaction, findingId, snapshotId, statusChange.status, statusChange.change);
     });
     return this.findById(findingId);
   }
@@ -222,6 +230,22 @@ export class DrizzleFindingRepository implements iFindingRepository {
       .$dynamic();
   }
 
+  /** Sets the status and records the move; runs inside the caller's transaction. */
+  private writeStatus(
+    database: Pick<ReturnType<DatabaseService['getDb']>, 'insert' | 'update'>,
+    findingId: string,
+    snapshotId: string,
+    status: FindingStatus,
+    { answer, source, note, commits }: iStatusChange = {},
+  ) {
+    database
+      .update(findings)
+      .set(answer === undefined ? { status } : { status, answer })
+      .where(eq(findings.id, findingId))
+      .run();
+    database.insert(findingEvents).values({ findingId, snapshotId, status, source, note, commits }).run();
+  }
+
   private async withAnchors(rows: (typeof findings.$inferSelect & { branch: string; parentBranch: string })[]) {
     if (rows.length === 0) return [];
     const anchors = this.databaseService
@@ -283,8 +307,23 @@ export class DrizzleFindingRepository implements iFindingRepository {
       )
       .orderBy(asc(findingReplies.createdAt))
       .all();
+    const messages = this.databaseService
+      .getDb()
+      .select()
+      .from(findingMessages)
+      .where(
+        inArray(
+          findingMessages.findingId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(findingMessages.createdAt), sql`rowid`)
+      .all();
     return rows.map((row) => ({
       ...this.findingResolver.toFindingRecord(row),
+      messages: messages
+        .filter((message) => message.findingId === row.id)
+        .map((message) => this.findingResolver.toMessageRecord(message)),
       replies: replies
         .filter((reply) => reply.findingId === row.id)
         .map(({ id: _id, findingId: _findingId, ...reply }) => reply),

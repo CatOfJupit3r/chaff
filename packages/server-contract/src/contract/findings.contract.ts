@@ -1,4 +1,4 @@
-import { oc } from '@orpc/contract';
+import { eventIterator, oc } from '@orpc/contract';
 import z from 'zod';
 
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
@@ -7,6 +7,7 @@ import { reportSkipReasonSchema } from '@chaff/common/enums/export.enums';
 import {
   anchorMatchSchema,
   diffSideSchema,
+  findingAuthorSchema,
   findingEventSourceSchema,
   findingKindSchema,
   findingScopeSchema,
@@ -20,6 +21,7 @@ const MAX_BODY_LENGTH = 20_000;
 const MAX_ANCHORS = 50;
 const MAX_REPORT_LENGTH = 1_000_000;
 const MAX_TASK_LENGTH = 2000;
+const MAX_MESSAGE_LENGTH = 20_000;
 
 const lineSchema = z.number().int().nonnegative();
 
@@ -43,6 +45,16 @@ export const findingEventSchema = z.object({
   /** What a coding agent said it did, from its report. */
   note: z.string().optional(),
   commits: z.array(z.string()).optional(),
+  snapshotId: z.string(),
+  createdAt: z.date(),
+});
+
+/** A message in the finding's discussion in Chaff. */
+export const findingMessageSchema = z.object({
+  id: z.string(),
+  author: findingAuthorSchema,
+  body: z.string(),
+  /** The review's newest snapshot when it was written. */
   snapshotId: z.string(),
   createdAt: z.date(),
 });
@@ -132,6 +144,8 @@ export const findingSchema = z.object({
   task: findingTaskSchema.optional(),
   /** Answers on the host since it was posted, oldest first. */
   replies: z.array(findingReplySchema),
+  /** The discussion in Chaff, oldest first. */
+  messages: z.array(findingMessageSchema),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
@@ -280,6 +294,29 @@ export const findingsContract = oc.router({
     })
     .input(z.object({ workspaceId: idSchema, report: z.string().min(1).max(MAX_REPORT_LENGTH) }))
     .output(reportResultSchema),
+
+  reply: oc
+    .route({
+      summary: 'Reply on a finding',
+      description:
+        "Adds the reviewer's message to the finding's discussion. With shouldReopen it also reopens the finding, where reopening is allowed; otherwise the status stays.",
+    })
+    .input(
+      z.object({
+        findingId: idSchema,
+        body: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+        shouldReopen: z.boolean().default(false),
+      }),
+    )
+    .output(findingSchema),
+
+  watch: oc
+    .route({
+      summary: 'Watch findings',
+      description:
+        'Sends the ids of findings each time a reply or a coding agent changes them, so they can be read again.',
+    })
+    .output(eventIterator(z.object({ findingIds: z.array(z.string()) }))),
 
   remove: oc
     .route({
