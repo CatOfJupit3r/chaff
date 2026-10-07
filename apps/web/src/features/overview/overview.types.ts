@@ -1,11 +1,14 @@
-import type { iChangeRequestInfo, iInboxProject, iRemoteChange } from '@~/features/code-hosts/code-hosts.types';
+import type { iChangeRequestInfo, iRemoteChange } from '@~/features/code-hosts/code-hosts.types';
 import type { iReviewTarget } from '@~/features/reviews/reviews.types';
-import type { iBranch, iLocalStack, iWorkspace } from '@~/features/workspaces/workspaces.types';
+import type { iStack, iStackMember } from '@~/features/stacks/stacks.types';
+import type { iBranch, iWorkspace } from '@~/features/workspaces/workspaces.types';
 
 export interface iOverviewBranch {
   name: string;
   title: string;
+  /** Branch it merges into in its stack; unset until the stack's base is chosen. */
   parent?: string;
+  member: iStackMember;
   local?: iBranch;
   change?: iChangeRequestInfo;
   remote?: iRemoteChange;
@@ -16,20 +19,22 @@ export interface iOverviewBranch {
 export interface iOverviewStack {
   id: string;
   title: string;
-  /** Branch nothing else in the stack builds on; it names the stack when the stack is hidden. */
+  /** Branch nothing else in the stack builds on. */
   tipBranch: string;
   workspace: iWorkspace;
   base?: string;
+  /** Bottom first. */
   branches: iOverviewBranch[];
-  hasCycle: boolean;
+  isHidden: boolean;
+  stack: iStack;
 }
 
 export type iStackFilters = iWorkspace['stackFilters'];
 
 export interface iOverviewSources {
-  workspaces: readonly iWorkspace[];
-  localStacks: readonly iLocalStack[];
-  projects: readonly iInboxProject[];
+  workspace: iWorkspace;
+  stacks: readonly iStack[];
+  branches: readonly iBranch[];
   targets: readonly iReviewTarget[];
 }
 

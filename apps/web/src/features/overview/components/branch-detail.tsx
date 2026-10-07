@@ -10,6 +10,7 @@ import { MarkdownTitle } from '@~/components/markdown/markdown-title';
 import { Button } from '@~/components/ui/button';
 import { changeLabel } from '@~/features/code-hosts/code-hosts.utils';
 import { useOpenLink } from '@~/features/code-hosts/hooks/use-open-link';
+import { useStackActions } from '@~/features/stacks/hooks/use-stack-actions';
 import { pluralize } from '@~/utils/pluralize';
 
 import { useOverviewActions } from '../hooks/use-overview-actions';
@@ -18,6 +19,7 @@ import { OverviewDiscussions } from './overview-discussions';
 
 export function BranchDetail({ stack, branch }: Pick<iStackNavigation, 'stack' | 'branch'>) {
   const actions = useOverviewActions(stack, branch);
+  const { removeBranch } = useStackActions();
   const openLink = useOpenLink();
   const snapshot = branch.target?.latestSnapshot;
   let percentage = 0;
@@ -57,27 +59,42 @@ export function BranchDetail({ stack, branch }: Pick<iStackNavigation, 'stack' |
                 'Local branch'
               )}
             </dd>
-            <dt className="text-muted">Compared against</dt>
-            <dd className="m-0 font-mono text-xs wrap-anywhere">
-              {branch.target?.parentBranch ?? branch.parent ?? 'Choose a parent in Stack'}
+            <dt className="text-muted">Merges into</dt>
+            <dd className="m-0 min-w-0">
+              {branch.parent ? (
+                <span className="font-mono text-xs wrap-anywhere">{branch.parent}</span>
+              ) : (
+                <span className="text-muted">Not chosen yet: add the branch below it.</span>
+              )}
             </dd>
           </dl>
           {branch.remote?.isDraft ? <p className="text-sm text-muted">Draft merge request</p> : null}
           {branch.local?.hasWorkingChanges ? (
             <p className="text-sm text-warn">This branch has uncommitted changes.</p>
           ) : null}
-          {branch.local?.isParentMoved ? (
+          {branch.member.isMissing ? (
+            <p className="text-sm text-warn">This branch is no longer in the repository, locally or on a remote.</p>
+          ) : null}
+          {branch.member.isParentMoved ? (
             <p className="text-sm text-warn">The parent branch has moved since this branch was based on it.</p>
           ) : null}
-          {branch.local ? (
+          <div className="mt-4 flex flex-wrap items-center gap-4">
             <Link
               to="/stack"
-              search={{ workspace: stack.workspace.id, branch: branch.name }}
-              className="mt-4 inline-block text-sm text-accent hover:underline"
+              search={{ workspace: stack.workspace.id, stack: stack.id, branch: branch.name }}
+              className="text-sm text-accent hover:underline"
             >
               Open stack tools
             </Link>
-          ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={removeBranch.isPending}
+              onClick={() => removeBranch.mutate({ stackId: stack.id, branch: branch.name })}
+            >
+              Remove from stack
+            </Button>
+          </div>
         </div>
         <div className="min-w-0 xl:border-l xl:border-line xl:pl-8">
           <h3 className="m-0 text-base font-semibold">Review progress</h3>

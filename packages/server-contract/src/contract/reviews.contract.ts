@@ -251,15 +251,6 @@ export const reviewsContract = oc.router({
     )
     .output(z.object({ targetId: z.string(), snapshotId: z.string() })),
 
-  setParent: oc
-    .route({
-      summary: "Confirm or change a branch's parent",
-      description:
-        'Stores the branch the review compares this branch with. Snapshots already taken stay as they are; the next update uses the new parent.',
-    })
-    .input(z.object({ workspaceId: idSchema, branch: branchNameSchema, parentBranch: branchNameSchema }))
-    .output(z.object({ targetId: z.string(), branch: z.string(), parentBranch: z.string() })),
-
   refresh: oc
     .route({
       summary: 'Update a review to the newest commits',

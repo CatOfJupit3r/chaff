@@ -2,11 +2,10 @@ import { singleton } from 'tsyringe';
 
 import { BranchRefsService } from '@~/features/git/branch-refs.service';
 import type { iBranchRefRow } from '@~/features/git/branch-refs.service';
-import { REMOTE_BRANCH_PREFIX } from '@~/features/git/branch-refs.utils';
 import { GitService } from '@~/features/git/git.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 
-import type { iGitBranch } from './workspaces.types';
+import type { iBranchLink, iBranchLinkStatus, iGitBranch, iNearbyBranch } from './workspaces.types';
 
 const BRANCH_FIELDS = [
   '%(objectname)',
@@ -15,12 +14,10 @@ const BRANCH_FIELDS = [
   '%(authorname)',
   '%(contents:subject)',
 ];
-/** How far back the history is searched for other branches' tips. */
-const PARENT_SEARCH_DEPTH = 2000;
-/** Commits of the stacks, beyond the default branch, searched for remote-only branches' tips. */
-const STACK_SEARCH_DEPTH = 20000;
-/** Branch tips found nearest in the history that are compared as possible parents. */
-const MAX_PARENT_CANDIDATES = 8;
+/** How far back a branch's history is searched for other branches' tips. */
+const HISTORY_SEARCH_DEPTH = 2000;
+/** Branch tips found nearest in the history that are counted as candidates. */
+const MAX_HISTORY_CANDIDATES = 8;
 const GIT_CONCURRENCY = 8;
 
 interface iRawBranch {
@@ -36,27 +33,16 @@ interface iRawBranch {
 }
 
 interface iListBranchesOptions {
-  /** The parent suggested last time for each branch. */
-  knownParents?: ReadonlyMap<string, string>;
-  /** Branches listed whenever they exist, such as the ones under review and their parents. */
-  reviewedNames?: ReadonlySet<string>;
-  /** Lists every remote-only branch the default branch hasn't merged, not only those of the local stacks. */
-  shouldIncludeRemoteBranches?: boolean;
+  /** Branches listed whenever they exist, such as the branches of stacks. */
+  keptNames?: ReadonlySet<string>;
   /** Emails, besides the repository's git user, whose commits count as the user's own. */
   authorEmails?: readonly string[];
-  /** Target branch of each branch's open merge or pull request, which is that branch's parent. */
-  changeParents?: ReadonlyMap<string, string>;
 }
 
-interface iStackMemberOptions extends Pick<iListBranchesOptions, 'shouldIncludeRemoteBranches'> {
+interface iNearbyOptions {
   defaultBranch: string | undefined;
-  reviewedNames: ReadonlySet<string>;
-  changeParents: ReadonlyMap<string, string>;
-}
-
-interface iParentSuggestion {
-  parent?: string;
-  commitsAhead: number;
+  /** Most branches returned. */
+  limit: number;
 }
 
 function toRawBranch({ name, ref, remote, fields }: iBranchRefRow): iRawBranch {
@@ -73,31 +59,20 @@ function toRawBranch({ name, ref, remote, fields }: iBranchRefRow): iRawBranch {
   };
 }
 
-interface iSuggestionContext {
-  /** Branch names by the commit at their tip. */
-  tips: ReadonlyMap<string, string[]>;
-  /** Tips already merged into the default branch or its upstream; such branches have landed and parent nothing. */
-  mergedTips: ReadonlySet<string>;
-  /** Full ref name of each branch by its name. */
-  refs: ReadonlyMap<string, string>;
-  defaultBranch: string | undefined;
-  knownParent: string | undefined;
-}
-
-function upstreamMatches(branch: iRawBranch, candidate: string) {
-  return branch.upstream === candidate || branch.upstream?.endsWith(`/${candidate}`) === true;
-}
-
-function isRemoteRef(refs: ReadonlyMap<string, string>, name: string) {
-  return refs.get(name)?.startsWith(REMOTE_BRANCH_PREFIX) === true;
+/** Nearest first; at the same distance the default branch, then local branches, then alphabetical order. */
+function byDistance(defaultBranch: string | undefined) {
+  return (left: iNearbyBranch, right: iNearbyBranch) =>
+    left.commitsApart - right.commitsApart ||
+    Number(right.name === defaultBranch) - Number(left.name === defaultBranch) ||
+    Number(left.remote !== undefined) - Number(right.remote !== undefined) ||
+    left.name.localeCompare(right.name);
 }
 
 /**
- * Reads branches straight from the user's repository and suggests a parent for each: the target branch of its
- * open merge or pull request when it has one, else the nearest branch below it in the history. Local branches
- * are all listed; a remote-tracking branch with no local branch of its name is listed when it belongs to a
- * local branch's stack or is a listed branch's change target, or, when remote branches are included, whenever
- * the default branch hasn't merged it.
+ * Reads branches straight from the user's repository. Local branches are all listed; a remote-tracking branch
+ * with no local branch of its name is listed while the default branch hasn't merged it, or when it is kept.
+ * Nothing is guessed about how branches stack: the nearest branches below or above one branch are read only
+ * when asked for.
  */
 @singleton()
 export class BranchesService {
@@ -109,56 +84,35 @@ export class BranchesService {
   public async listBranches(
     repoPath: string,
     defaultBranch: string | undefined,
-    {
-      knownParents = new Map(),
-      reviewedNames = new Set(),
-      shouldIncludeRemoteBranches,
-      authorEmails = [],
-      changeParents = new Map(),
-    }: iListBranchesOptions = {},
+    { keptNames = new Set(), authorEmails = [] }: iListBranchesOptions = {},
   ): Promise<iGitBranch[]> {
-    const all = (await this.branchRefsService.list(repoPath, BRANCH_FIELDS)).map(toRawBranch);
-    const branches = await this.stackMembers(repoPath, all, {
-      defaultBranch,
-      reviewedNames,
-      shouldIncludeRemoteBranches,
-      changeParents,
-    });
-
-    const tips = new Map<string, string[]>();
-    for (const branch of branches) {
-      tips.set(branch.headSha, [...(tips.get(branch.headSha) ?? []), branch.name]);
-    }
-    const refs = new Map(branches.map((branch) => [branch.name, branch.ref]));
+    const all = await this.readBranches(repoPath);
     const integrationRefs = await this.integrationRefs(
       repoPath,
-      branches.find((branch) => branch.name === defaultBranch),
+      all.find((branch) => branch.name === defaultBranch),
     );
     const [mergedTips, authorPatterns] = await Promise.all([
       this.mergedTips(repoPath, integrationRefs),
       this.authorPatterns(repoPath, authorEmails),
     ]);
-
-    const suggestions = await mapWithConcurrency(branches, GIT_CONCURRENCY, async (branch) => {
-      if (branch.name === defaultBranch) return { commitsAhead: 0, isAuthoredByUser: false };
-      const context = { tips, mergedTips, refs, defaultBranch, knownParent: knownParents.get(branch.name) };
-      const changeParent = changeParents.get(branch.name);
-      const suggestion =
-        changeParent === undefined
-          ? await this.suggestParent(repoPath, branch, context)
-          : await this.changeParentSuggestion(repoPath, branch, changeParent, context);
-      const isAuthoredByUser =
-        suggestion.commitsAhead > 0 && (await this.hasUserCommits(repoPath, branch, authorPatterns, integrationRefs));
-      return { ...suggestion, isAuthoredByUser };
+    const branches = all.filter(
+      (branch) =>
+        branch.remote === undefined ||
+        branch.name === defaultBranch ||
+        keptNames.has(branch.name) ||
+        !mergedTips.has(branch.headSha),
+    );
+    const authored = await mapWithConcurrency(branches, GIT_CONCURRENCY, async (branch) => {
+      const isRead = branch.remote === undefined || keptNames.has(branch.name);
+      if (!isRead || branch.name === defaultBranch || mergedTips.has(branch.headSha)) return false;
+      return this.hasUserCommits(repoPath, branch, authorPatterns, integrationRefs);
     });
 
     return branches
       .map(({ ref: _ref, ...branch }, index) => ({
         ...branch,
         isDefault: branch.name === defaultBranch,
-        suggestedParent: suggestions[index]?.parent,
-        commitsAhead: suggestions[index]?.commitsAhead ?? 0,
-        isAuthoredByUser: suggestions[index]?.isAuthoredByUser ?? false,
+        isAuthoredByUser: authored[index] ?? false,
       }))
       .sort(
         (left, right) =>
@@ -167,187 +121,98 @@ export class BranchesService {
   }
 
   /**
-   * Every local branch, plus the remote-only branches of the stacks: those whose tip is in a stack branch's
-   * history but not on the default branch (the branches below it), and those that build on a stack branch or
-   * on one of those (the branches above it). Stacks start from the local branches, and also from every
-   * remote-only branch when remote branches are included. Remote branches merged into the default branch, or
-   * unrelated to any stack, are left out, so a repository with many of them stays quick to read. The default
-   * branch, the reviewed branches and the members' change targets are kept even when they only exist on a remote.
+   * Branches whose tip is in the branch's history, nearest first, with the commits the branch has beyond each, and
+   * the default branch last. Branches the default branch already merged are left out.
    */
-  private async stackMembers(
-    repoPath: string,
-    all: readonly iRawBranch[],
-    { defaultBranch, reviewedNames, shouldIncludeRemoteBranches, changeParents }: iStackMemberOptions,
-  ) {
-    const isKept = (branch: iRawBranch) =>
-      branch.remote === undefined || branch.name === defaultBranch || reviewedNames.has(branch.name);
-    const kept = all.filter(isKept);
-    const remoteOnly = all.filter((branch) => !isKept(branch));
-    const defaultRef = all.find((branch) => branch.name === defaultBranch);
-    const stackStarts = all.filter(
-      (branch) => branch.name !== defaultBranch && (branch.remote === undefined || shouldIncludeRemoteBranches),
-    );
-    const startTips = [...new Set(stackStarts.map((branch) => branch.headSha))];
-    if (remoteOnly.length === 0 || startTips.length === 0) return this.withChangeTargets(kept, all, changeParents);
-
-    const history = await this.gitService.output(repoPath, [
-      'rev-list',
-      `--max-count=${STACK_SEARCH_DEPTH}`,
-      ...startTips,
-      ...(defaultRef ? [`^${defaultRef.ref}`] : []),
-      '--',
-    ]);
-    const stackCommits = new Set(history.split('\n').filter(Boolean));
-    const below = remoteOnly.filter((branch) => stackCommits.has(branch.headSha));
-    const memberTips = [...new Set([...startTips, ...below.map((branch) => branch.headSha)])].filter((sha) =>
-      stackCommits.has(sha),
-    );
-    const above =
-      memberTips.length === 0
-        ? new Set<string>()
-        : new Set(
-            (
-              await this.gitService.output(repoPath, [
-                'for-each-ref',
-                '--format=%(refname)',
-                ...memberTips.flatMap((sha) => ['--contains', sha]),
-                'refs/remotes',
-              ])
-            ).split('\n'),
-          );
-    return this.withChangeTargets(
-      [...kept, ...remoteOnly.filter((branch) => stackCommits.has(branch.headSha) || above.has(branch.ref))],
-      all,
-      changeParents,
-    );
-  }
-
-  /** The members, plus the target branch of each one's open change, and of theirs, when it is in the repository. */
-  private withChangeTargets(
-    members: readonly iRawBranch[],
-    all: readonly iRawBranch[],
-    changeParents: ReadonlyMap<string, string>,
-  ) {
-    const byName = new Map(all.map((branch) => [branch.name, branch]));
-    const listed = new Map(members.map((branch) => [branch.name, branch]));
-    let pending = [...listed.keys()];
-    while (pending.length > 0) {
-      const added = pending.flatMap((name) => {
-        const target = byName.get(changeParents.get(name) ?? '');
-        if (!target || listed.has(target.name)) return [];
-        listed.set(target.name, target);
-        return [target.name];
-      });
-      pending = added;
-    }
-    return [...listed.values()];
-  }
-
-  /**
-   * A branch with an open change stacks on the change's target branch. Its commits are counted from that
-   * branch, or, when the repository doesn't have it, the way the history suggests.
-   */
-  private async changeParentSuggestion(
-    repoPath: string,
-    branch: iRawBranch,
-    parent: string,
-    context: iSuggestionContext,
-  ): Promise<iParentSuggestion> {
-    const parentRef = context.refs.get(parent);
-    if (parentRef) return { parent, commitsAhead: await this.countCommits(repoPath, parentRef, branch.headSha) };
-    return { ...(await this.suggestParent(repoPath, branch, context)), parent };
-  }
-
-  /**
-   * Walks the branch's history (merged-in commits included) for other branches' tips and suggests the
-   * one with the fewest commits between it and this branch, so a branch that merged newer commits of
-   * its parent, or of the default branch, still stacks on its parent. Ties go to the branch's upstream,
-   * then the default branch, then local branches over remote-only ones, then alphabetical order. At the
-   * branch's own tip, another branch only qualifies if it is the default branch or sorts before this one,
-   * which keeps two branches on the same commit from suggesting each other. The parent suggested last time
-   * wins ties, and stays the parent after it gets commits this branch doesn't have, as long as this branch
-   * still holds commits of its own (beyond the default branch) and no other branch is nearer. Branches already
-   * merged into the default branch are skipped, so long-merged branches never chain into one giant stack.
-   */
-  private async suggestParent(
-    repoPath: string,
-    branch: iRawBranch,
-    { tips, mergedTips, refs, defaultBranch, knownParent }: iSuggestionContext,
-  ): Promise<iParentSuggestion> {
-    const history = await this.gitService.output(repoPath, [
-      'rev-list',
-      '--topo-order',
-      `--max-count=${PARENT_SEARCH_DEPTH}`,
-      branch.headSha,
+  public async branchesBelow(repoPath: string, name: string, { defaultBranch, limit }: iNearbyOptions) {
+    const all = await this.readBranches(repoPath);
+    const branch = all.find((candidate) => candidate.name === name);
+    if (!branch) return [];
+    const defaultRow = all.find((candidate) => candidate.name === defaultBranch);
+    const [history, mergedTips] = await Promise.all([
+      this.gitService.output(repoPath, [
+        'rev-list',
+        '--topo-order',
+        `--max-count=${HISTORY_SEARCH_DEPTH}`,
+        branch.headSha,
+      ]),
+      this.mergedTips(repoPath, await this.integrationRefs(repoPath, defaultRow)),
     ]);
     const shas = history.split('\n').filter((sha) => sha.length > 0);
-
-    const candidates = shas
-      .flatMap((sha, index) =>
-        (tips.get(sha) ?? [])
-          .filter(
-            (name) =>
-              name !== branch.name &&
-              (name === defaultBranch || !mergedTips.has(sha)) &&
-              (index > 0 || name === defaultBranch || name < branch.name),
-          )
-          .map((name) => ({ name, sha })),
+    const historyIndex = new Map(shas.map((sha, index) => [sha, index]));
+    const candidates = all
+      .filter(
+        (candidate) =>
+          candidate.name !== name &&
+          candidate.name !== defaultBranch &&
+          historyIndex.has(candidate.headSha) &&
+          !mergedTips.has(candidate.headSha),
       )
-      .slice(0, MAX_PARENT_CANDIDATES);
-
-    const ranked: { name: string; commitsAhead: number }[] = [];
-    for (const { name, sha } of candidates) {
-      ranked.push({ name, commitsAhead: await this.countCommits(repoPath, sha, branch.headSha) });
-    }
-    const moved = knownParent && !candidates.some(({ name }) => name === knownParent);
-    const movedParent = moved
-      ? await this.movedParent(repoPath, branch, knownParent, { refs, defaultBranch })
-      : undefined;
-    if (movedParent) ranked.push(movedParent);
-    if (ranked.length > 0) {
-      const [parent] = ranked.sort(
-        (left, right) =>
-          left.commitsAhead - right.commitsAhead ||
-          Number(right.name === knownParent) - Number(left.name === knownParent) ||
-          Number(upstreamMatches(branch, right.name)) - Number(upstreamMatches(branch, left.name)) ||
-          Number(right.name === defaultBranch) - Number(left.name === defaultBranch) ||
-          Number(isRemoteRef(refs, left.name)) - Number(isRemoteRef(refs, right.name)) ||
-          left.name.localeCompare(right.name),
-      );
-      if (parent) return { parent: parent.name, commitsAhead: parent.commitsAhead };
-    }
-
-    if (!defaultBranch) return { commitsAhead: shas.length };
-    const { stdout, exitCode } = await this.gitService.run(
-      repoPath,
-      ['rev-list', '--count', `${refs.get(defaultBranch) ?? defaultBranch}..${branch.headSha}`],
-      { allowFailure: true },
+      .sort((left, right) => (historyIndex.get(left.headSha) ?? 0) - (historyIndex.get(right.headSha) ?? 0))
+      .slice(0, MAX_HISTORY_CANDIDATES);
+    const nearby = await mapWithConcurrency(candidates, GIT_CONCURRENCY, async (candidate) =>
+      this.toNearby(candidate, await this.countCommits(repoPath, candidate.headSha, branch.headSha)),
     );
-    return { parent: defaultBranch, commitsAhead: exitCode === 0 ? Number(stdout.trim()) : shas.length };
+    const nearest = nearby.sort(byDistance(defaultBranch)).slice(0, limit);
+    if (!defaultRow) return nearest;
+    return [...nearest, this.toNearby(defaultRow, await this.countCommits(repoPath, defaultRow.ref, branch.headSha))];
   }
 
-  /** The parent from last time, counted from where this branch left it, when the branch still builds on it. */
-  private async movedParent(
+  /** Branches that contain the branch's tip, nearest first, with the commits each has beyond it; never the default branch. */
+  public async branchesAbove(repoPath: string, name: string, { defaultBranch, limit }: iNearbyOptions) {
+    const all = await this.readBranches(repoPath);
+    const branch = all.find((candidate) => candidate.name === name);
+    if (!branch) return [];
+    const containing = new Set(
+      (
+        await this.gitService.output(repoPath, [
+          'for-each-ref',
+          '--format=%(refname)',
+          '--contains',
+          branch.headSha,
+          'refs/heads',
+          'refs/remotes',
+        ])
+      ).split('\n'),
+    );
+    const candidates = all.filter(
+      (candidate) => candidate.name !== name && candidate.name !== defaultBranch && containing.has(candidate.ref),
+    );
+    const nearby = await mapWithConcurrency(candidates, GIT_CONCURRENCY, async (candidate) =>
+      this.toNearby(candidate, await this.countCommits(repoPath, branch.headSha, candidate.headSha)),
+    );
+    return nearby.sort(byDistance(defaultBranch)).slice(0, limit);
+  }
+
+  /**
+   * How each branch sits on the branch it merges into: the commits it has beyond it, and whether that branch,
+   * other than the default branch, moved on with commits the branch doesn't contain.
+   */
+  public async describeLinks(
     repoPath: string,
-    branch: iRawBranch,
-    parent: string,
-    { refs, defaultBranch }: Pick<iSuggestionContext, 'refs' | 'defaultBranch'>,
-  ): Promise<{ name: string; commitsAhead: number } | undefined> {
-    const parentRef = refs.get(parent);
-    if (parent === defaultBranch || !parentRef) return undefined;
-    const forkPoint = await this.gitService.run(repoPath, ['merge-base', parentRef, branch.headSha], {
-      allowFailure: true,
+    links: readonly iBranchLink[],
+    defaultBranch: string | undefined,
+  ): Promise<iBranchLinkStatus[]> {
+    const tips = new Map((await this.readBranches(repoPath)).map((branch) => [branch.name, branch.headSha]));
+    return mapWithConcurrency(links, GIT_CONCURRENCY, async ({ branch, parent }) => {
+      const sha = tips.get(branch);
+      const parentSha = parent ? tips.get(parent) : undefined;
+      if (!sha) return { branch, commitsAhead: 0, isParentMoved: false, isMissing: true };
+      if (!parentSha) return { branch, commitsAhead: 0, isParentMoved: false, isMissing: false };
+      const [commitsAhead, isContained] = await Promise.all([
+        this.countCommits(repoPath, parentSha, sha),
+        this.isAncestor(repoPath, parentSha, sha),
+      ]);
+      return { branch, commitsAhead, isParentMoved: parent !== defaultBranch && !isContained, isMissing: false };
     });
-    const forkSha = forkPoint.stdout.trim();
-    if (forkPoint.exitCode !== 0 || !forkSha) return undefined;
-    const defaultRef = defaultBranch ? refs.get(defaultBranch) : undefined;
-    if (defaultRef) {
-      const onDefault = await this.gitService.run(repoPath, ['merge-base', '--is-ancestor', forkSha, defaultRef], {
-        allowFailure: true,
-      });
-      if (onDefault.exitCode === 0) return undefined;
-    }
-    return { name: parent, commitsAhead: await this.countCommits(repoPath, forkSha, branch.headSha) };
+  }
+
+  private async readBranches(repoPath: string) {
+    return (await this.branchRefsService.list(repoPath, BRANCH_FIELDS)).map(toRawBranch);
+  }
+
+  private toNearby(branch: iRawBranch, commitsApart: number): iNearbyBranch {
+    return { name: branch.name, remote: branch.remote, commitsApart };
   }
 
   /** The default branch and its upstream when that still exists: every finished branch is merged into one of them. */
@@ -410,6 +275,16 @@ export class BranchesService {
   }
 
   private async countCommits(repoPath: string, from: string, to: string) {
-    return Number(await this.gitService.output(repoPath, ['rev-list', '--count', `${from}..${to}`]));
+    const { stdout, exitCode } = await this.gitService.run(repoPath, ['rev-list', '--count', `${from}..${to}`], {
+      allowFailure: true,
+    });
+    return exitCode === 0 ? Number(stdout.trim()) : 0;
+  }
+
+  private async isAncestor(repoPath: string, ancestor: string, sha: string) {
+    const { exitCode } = await this.gitService.run(repoPath, ['merge-base', '--is-ancestor', ancestor, sha], {
+      allowFailure: true,
+    });
+    return exitCode !== 1;
   }
 }

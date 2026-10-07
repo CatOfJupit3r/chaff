@@ -38,7 +38,6 @@ import type {
   iReviewTargetResponse,
   iSnapshotLiveStatus,
   iSnapshotResponse,
-  iSetParentInput,
   iSnapshotSummary,
   iStartReviewInput,
 } from './reviews.types';
@@ -171,46 +170,6 @@ export class ReviewsService {
 
       const snapshot = await this.capture(workspace, target);
       return { targetId: target.id, snapshotId: snapshot.id, isNew: true };
-    });
-  }
-
-  /**
-   * Confirms or changes the parent a branch is reviewed against. A review already started keeps its
-   * snapshots; the next update compares the branch with the new parent.
-   */
-  public async setParent(input: iSetParentInput) {
-    if (input.branch === input.parentBranch) throw ORPCBadRequestError(errorCodes.INVALID_PARENT_BRANCH);
-    const workspace = await this.workspacesService.getRecord(input.workspaceId);
-    for (const name of [input.branch, input.parentBranch]) {
-      if (!(await this.snapshotStoreService.resolveBranch(workspace.repoPath, name))) {
-        throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
-      }
-    }
-
-    const targets = await this.reviewTargetRepository.list(workspace.id);
-    const parents = new Map(
-      targets
-        .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
-        .map((target) => [target.branch, target.parentBranch]),
-    );
-    const visited = new Set<string>();
-    for (let current: string | undefined = input.parentBranch; current; current = parents.get(current)) {
-      if (current === input.branch) throw ORPCBadRequestError(errorCodes.PARENT_CYCLE);
-      if (visited.has(current)) break;
-      visited.add(current);
-    }
-
-    return this.captureMutex.run(this.captureKey(workspace.id, input.branch), async () => {
-      const existing = await this.reviewTargetRepository.findByBranch(
-        workspace.id,
-        input.branch,
-        REVIEW_TARGET_KINDS.BRANCH,
-      );
-      const target = existing
-        ? await this.reviewTargetRepository.updateParent(existing.id, input.parentBranch)
-        : await this.reviewTargetRepository.create({ ...input, kind: REVIEW_TARGET_KINDS.BRANCH });
-      if (!target) throw ORPCNotFoundError(errorCodes.REVIEW_TARGET_NOT_FOUND);
-      return { targetId: target.id, branch: target.branch, parentBranch: target.parentBranch };
     });
   }
 

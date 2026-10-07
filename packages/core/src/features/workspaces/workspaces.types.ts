@@ -1,5 +1,3 @@
-import type { BranchParentSource } from '@chaff/common/enums/branch-parent.enums';
-
 import type { workspaces } from '@~/db/schema/workspaces.schema';
 
 type WorkspaceRow = typeof workspaces.$inferSelect;
@@ -10,7 +8,7 @@ export type iWorkspaceRecord = Omit<WorkspaceRow, 'defaultBranch'> & {
 
 export type iNewWorkspace = Pick<typeof workspaces.$inferInsert, 'name' | 'repoPath' | 'defaultBranch'>;
 
-export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt' | 'knownParents'> & {
+export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt'> & {
   isAvailable: boolean;
 };
 
@@ -24,28 +22,15 @@ export interface iBranchResponse {
   /** Remote the branch is read from when it has no local branch, such as `origin`. */
   remote?: string;
   isDefault: boolean;
-  suggestedParent?: string;
-  commitsAhead: number;
   isAuthoredByUser: boolean;
-  parent?: string;
-  parentSource: BranchParentSource;
-  isParentMoved: boolean;
   worktreePath?: string;
   hasWorkingChanges: boolean;
 }
 
-/** A branch as read from git, before Chaff adds its confirmed parent and working-changes state. */
-export type iGitBranch = Omit<
-  iBranchResponse,
-  'parent' | 'parentSource' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
->;
+/** A branch as read from git, before Chaff adds its worktree and working-changes state. */
+export type iGitBranch = Omit<iBranchResponse, 'worktreePath' | 'hasWorkingChanges'>;
 
-/** How a repository's stack list is shown: hidden stacks, filters and whether remote branches are listed. */
-export type iStackView = Partial<
-  Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters' | 'shouldIncludeRemoteBranches'>
->;
-
-export type iStackViewInput = iStackView & {
+export type iStackViewInput = Pick<iWorkspaceRecord, 'stackFilters'> & {
   workspaceId: string;
 };
 
@@ -53,4 +38,24 @@ export interface iBranchStatInput {
   workspaceId: string;
   branch: string;
   parentBranch: string;
+}
+
+/** A branch and the branch it merges into, when that is known. */
+export interface iBranchLink {
+  branch: string;
+  parent?: string;
+}
+
+export interface iBranchLinkStatus {
+  branch: string;
+  commitsAhead: number;
+  isParentMoved: boolean;
+  isMissing: boolean;
+}
+
+/** A branch near another one in the history, and the commits between their tips. */
+export interface iNearbyBranch {
+  name: string;
+  remote?: string;
+  commitsApart: number;
 }

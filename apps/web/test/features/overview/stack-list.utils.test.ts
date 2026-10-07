@@ -9,6 +9,7 @@ import type { iOverviewStack } from '@~/features/overview/overview.types';
 import { activeFilterCount, listStacks } from '@~/features/overview/stack-list.utils';
 
 import { reviewTarget, snapshotSummary } from '../reviews/review-fixtures';
+import { builtStack, stackMember } from '../stacks/stack-fixtures';
 import { branch, workspace } from '../workspaces/workspace-fixtures';
 
 const NOW = new Date('2026-10-04T12:00:00Z').getTime();
@@ -19,8 +20,17 @@ function stack(name: string, committedAt: string, overrides: Partial<iOverviewSt
     title: name,
     tipBranch: name,
     workspace,
-    hasCycle: false,
-    branches: [{ name, title: name, local: branch(name, { committedAt: new Date(committedAt) }), ...overrides }],
+    isHidden: false,
+    stack: builtStack([name]),
+    branches: [
+      {
+        name,
+        title: name,
+        member: stackMember(name),
+        local: branch(name, { committedAt: new Date(committedAt) }),
+        ...overrides,
+      },
+    ],
   } satisfies iOverviewStack;
 }
 
@@ -39,15 +49,20 @@ const theirs = stack('theirs', '2026-10-03T18:00:00Z', {
 });
 const stacks = [stale, fresh, reviewed, requested, theirs];
 
+const MONTH_FILTERS = { ...DEFAULT_STACK_FILTERS, activity: STACK_ACTIVITIES.MONTH };
+
 function names(result: ReturnType<typeof listStacks>) {
-  return result.listed.map(({ stack: listed }) => listed.tipBranch);
+  return result.listed.map((listed) => listed.tipBranch);
+}
+
+function hiding(name: string) {
+  return stacks.map((candidate) => (candidate.tipBranch === name ? { ...candidate, isHidden: true } : candidate));
 }
 
 function list(overrides: Partial<Parameters<typeof listStacks>[0]> = {}) {
   return listStacks({
     stacks,
-    filters: DEFAULT_STACK_FILTERS,
-    hiddenStacks: [],
+    filters: MONTH_FILTERS,
     query: '',
     isShowingHidden: false,
     now: NOW,
@@ -72,22 +87,22 @@ describe('stack list', () => {
   });
 
   it('keeps hidden stacks out until they are shown, and counts them', () => {
-    const hidden = list({ hiddenStacks: ['fresh'] });
+    const hidden = list({ stacks: hiding('fresh') });
     expect(names(hidden)).not.toContain('fresh');
     expect(hidden.hiddenCount).toBe(1);
 
-    const shown = list({ hiddenStacks: ['fresh'], isShowingHidden: true });
-    expect(shown.listed.find(({ stack: listed }) => listed.tipBranch === 'fresh')).toMatchObject({ isHidden: true });
+    const shown = list({ stacks: hiding('fresh'), isShowingHidden: true });
+    expect(shown.listed.find((listed) => listed.tipBranch === 'fresh')).toMatchObject({ isHidden: true });
   });
 
   it('searches hidden and stale stacks too', () => {
     expect(names(list({ query: 'stale' }))).toEqual(['stale']);
-    expect(names(list({ query: 'fresh', hiddenStacks: ['fresh'] }))).toEqual(['fresh']);
+    expect(names(list({ query: 'fresh', stacks: hiding('fresh') }))).toEqual(['fresh']);
   });
 
   it('counts only the filters that leave stacks out', () => {
     expect(activeFilterCount(INCLUSIVE_STACK_FILTERS)).toBe(0);
-    expect(activeFilterCount(DEFAULT_STACK_FILTERS)).toBe(1);
+    expect(activeFilterCount(DEFAULT_STACK_FILTERS)).toBe(0);
     expect(activeFilterCount({ ...INCLUSIVE_STACK_FILTERS, activity: STACK_ACTIVITIES.WEEK, isMineOnly: true })).toBe(
       2,
     );

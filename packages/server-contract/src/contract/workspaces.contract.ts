@@ -1,8 +1,6 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
-import { MAX_HIDDEN_STACKS } from '@chaff/common/constants/stack-filters.constants';
-import { branchParentSourceSchema } from '@chaff/common/enums/branch-parent.enums';
 import {
   stackActivitySchema,
   stackReviewFilterSchema,
@@ -16,7 +14,7 @@ export const stackFiltersSchema = z.object({
   activity: stackActivitySchema,
   review: stackReviewFilterSchema,
   source: stackSourceSchema,
-  /** Only stacks with commits by the repository's configured git user. */
+  /** Only stacks with commits by the user. */
   isMineOnly: z.boolean(),
 });
 
@@ -27,11 +25,7 @@ export const workspaceSchema = z.object({
   defaultBranch: z.string().optional(),
   /** False when the folder was moved or deleted since it was added. */
   isAvailable: z.boolean(),
-  /** Tip branches of the stacks the user hid from the stack list. */
-  hiddenStacks: z.array(z.string()),
   stackFilters: stackFiltersSchema,
-  /** Every remote-tracking branch the default branch hasn't merged is listed, not only those of local stacks. */
-  shouldIncludeRemoteBranches: z.boolean(),
   createdAt: z.date(),
 });
 
@@ -50,21 +44,9 @@ export const branchSchema = z.object({
   remote: z.string().optional(),
   isDefault: z.boolean(),
   /**
-   * Target branch of the branch's open merge or pull request; otherwise the nearest branch whose tip, or a commit
-   * it had when this branch left it, is in this branch's history, or the default branch when none is.
+   * The user, by the repository's configured git user or their own emails, wrote at least one of the commits the
+   * default branch doesn't have yet. Read for local branches and branches of stacks only.
    */
-  suggestedParent: z.string().optional(),
-  /** Commits between where this branch left the suggested parent and this branch's tip. */
-  commitsAhead: z.number().int().nonnegative(),
-  /**
-   * The parent the branch is reviewed against: the target branch of its open merge or pull request, else the
-   * confirmed one, else the suggestion.
-   */
-  parent: z.string().optional(),
-  parentSource: branchParentSourceSchema,
-  /** The parent, other than the default branch, has commits this branch doesn't contain yet. */
-  isParentMoved: z.boolean(),
-  /** The repository's configured git user wrote at least one of the commits the default branch doesn't have yet. */
   isAuthoredByUser: z.boolean(),
   /** Folder of the worktree the branch is checked out in, if any. */
   worktreePath: z.string().optional(),
@@ -102,23 +84,16 @@ export const workspacesContract = oc.router({
   updateStackView: oc
     .route({
       summary: "Change a repository's stack list",
-      description:
-        'Saves the filters of the stack list, the stacks hidden from it by tip branch, and whether every remote branch the default branch has not merged is listed. Fields left out keep their value.',
+      description: 'Saves the filters of the stack list.',
     })
-    .input(
-      workspaceIdInput.extend({
-        hiddenStacks: z.array(branchNameSchema).max(MAX_HIDDEN_STACKS).optional(),
-        stackFilters: stackFiltersSchema.optional(),
-        shouldIncludeRemoteBranches: z.boolean().optional(),
-      }),
-    )
+    .input(workspaceIdInput.extend({ stackFilters: stackFiltersSchema }))
     .output(workspaceSchema),
 
   branches: oc
     .route({
       summary: 'List branches',
       description:
-        "Reads every local branch of the repository from disk, plus the remote-tracking branches that have no local branch and belong to a local branch's stack or are a listed branch's change target (or, when the repository includes remote branches, every one the default branch has not merged), newest commit first, with a parent for each. A branch with an open merge or pull request on the linked project takes the change's target branch as its parent, and its review follows that branch.",
+        'Reads every local branch of the repository from disk, plus the remote-tracking branches with no local branch that the default branch has not merged or that belong to a stack, newest commit first.',
     })
     .input(workspaceIdInput)
     .output(z.array(branchSchema)),

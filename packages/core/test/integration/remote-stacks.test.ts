@@ -2,7 +2,7 @@ import { call } from '@orpc/server';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
-import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
+import { STACK_ENDS } from '@chaff/common/enums/stack.enums';
 
 import { createTempDirectory, createTestGitRepo, TestGitRepo } from '../helpers/git-repo';
 import { appRouter } from '../helpers/instance';
@@ -50,54 +50,59 @@ async function listBranches(workspaceId: string) {
   return call(appRouter.workspaces.branches, { workspaceId });
 }
 
-function parentsOf(branches: Awaited<ReturnType<typeof listBranches>>) {
-  return Object.fromEntries(branches.map((branch) => [branch.name, [branch.parent, branch.remote]]));
+async function bottomSuggestions(stackId: string) {
+  return (await call(appRouter.stacks.suggest, { stackId, end: STACK_ENDS.BOTTOM })).map((suggestion) => [
+    suggestion.branch,
+    suggestion.isBase,
+  ]);
 }
 
 describe('stacks with remote-tracking branches', () => {
-  it('builds the whole stack once the lower branches are fetched, though only the top two are local', async () => {
+  it('suggests the remote-only branches below a local branch once they are fetched', async () => {
     const clone = cloneTopOfStack(createUpstreamStack());
     const workspace = await addWorkspace(clone);
+    const stack = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'stack/4' });
 
-    expect(parentsOf(await listBranches(workspace.id))).toEqual({
-      main: [undefined, undefined],
-      'stack/4': ['main', undefined],
-      'stack/5': ['stack/4', undefined],
-    });
+    expect(await bottomSuggestions(stack.id)).toEqual([['main', true]]);
 
     fetchEveryBranch(clone);
 
-    expect(parentsOf(await listBranches(workspace.id))).toEqual({
-      main: [undefined, undefined],
-      'stack/1': ['main', 'origin'],
-      'stack/2': ['stack/1', 'origin'],
-      'stack/3': ['stack/2', 'origin'],
-      'stack/4': ['stack/3', undefined],
-      'stack/5': ['stack/4', undefined],
-    });
+    expect((await bottomSuggestions(stack.id))[0]).toEqual(['stack/3', false]);
   });
 
-  it('compares a local branch with its remote-only parent, and reviews a remote-only branch on another', async () => {
+  it('stacks a local branch on a remote-only one and reviews each against the branch below it', async () => {
     const clone = cloneTopOfStack(createUpstreamStack());
     fetchEveryBranch(clone);
     const workspace = await addWorkspace(clone);
-    const parentOf = async (name: string) =>
-      (await listBranches(workspace.id)).find((branch) => branch.name === name)?.parent ?? '';
+    const created = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'stack/4' });
+    await call(appRouter.stacks.addBranch, { stackId: created.id, branch: 'stack/3', end: STACK_ENDS.BOTTOM });
+    await call(appRouter.stacks.addBranch, { stackId: created.id, branch: 'stack/2', end: STACK_ENDS.BOTTOM });
+    const stack = await call(appRouter.stacks.addBranch, {
+      stackId: created.id,
+      branch: 'stack/1',
+      end: STACK_ENDS.BOTTOM,
+    });
 
+    expect(stack.branches.map((member) => [member.branch, member.parentBranch, member.isMissing])).toEqual([
+      ['stack/1', undefined, false],
+      ['stack/2', 'stack/1', false],
+      ['stack/3', 'stack/2', false],
+      ['stack/4', 'stack/3', false],
+    ]);
     const stat = await call(appRouter.workspaces.branchStat, {
       workspaceId: workspace.id,
       branch: 'stack/4',
-      parentBranch: await parentOf('stack/4'),
+      parentBranch: 'stack/3',
     });
     const local = await call(appRouter.reviews.start, {
       workspaceId: workspace.id,
       branch: 'stack/4',
-      parentBranch: await parentOf('stack/4'),
+      parentBranch: 'stack/3',
     });
     const remote = await call(appRouter.reviews.start, {
       workspaceId: workspace.id,
       branch: 'stack/2',
-      parentBranch: await parentOf('stack/2'),
+      parentBranch: 'stack/1',
     });
 
     expect(stat).toEqual({ fileCount: 1, additions: 1, deletions: 0 });
@@ -114,19 +119,6 @@ describe('stacks with remote-tracking branches', () => {
     expect(await call(appRouter.reviews.liveStatus, { snapshotId: remote.snapshotId })).toMatchObject({
       isBranchMissing: false,
       newCommitCount: 0,
-    });
-  });
-
-  it('lets a remote-only branch be confirmed as a parent', async () => {
-    const clone = cloneTopOfStack(createUpstreamStack());
-    fetchEveryBranch(clone);
-    const workspace = await addWorkspace(clone);
-
-    await call(appRouter.reviews.setParent, { workspaceId: workspace.id, branch: 'stack/5', parentBranch: 'stack/2' });
-
-    expect((await listBranches(workspace.id)).find((branch) => branch.name === 'stack/5')).toMatchObject({
-      parent: 'stack/2',
-      parentSource: BRANCH_PARENT_SOURCES.CONFIRMED,
     });
   });
 
@@ -153,35 +145,7 @@ describe('stacks with remote-tracking branches', () => {
     expect(branches.map((branch) => branch.name)).not.toContain('HEAD');
   });
 
-  // Creating 150 commits with real Git processes needs more time on Windows.
-  it('leaves out remote branches that are merged or unrelated to the local stacks', async () => {
-    const upstream = createUpstreamStack();
-    const mainSha = upstream.git('rev-parse', 'main');
-    const tree = upstream.git('rev-parse', 'main^{tree}');
-    const unrelated = Array.from({ length: 150 }, (_, index) => [
-      `refs/heads/other/${index}`,
-      upstream.git('commit-tree', tree, '-p', mainSha, '-m', `other ${index}`),
-    ]);
-    const merged = Array.from({ length: 150 }, (_, index) => [`refs/heads/merged/${index}`, mainSha]);
-    execFileSync('git', ['update-ref', '--stdin'], {
-      cwd: upstream.path,
-      input: [...unrelated, ...merged].map(([ref, sha]) => `create ${ref} ${sha}\n`).join(''),
-    });
-    upstream.branch('stack/2-alt', 'stack/2');
-    upstream.commit('sibling', 'alt.txt');
-    upstream.branch('stack/6', 'stack/5');
-    upstream.commit('on top', 'six.txt');
-    upstream.switch('main');
-    const clone = cloneTopOfStack(upstream);
-    fetchEveryBranch(clone);
-    const workspace = await addWorkspace(clone);
-
-    const names = (await listBranches(workspace.id)).map((branch) => branch.name).sort();
-
-    expect(names).toEqual(['main', ...STACK.slice(0, 2), 'stack/2-alt', ...STACK.slice(2), 'stack/6']);
-  }, 30_000);
-
-  it('lists every unmerged remote branch once the repository includes remote branches', async () => {
+  it('lists the remote branches the default branch has not merged, and the merged ones of stacks', async () => {
     const upstream = createUpstreamStack();
     upstream.branch('landed', 'main~1');
     upstream.branch('other', 'main');
@@ -190,24 +154,13 @@ describe('stacks with remote-tracking branches', () => {
     const clone = new TestGitRepo(createTempDirectory('chaff-clone-'));
     execFileSync('git', ['clone', '--quiet', upstream.path, clone.path]);
     const workspace = await addWorkspace(clone);
+    const names = async () => (await listBranches(workspace.id)).map((branch) => branch.name).sort();
 
-    expect(parentsOf(await listBranches(workspace.id))).toEqual({ main: [undefined, undefined] });
+    expect(await names()).toEqual(['main', 'other', ...STACK]);
 
-    const saved = await call(appRouter.workspaces.updateStackView, {
-      workspaceId: workspace.id,
-      shouldIncludeRemoteBranches: true,
-    });
+    await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'landed' });
 
-    expect(saved.shouldIncludeRemoteBranches).toBe(true);
-    expect(parentsOf(await listBranches(workspace.id))).toEqual({
-      main: [undefined, undefined],
-      other: ['main', 'origin'],
-      'stack/1': ['main', 'origin'],
-      'stack/2': ['stack/1', 'origin'],
-      'stack/3': ['stack/2', 'origin'],
-      'stack/4': ['stack/3', 'origin'],
-      'stack/5': ['stack/4', 'origin'],
-    });
+    expect(await names()).toEqual(['landed', 'main', 'other', ...STACK]);
   });
 
   it('pushes an event when a fetch moves a remote-tracking branch', async () => {

@@ -20,10 +20,7 @@ const REVIEW_OPTIONS = stackReviewFilterValues.map((value) => ({
 }));
 const SOURCE_OPTIONS = stackSourceValues.map((value) => ({ value, label: STACK_SOURCE_LABELS.get(value) }));
 
-interface iStackFiltersPanelProps extends Pick<
-  ReturnType<typeof useStackList>,
-  'filters' | 'setFilters' | 'shouldIncludeRemoteBranches' | 'setShouldIncludeRemoteBranches'
-> {}
+interface iStackFiltersPanelProps extends Pick<ReturnType<typeof useStackList>, 'filters' | 'setFilters'> {}
 
 function FilterField({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -34,12 +31,7 @@ function FilterField({ label, children }: { label: string; children: ReactNode }
   );
 }
 
-export function StackFiltersPanel({
-  filters,
-  setFilters,
-  shouldIncludeRemoteBranches,
-  setShouldIncludeRemoteBranches,
-}: iStackFiltersPanelProps) {
+export function StackFiltersPanel({ filters, setFilters }: iStackFiltersPanelProps) {
   return (
     <div className="flex shrink-0 flex-col gap-3 border-b border-line px-4 pb-4">
       <FilterField label="Active within">
@@ -74,15 +66,6 @@ export function StackFiltersPanel({
           onChange={(event) => setFilters({ isMineOnly: event.target.checked })}
         />
         Only stacks with my commits
-      </label>
-      <label className="flex items-center gap-2 text-xs text-fg-soft">
-        <input
-          type="checkbox"
-          className="size-3.5 accent-accent"
-          checked={shouldIncludeRemoteBranches}
-          onChange={(event) => setShouldIncludeRemoteBranches(event.target.checked)}
-        />
-        Include unmerged remote branches
       </label>
     </div>
   );

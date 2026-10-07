@@ -7,6 +7,7 @@ export const CORE_OPTIONS_TOKEN = Symbol.for('CoreOptions');
 export const CORE_HOST_TOKEN = Symbol.for('CoreHost');
 
 export const WORKSPACE_REPOSITORY_TOKEN = Symbol.for('WorkspaceRepository');
+export const STACK_REPOSITORY_TOKEN = Symbol.for('StackRepository');
 export const SETTINGS_REPOSITORY_TOKEN = Symbol.for('SettingsRepository');
 export const REVIEW_TARGET_REPOSITORY_TOKEN = Symbol.for('ReviewTargetRepository');
 export const SNAPSHOT_REPOSITORY_TOKEN = Symbol.for('SnapshotRepository');

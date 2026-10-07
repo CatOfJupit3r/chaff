@@ -8,16 +8,10 @@ import { branchProgress, matchesStackSearch } from './overview.utils';
 export interface iStackListInput {
   stacks: readonly iOverviewStack[];
   filters: iStackFilters;
-  hiddenStacks: readonly string[];
   query: string;
   isShowingHidden: boolean;
   /** Current time in milliseconds; defaults to now. */
   now?: number;
-}
-
-export interface iListedStack {
-  stack: iOverviewStack;
-  isHidden: boolean;
 }
 
 /** Time of the newest commit or merge request update in the stack, 0 when it has neither. */
@@ -69,22 +63,13 @@ export function activeFilterCount(filters: iStackFilters) {
  * The stacks to list, most recently active first. Hidden stacks are listed while the user shows them or
  * searches; `filteredCount` and `hiddenCount` say how many stacks the filters and the hide list leave out.
  */
-export function listStacks({
-  stacks,
-  filters,
-  hiddenStacks,
-  query,
-  isShowingHidden,
-  now = Date.now(),
-}: iStackListInput) {
-  const hidden = new Set(hiddenStacks);
+export function listStacks({ stacks, filters, query, isShowingHidden, now = Date.now() }: iStackListInput) {
   const isSearching = query.trim().length > 0;
   const matching = stacks.filter((stack) => !isSearching || matchesStackSearch(stack, query));
   const kept = matching.filter((stack) => matchesStackFilters(stack, filters, now, isSearching));
-  const hiddenCount = kept.filter((stack) => hidden.has(stack.tipBranch)).length;
-  const listed: iListedStack[] = kept
-    .filter((stack) => isShowingHidden || isSearching || !hidden.has(stack.tipBranch))
-    .map((stack) => ({ stack, isHidden: hidden.has(stack.tipBranch) }))
-    .sort((left, right) => stackLastActivity(right.stack) - stackLastActivity(left.stack));
+  const hiddenCount = kept.filter((stack) => stack.isHidden).length;
+  const listed = kept
+    .filter((stack) => isShowingHidden || isSearching || !stack.isHidden)
+    .sort((left, right) => stackLastActivity(right) - stackLastActivity(left));
   return { listed, filteredCount: matching.length - kept.length, hiddenCount };
 }

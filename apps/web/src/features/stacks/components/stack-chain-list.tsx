@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
+import { STACK_ENDS } from '@chaff/common/enums/stack.enums';
 
-import { BranchIcon } from '@~/components/icons/icons';
+import { BranchIcon, PlusIcon } from '@~/components/icons/icons';
 import { Pill } from '@~/components/ui/pill';
 import type { iFinding } from '@~/features/findings/findings.types';
 import { countActive } from '@~/features/findings/findings.utils';
@@ -11,12 +11,17 @@ import { isReviewComplete } from '@~/features/reviews/review-progress.utils';
 import type { iSnapshotSummary } from '@~/features/reviews/reviews.types';
 import type { iStackLink } from '@~/features/reviews/stack-review.utils';
 import { RemoteBranchPill } from '@~/features/workspaces/components/remote-branch-pill';
+import type { iBranch, iWorkspace } from '@~/features/workspaces/workspaces.types';
 import { cn } from '@~/lib/utils';
 import { pluralize } from '@~/utils/pluralize';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import { findingsFromStack } from '../stack.utils';
+import { GHOST_SLOT_CLASS } from '../stacks.constants';
+import { STACK_SLOT_LABELS } from '../stacks.enums';
+import type { iStack } from '../stacks.types';
 import { MarkBar } from './mark-bar';
+import { StackSlot } from './stack-slot';
 
 function dotClass(summary: iSnapshotSummary | undefined) {
   if (!summary) return 'border-line-strong';
@@ -31,14 +36,15 @@ function decidedUnitCount(summary: iSnapshotSummary) {
 function UnreviewedStat({ workspaceId, link }: { workspaceId: string; link: iStackLink }) {
   const { data: stat } = useQuery({
     ...tanstackRPC.workspaces.branchStat.queryOptions({
-      input: { workspaceId, branch: link.branch.name, parentBranch: link.parentBranch ?? '' },
+      input: { workspaceId, branch: link.name, parentBranch: link.parentBranch ?? '' },
     }),
-    enabled: link.parentBranch !== undefined,
+    enabled: link.parentBranch !== undefined && !link.member.isMissing,
   });
 
+  if (link.parentBranch === undefined) return <span>merges into a branch not chosen yet</span>;
   return (
     <>
-      <span>{pluralize(link.branch.commitsAhead, 'commit')}</span>
+      <span>{pluralize(link.member.commitsAhead, 'commit')}</span>
       {stat ? (
         <>
           <DiffStat additions={stat.additions} deletions={stat.deletions} />
@@ -85,16 +91,14 @@ function StackChainItem({ workspaceId, link, findings, fromStack, isSelected, on
         className="my-1 w-full rounded-lg border border-transparent px-4 py-3 text-left hover:bg-hover aria-current:border-line-strong aria-current:bg-surface"
       >
         <span className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[13px] font-medium break-all text-fg">{link.branch.name}</span>
-          <RemoteBranchPill branch={link.branch} />
-          {link.branch.hasWorkingChanges ? <Pill variant="open">uncommitted</Pill> : null}
-          {link.branch.parentSource === BRANCH_PARENT_SOURCES.SUGGESTED ? (
-            <Pill variant="out">parent suggested</Pill>
-          ) : null}
-          {link.branch.isParentMoved ? (
+          <span className="font-mono text-[13px] font-medium break-all text-fg">{link.name}</span>
+          {link.branch ? <RemoteBranchPill branch={link.branch} /> : null}
+          {link.member.isMissing ? <Pill variant="bad">missing</Pill> : null}
+          {link.branch?.hasWorkingChanges ? <Pill variant="open">uncommitted</Pill> : null}
+          {link.member.isParentMoved ? (
             <Pill
               variant="open"
-              title={`${link.branch.parent} has commits this branch doesn't have yet; rebase to bring them in.`}
+              title={`${link.parentBranch} has commits this branch doesn't have yet; rebase to bring them in.`}
             >
               parent moved
             </Pill>
@@ -109,7 +113,7 @@ function StackChainItem({ workspaceId, link, findings, fromStack, isSelected, on
           ) : null}
         </span>
         <span className="mt-1 flex flex-wrap items-center gap-x-3.5 text-[12.5px] text-muted">
-          <span className="max-w-[36ch] truncate">{link.branch.subject}</span>
+          <span className="max-w-[36ch] truncate">{link.branch?.subject ?? link.member.change?.title}</span>
           {summary ? (
             <>
               <DiffStat additions={summary.additions} deletions={summary.deletions} />
@@ -133,37 +137,85 @@ function StackChainItem({ workspaceId, link, findings, fromStack, isSelected, on
 }
 
 interface iStackChainListProps {
-  workspaceId: string;
+  stack: iStack;
+  workspace: iWorkspace;
+  branches: readonly iBranch[];
+  stackedBranches: ReadonlySet<string>;
   links: readonly iStackLink[];
-  base: string | undefined;
   findings: readonly iFinding[];
   selectedBranch: string | undefined;
   onSelect: (branch: string) => void;
 }
 
-/** The stack top to bottom, each branch with its progress, down to the branch it sits on. */
-export function StackChainList({ workspaceId, links, base, findings, selectedBranch, onSelect }: iStackChainListProps) {
+function GhostSlotContent({ hint }: { hint: string }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <PlusIcon className="size-3.5 shrink-0" />
+      <span className="text-[12.5px]">{hint}</span>
+    </span>
+  );
+}
+
+/**
+ * The stack top to bottom like a roadmap, each branch with its progress. Faint slots above the top branch and
+ * below the bottom one add the next branch; the base closes the bottom once chosen.
+ */
+export function StackChainList({
+  stack,
+  workspace,
+  branches,
+  stackedBranches,
+  links,
+  findings,
+  selectedBranch,
+  onSelect,
+}: iStackChainListProps) {
+  const slot = { stack, branches, stackedBranches, side: 'right' as const };
+  const top = stack.branches.at(-1)?.branch;
+  const bottom = stack.branches[0]?.branch;
   return (
     <div className="min-w-0">
+      <StackSlot
+        {...slot}
+        end={STACK_ENDS.TOP}
+        label={STACK_SLOT_LABELS.get(STACK_ENDS.TOP)}
+        className={`${GHOST_SLOT_CLASS} mb-1 ml-9 block w-[calc(100%-36px)] px-4 py-2.5`}
+      >
+        <GhostSlotContent hint={`${STACK_SLOT_LABELS.get(STACK_ENDS.TOP)}: a branch that merges into ${top ?? 'it'}`} />
+      </StackSlot>
       <ol className="m-0 list-none p-0">
         {links.toReversed().map((link, reversedIndex) => (
           <StackChainItem
-            key={link.branch.name}
-            workspaceId={workspaceId}
+            key={link.name}
+            workspaceId={workspace.id}
             link={link}
             findings={findings}
             fromStack={findingsFromStack(links, links.length - 1 - reversedIndex, findings)}
-            isSelected={link.branch.name === selectedBranch}
-            onSelect={() => onSelect(link.branch.name)}
+            isSelected={link.name === selectedBranch}
+            onSelect={() => onSelect(link.name)}
           />
         ))}
       </ol>
-      {base ? (
-        <div className="mt-3 flex items-center gap-2 pl-6 font-mono text-[12.5px] text-muted">
+      {stack.baseBranch ? (
+        <StackSlot
+          {...slot}
+          end={STACK_ENDS.BOTTOM}
+          label={`${stack.baseBranch}: insert a branch above it or change it`}
+          className="mt-3 ml-6 flex items-center gap-2 rounded-sm px-1.5 py-1 font-mono text-[12.5px] text-muted hover:bg-hover hover:text-fg data-open:bg-hover"
+        >
           <BranchIcon className="size-3.5" />
-          {base}
-        </div>
-      ) : null}
+          {stack.baseBranch}
+        </StackSlot>
+      ) : (
+        <StackSlot
+          {...slot}
+          end={STACK_ENDS.BOTTOM}
+          label={STACK_SLOT_LABELS.get(STACK_ENDS.BOTTOM)}
+          className={`${GHOST_SLOT_CLASS} mt-1 ml-9 block w-[calc(100%-36px)] px-4 py-2.5`}
+        >
+          <GhostSlotContent hint={`${STACK_SLOT_LABELS.get(STACK_ENDS.BOTTOM)}: what ${bottom ?? 'it'} merges into`} />
+        </StackSlot>
+      )}
     </div>
   );
 }

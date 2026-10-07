@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { workspaceSchema } from '@chaff/server-contract/contract/workspaces.contract';
+import { stackFiltersSchema } from '@chaff/server-contract/contract/workspaces.contract';
 
 import { showToast } from '@~/components/toast/toast-store';
 import { getErrorMessage } from '@~/utils/rpc-errors';
@@ -9,14 +9,7 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 import type { iWorkspace } from '../workspaces.types';
 import { workspacesQueryOptions } from './use-workspaces';
 
-const stackViewSchema = workspaceSchema
-  .pick({ hiddenStacks: true, stackFilters: true, shouldIncludeRemoteBranches: true })
-  .partial();
-
-/**
- * Saves a repository's stack filters, hidden stacks or remote branch listing, applying them at once and rolling
- * back on failure. Its branches are read again when the remote branch listing changes.
- */
+/** Saves a repository's stack filters, applying them at once and rolling back on failure. */
 export function useUpdateStackView() {
   const queryClient = useQueryClient();
   const replaceWorkspace = (workspaceId: string, change: (workspace: iWorkspace) => iWorkspace) =>
@@ -26,23 +19,20 @@ export function useUpdateStackView() {
 
   return useMutation(
     tanstackRPC.workspaces.updateStackView.mutationOptions({
-      onMutate: async ({ workspaceId, ...view }) => {
+      onMutate: async ({ workspaceId, stackFilters }) => {
         await queryClient.cancelQueries({ queryKey: workspacesQueryOptions.queryKey });
         const previous = queryClient.getQueryData(workspacesQueryOptions.queryKey);
-        replaceWorkspace(workspaceId, (workspace) => ({ ...workspace, ...stackViewSchema.parse(view) }));
+        replaceWorkspace(workspaceId, (workspace) => ({
+          ...workspace,
+          stackFilters: stackFiltersSchema.parse(stackFilters),
+        }));
         return { previous };
       },
       onError: (error, _view, context) => {
         if (context?.previous) queryClient.setQueryData(workspacesQueryOptions.queryKey, context.previous);
         showToast(getErrorMessage(error));
       },
-      onSuccess: async (saved, view) => {
-        replaceWorkspace(saved.id, () => saved);
-        if (view.shouldIncludeRemoteBranches === undefined) return;
-        await queryClient.invalidateQueries({
-          queryKey: tanstackRPC.workspaces.branches.key({ input: { workspaceId: saved.id } }),
-        });
-      },
+      onSuccess: (saved) => replaceWorkspace(saved.id, () => saved),
     }),
   );
 }

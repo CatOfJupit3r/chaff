@@ -223,3 +223,11 @@ export const EyeOffIcon = createIcon(
     <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M4 4l16 16" />
   </>,
 );
+export const PlusIcon = createIcon('PlusIcon', <path d="M12 5v14M5 12h14" />);
+export const ImportIcon = createIcon(
+  'ImportIcon',
+  <>
+    <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5" />
+    <path d="M5 15v4h14v-4" />
+  </>,
+);

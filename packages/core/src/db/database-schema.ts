@@ -6,12 +6,15 @@ import { findingAnchors, findingEvents, findings } from './schema/findings.schem
 import { reviewTargets } from './schema/review-targets.schema';
 import { settings } from './schema/settings.schema';
 import { regions, snapshotFiles, snapshots, units } from './schema/snapshots.schema';
+import { stackBranches, stacks } from './schema/stacks.schema';
 import { unitMarks } from './schema/unit-marks.schema';
 import { workspaces } from './schema/workspaces.schema';
 
 export const schema = {
   settings,
   workspaces,
+  stacks,
+  stackBranches,
   connections,
   reviewTargets,
   snapshots,

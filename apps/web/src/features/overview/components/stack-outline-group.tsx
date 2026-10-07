@@ -8,13 +8,16 @@ import { formatRelativeTime } from '@~/utils/relative-time';
 import type { useOverview } from '../hooks/use-overview';
 import type { useStackList } from '../hooks/use-stack-list';
 import { OVERVIEW_REVIEW_PROGRESS } from '../overview.enums';
+import type { iOverviewStack } from '../overview.types';
 import { branchProgress, isStackTitleMatch, matchesOverviewSearch } from '../overview.utils';
-import type { iListedStack } from '../stack-list.utils';
 import { stackLastActivity } from '../stack-list.utils';
 import { StackOutlineBranch } from './stack-outline-branch';
 
-interface iStackOutlineGroupProps
-  extends iListedStack, Pick<ReturnType<typeof useOverview>, 'branch' | 'selectBranch' | 'selectStack'> {
+interface iStackOutlineGroupProps extends Pick<
+  ReturnType<typeof useOverview>,
+  'branch' | 'selectBranch' | 'selectStack'
+> {
+  stack: iOverviewStack;
   isSelected: boolean;
   query: string;
   onToggleHidden: ReturnType<typeof useStackList>['toggleHidden'];
@@ -22,7 +25,6 @@ interface iStackOutlineGroupProps
 
 export function StackOutlineGroup({
   stack,
-  isHidden,
   isSelected,
   branch,
   selectBranch,
@@ -30,6 +32,7 @@ export function StackOutlineGroup({
   query,
   onToggleHidden,
 }: iStackOutlineGroupProps) {
+  const { isHidden } = stack;
   const reviewed = stack.branches.filter(
     (candidate) => branchProgress(candidate) === OVERVIEW_REVIEW_PROGRESS.REVIEWED,
   ).length;

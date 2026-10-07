@@ -25,6 +25,8 @@ import { DrizzleSnapshotRepository } from '@~/features/reviews/snapshots/drizzle
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import { DrizzleSettingsRepository } from '@~/features/settings/drizzle-settings.repository';
 import type { iSettingsRepository } from '@~/features/settings/settings.repository';
+import { DrizzleStackRepository } from '@~/features/stacks/drizzle-stack.repository';
+import type { iStackRepository } from '@~/features/stacks/stack.repository';
 import { DrizzleWorkspaceRepository } from '@~/features/workspaces/drizzle-workspace.repository';
 import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repository';
 
@@ -40,6 +42,7 @@ import {
   REVIEW_TARGET_REPOSITORY_TOKEN,
   SETTINGS_REPOSITORY_TOKEN,
   SNAPSHOT_REPOSITORY_TOKEN,
+  STACK_REPOSITORY_TOKEN,
   UNIT_MARK_REPOSITORY_TOKEN,
   WORKSPACE_REPOSITORY_TOKEN,
 } from './tokens';
@@ -47,6 +50,7 @@ import {
 /** Binds interface tokens to their implementations. `@singleton()` classes resolve by type. */
 export function registerServices() {
   container.registerSingleton<iWorkspaceRepository>(WORKSPACE_REPOSITORY_TOKEN, DrizzleWorkspaceRepository);
+  container.registerSingleton<iStackRepository>(STACK_REPOSITORY_TOKEN, DrizzleStackRepository);
   container.registerSingleton<iSettingsRepository>(SETTINGS_REPOSITORY_TOKEN, DrizzleSettingsRepository);
   container.registerSingleton<iReviewTargetRepository>(REVIEW_TARGET_REPOSITORY_TOKEN, DrizzleReviewTargetRepository);
   container.registerSingleton<iSnapshotRepository>(SNAPSHOT_REPOSITORY_TOKEN, DrizzleSnapshotRepository);

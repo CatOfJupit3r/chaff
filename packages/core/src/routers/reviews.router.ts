@@ -14,10 +14,6 @@ export const reviewsRouter = base.reviews.router({
 
   start: procedure.reviews.start.handler(async ({ input }) => container.resolve(ReviewsService).start(input)),
 
-  setParent: procedure.reviews.setParent.handler(async ({ input }) =>
-    container.resolve(ReviewsService).setParent(input),
-  ),
-
   refresh: procedure.reviews.refresh.handler(async ({ input }) =>
     container.resolve(ReviewsService).refresh(input.targetId),
   ),

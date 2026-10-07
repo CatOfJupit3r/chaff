@@ -1,8 +1,4 @@
-import { CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
-
-import type { iInboxProject, iRemoteChange } from '@~/features/code-hosts/code-hosts.types';
-
-import { workspace } from '../workspaces/workspace-fixtures';
+import type { iRemoteChange } from '@~/features/code-hosts/code-hosts.types';
 
 export function remoteChange(
   number: number,
@@ -24,18 +20,6 @@ export function remoteChange(
     updatedAt: new Date('2026-10-03T10:00:00Z'),
     assigneeUsernames: [],
     reviewerUsernames: [],
-    ...overrides,
-  };
-}
-
-export function inboxProject(changes: iRemoteChange[], overrides: Partial<iInboxProject> = {}): iInboxProject {
-  return {
-    workspaceId: workspace.id,
-    connectionId: 'connection',
-    host: CODE_HOSTS.GITLAB,
-    project: 'group/project',
-    changes,
-    error: null,
     ...overrides,
   };
 }

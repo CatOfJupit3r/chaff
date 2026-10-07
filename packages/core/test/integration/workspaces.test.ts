@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_STACK_FILTERS } from '@chaff/common/constants/stack-filters.constants';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { STACK_ACTIVITIES } from '@chaff/common/enums/stack-filters.enums';
+import { STACK_ENDS } from '@chaff/common/enums/stack.enums';
 
 import { cloneTestGitRepo, createTempDirectory, createTestGitRepo } from '../helpers/git-repo';
 import type { TestGitRepo } from '../helpers/git-repo';
@@ -14,6 +15,13 @@ import { expectORPCError } from '../helpers/orpc-errors';
 
 async function addWorkspace(repo: TestGitRepo) {
   return call(appRouter.workspaces.add, { path: repo.path });
+}
+
+/** What the history suggests below the branch, as `[name, commits apart, is base]`, nearest first. */
+async function suggestionsBelow(workspaceId: string, branch: string) {
+  const stack = await call(appRouter.stacks.create, { workspaceId, branch });
+  const suggestions = await call(appRouter.stacks.suggest, { stackId: stack.id, end: STACK_ENDS.BOTTOM });
+  return suggestions.map((suggestion) => [suggestion.branch, suggestion.commitsApart, suggestion.isBase]);
 }
 
 describe('workspaces', () => {
@@ -125,7 +133,7 @@ describe('workspace branches', () => {
     expect(stat).toEqual({ fileCount: 2, additions: 3, deletions: 0 });
   });
 
-  it('suggests the nearest branch below each branch of a stack', async () => {
+  it('lists every local branch, the default branch first, then newest commit first', async () => {
     const repo = createTestGitRepo();
     repo.git('branch', 'release');
     repo.branch('feature/a');
@@ -139,19 +147,12 @@ describe('workspace branches', () => {
 
     const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
 
-    expect(
-      branches.map(({ name, isDefault, suggestedParent, commitsAhead }) => ({
-        name,
-        isDefault,
-        suggestedParent,
-        commitsAhead,
-      })),
-    ).toEqual([
-      { name: 'main', isDefault: true, suggestedParent: undefined, commitsAhead: 0 },
-      { name: 'hotfix', isDefault: false, suggestedParent: 'main', commitsAhead: 1 },
-      { name: 'feature/b', isDefault: false, suggestedParent: 'feature/a', commitsAhead: 1 },
-      { name: 'feature/a', isDefault: false, suggestedParent: 'main', commitsAhead: 2 },
-      { name: 'release', isDefault: false, suggestedParent: 'main', commitsAhead: 0 },
+    expect(branches.map(({ name, isDefault }) => [name, isDefault])).toEqual([
+      ['main', true],
+      ['hotfix', false],
+      ['feature/b', false],
+      ['feature/a', false],
+      ['release', false],
     ]);
     expect(branches.find((branch) => branch.name === 'feature/b')).toMatchObject({
       subject: 'b1',
@@ -160,7 +161,22 @@ describe('workspace branches', () => {
     });
   });
 
-  it('stacks a branch with no commits of its own on the branch it was cut from', async () => {
+  it('suggests the nearest branch below a branch, and the default branch as the base', async () => {
+    const repo = createTestGitRepo();
+    repo.branch('feature/a');
+    repo.commit('a1');
+    repo.commit('a2');
+    repo.branch('feature/b');
+    repo.commit('b1');
+    const workspace = await addWorkspace(repo);
+
+    expect(await suggestionsBelow(workspace.id, 'feature/b')).toEqual([
+      ['feature/a', 1, false],
+      ['main', 3, true],
+    ]);
+  });
+
+  it('suggests the branches a branch with no commits of its own was cut from', async () => {
     const repo = createTestGitRepo();
     repo.branch('feature/a');
     repo.commit('a1');
@@ -168,20 +184,14 @@ describe('workspace branches', () => {
     repo.git('branch', 'feature/a-copy');
     const workspace = await addWorkspace(repo);
 
-    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
-    const parents = Object.fromEntries(
-      branches.map((branch) => [branch.name, [branch.suggestedParent, branch.commitsAhead]]),
-    );
-
-    expect(parents).toEqual({
-      main: [undefined, 0],
-      'feature/a': ['main', 1],
-      'feature/a-copy': ['feature/a', 0],
-      'feature/b': ['feature/a', 0],
-    });
+    expect(await suggestionsBelow(workspace.id, 'feature/b')).toEqual([
+      ['feature/a', 0, false],
+      ['feature/a-copy', 0, false],
+      ['main', 1, true],
+    ]);
   });
 
-  it('keeps a branch on its parent after it merges newer commits from the parent and the default branch', async () => {
+  it('keeps the parent nearest after a branch merges newer commits from it and the default branch', async () => {
     const repo = createTestGitRepo();
     repo.branch('feature/a');
     repo.commit('a1', 'a1.txt');
@@ -198,36 +208,29 @@ describe('workspace branches', () => {
     repo.commit('b2', 'b2.txt');
     const workspace = await addWorkspace(repo);
 
-    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
-
-    expect(branches.find((branch) => branch.name === 'feature/b')?.suggestedParent).toBe('feature/a');
+    expect((await suggestionsBelow(workspace.id, 'feature/b'))[0]?.[0]).toBe('feature/a');
   });
 
-  it('keeps a stack together and flags the parent when a lower branch gets a new commit', async () => {
+  it('flags the parent of a stack branch when it gets commits the branch does not have', async () => {
     const repo = createTestGitRepo();
     repo.branch('feat/base');
     repo.commit('base1', 'base1.txt');
     repo.branch('feat/flags');
     repo.commit('flags1', 'flags1.txt');
     repo.commit('flags2', 'flags2.txt');
-    repo.branch('feat/ui', 'feat/base');
-    repo.commit('ui1', 'ui1.txt');
     const workspace = await addWorkspace(repo);
-    await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
+    const created = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feat/flags' });
+    await call(appRouter.stacks.addBranch, { stackId: created.id, branch: 'feat/base', end: STACK_ENDS.BOTTOM });
+    await call(appRouter.stacks.setBase, { stackId: created.id, baseBranch: 'main' });
     repo.switch('feat/base');
     repo.commit('fix', 'fix.txt');
 
-    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
-    const parents = Object.fromEntries(
-      branches.map((branch) => [branch.name, [branch.suggestedParent, branch.commitsAhead, branch.isParentMoved]]),
-    );
+    const [stack] = await call(appRouter.stacks.list, { workspaceId: workspace.id });
 
-    expect(parents).toEqual({
-      main: [undefined, 0, false],
-      'feat/base': ['main', 2, false],
-      'feat/flags': ['feat/base', 2, true],
-      'feat/ui': ['feat/base', 1, true],
-    });
+    expect(stack?.branches.map((member) => [member.branch, member.commitsAhead, member.isParentMoved])).toEqual([
+      ['feat/base', 2, false],
+      ['feat/flags', 2, true],
+    ]);
   });
 
   it('reports an unknown repository', async () => {
@@ -238,7 +241,7 @@ describe('workspace branches', () => {
 });
 
 describe('merged branches', () => {
-  it('stacks a branch on the default branch instead of the merged branches in its history', async () => {
+  it('suggests the default branch below a branch rather than the merged branches in its history', async () => {
     const repo = createTestGitRepo();
     repo.branch('feature/old');
     repo.commit('old work', 'old.txt');
@@ -250,16 +253,7 @@ describe('merged branches', () => {
     repo.commit('later on main', 'main.txt');
     const workspace = await addWorkspace(repo);
 
-    const branches = await call(appRouter.workspaces.branches, { workspaceId: workspace.id });
-    const parents = Object.fromEntries(
-      branches.map((branch) => [branch.name, [branch.suggestedParent, branch.commitsAhead]]),
-    );
-
-    expect(parents).toEqual({
-      main: [undefined, 0],
-      'feature/next': ['main', 1],
-      'feature/old': ['main', 0],
-    });
+    expect(await suggestionsBelow(workspace.id, 'feature/next')).toEqual([['main', 1, true]]);
   });
 });
 
@@ -284,10 +278,7 @@ describe('remote default branch', () => {
       headSha: clone.git('rev-parse', 'origin/main'),
       remote: undefined,
     });
-    expect(branches.find((branch) => branch.name === 'feature/next')).toMatchObject({
-      suggestedParent: 'main',
-      commitsAhead: 1,
-    });
+    expect(await suggestionsBelow(workspace.id, 'feature/next')).toEqual([['main', 1, true]]);
     expect(stat.fileCount).toBe(1);
   });
 });
@@ -334,23 +325,19 @@ describe('branch authorship', () => {
 describe('stack view', () => {
   it('starts with the default filters and keeps what the user saves', async () => {
     const workspace = await addWorkspace(createTestGitRepo());
-    expect(workspace).toMatchObject({
-      hiddenStacks: [],
-      stackFilters: DEFAULT_STACK_FILTERS,
-      shouldIncludeRemoteBranches: false,
-    });
+    expect(workspace).toMatchObject({ stackFilters: DEFAULT_STACK_FILTERS });
 
-    await call(appRouter.workspaces.updateStackView, { workspaceId: workspace.id, hiddenStacks: ['feature/old'] });
-    const stackFilters = { ...DEFAULT_STACK_FILTERS, activity: STACK_ACTIVITIES.ANY, isMineOnly: true };
+    const stackFilters = { ...DEFAULT_STACK_FILTERS, activity: STACK_ACTIVITIES.WEEK, isMineOnly: true };
     await call(appRouter.workspaces.updateStackView, { workspaceId: workspace.id, stackFilters });
 
     const [listed] = await call(appRouter.workspaces.list, undefined);
-    expect(listed).toMatchObject({ hiddenStacks: ['feature/old'], stackFilters });
+    expect(listed).toMatchObject({ stackFilters });
   });
 
   it('refuses an unknown repository', async () => {
-    await expectORPCError(call(appRouter.workspaces.updateStackView, { workspaceId: 'missing', hiddenStacks: [] }), {
-      code: errorCodes.WORKSPACE_NOT_FOUND,
-    });
+    await expectORPCError(
+      call(appRouter.workspaces.updateStackView, { workspaceId: 'missing', stackFilters: DEFAULT_STACK_FILTERS }),
+      { code: errorCodes.WORKSPACE_NOT_FOUND },
+    );
   });
 });

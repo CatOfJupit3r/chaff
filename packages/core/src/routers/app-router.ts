@@ -12,6 +12,7 @@ import { hostRouter } from './host.router';
 import { preferencesRouter } from './preferences.router';
 import { reviewsRouter } from './reviews.router';
 import { settingsRouter } from './settings.router';
+import { stacksRouter } from './stacks.router';
 import { workspacesRouter } from './workspaces.router';
 
 export const appRouter = base.router({
@@ -27,6 +28,7 @@ export const appRouter = base.router({
   preferences: preferencesRouter,
   reviews: reviewsRouter,
   settings: settingsRouter,
+  stacks: stacksRouter,
   workspaces: workspacesRouter,
 });
 

@@ -1,4 +1,4 @@
-import type { iNewWorkspace, iStackView, iWorkspaceRecord } from './workspaces.types';
+import type { iNewWorkspace, iWorkspaceRecord } from './workspaces.types';
 
 export interface iWorkspaceRepository {
   list: () => Promise<iWorkspaceRecord[]>;
@@ -9,7 +9,9 @@ export interface iWorkspaceRepository {
     workspaceId: string,
     remote: Pick<iWorkspaceRecord, 'remoteConnectionId' | 'remoteProject'>,
   ) => Promise<iWorkspaceRecord | undefined>;
-  updateStackView: (workspaceId: string, view: iStackView) => Promise<iWorkspaceRecord | undefined>;
-  updateKnownParents: (workspaceId: string, knownParents: iWorkspaceRecord['knownParents']) => Promise<unknown>;
+  updateStackFilters: (
+    workspaceId: string,
+    stackFilters: iWorkspaceRecord['stackFilters'],
+  ) => Promise<iWorkspaceRecord | undefined>;
   delete: (workspaceId: string) => Promise<boolean>;
 }

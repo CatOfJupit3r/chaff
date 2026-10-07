@@ -3,9 +3,9 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
+import { STACK_ENDS, STACK_SUGGESTION_SOURCES } from '@chaff/common/enums/stack.enums';
 
 import { appRouter } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
@@ -26,46 +26,83 @@ async function branchNamed(workspaceId: string, name: string) {
   return branch;
 }
 
-describe('stack parents', () => {
-  it('uses a confirmed parent over the suggestion', async () => {
+/** feature-ui on feature on main, built by hand from feature-ui down. */
+async function buildStack() {
+  const workspace = await addWorkspace(createStackRepo());
+  const created = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feature-ui' });
+  await call(appRouter.stacks.addBranch, { stackId: created.id, branch: 'feature', end: STACK_ENDS.BOTTOM });
+  const stack = await call(appRouter.stacks.setBase, { stackId: created.id, baseBranch: 'main' });
+  return { workspace, stack };
+}
+
+describe('stacks', () => {
+  it('lists no stacks until the user builds one', async () => {
     const workspace = await addWorkspace(createStackRepo());
-    expect(await branchNamed(workspace.id, 'feature-ui')).toMatchObject({
-      parent: 'feature',
-      parentSource: BRANCH_PARENT_SOURCES.SUGGESTED,
+
+    expect(await call(appRouter.stacks.list, { workspaceId: workspace.id })).toEqual([]);
+  });
+
+  it('builds a stack one branch at a time, each merging into the one below it', async () => {
+    const { workspace, stack } = await buildStack();
+
+    expect(stack.baseBranch).toBe('main');
+    expect(stack.branches).toMatchObject([
+      { branch: 'feature', parentBranch: 'main', commitsAhead: 1, isMissing: false },
+      { branch: 'feature-ui', parentBranch: 'feature', commitsAhead: 1, isMissing: false },
+    ]);
+    expect(await call(appRouter.stacks.list, { workspaceId: workspace.id })).toHaveLength(1);
+  });
+
+  it('suggests the nearest branches in the history for each end, and the default branch as the base', async () => {
+    const workspace = await addWorkspace(createStackRepo());
+    const below = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feature-ui' });
+    const above = await call(appRouter.stacks.create, {
+      workspaceId: (await addWorkspace(createStackRepo())).id,
+      branch: 'feature',
     });
 
-    await call(appRouter.reviews.setParent, { workspaceId: workspace.id, branch: 'feature-ui', parentBranch: 'main' });
+    expect(await call(appRouter.stacks.suggest, { stackId: below.id, end: STACK_ENDS.BOTTOM })).toMatchObject([
+      { branch: 'feature', source: STACK_SUGGESTION_SOURCES.HISTORY, isBase: false, commitsApart: 1 },
+      { branch: 'main', source: STACK_SUGGESTION_SOURCES.HISTORY, isBase: true, commitsApart: 2 },
+    ]);
+    expect(await call(appRouter.stacks.suggest, { stackId: above.id, end: STACK_ENDS.TOP })).toMatchObject([
+      { branch: 'feature-ui', source: STACK_SUGGESTION_SOURCES.HISTORY, commitsApart: 1 },
+    ]);
+  });
 
-    expect(await branchNamed(workspace.id, 'feature-ui')).toMatchObject({
-      parent: 'main',
-      suggestedParent: 'feature',
-      parentSource: BRANCH_PARENT_SOURCES.CONFIRMED,
+  it('keeps a branch in one stack and the default branch out of every stack', async () => {
+    const { workspace, stack } = await buildStack();
+
+    await expectORPCError(call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feature' }), {
+      code: errorCodes.BRANCH_ALREADY_STACKED,
+    });
+    await expectORPCError(call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'main' }), {
+      code: errorCodes.DEFAULT_BRANCH_NOT_STACKABLE,
+    });
+    await expectORPCError(call(appRouter.stacks.setBase, { stackId: stack.id, baseBranch: 'feature' }), {
+      code: errorCodes.INVALID_STACK_BASE,
     });
   });
 
-  it('refuses a parent that already builds on the branch', async () => {
-    const workspace = await addWorkspace(createStackRepo());
-    await call(appRouter.reviews.setParent, {
-      workspaceId: workspace.id,
-      branch: 'feature-ui',
-      parentBranch: 'feature',
-    });
+  it('closes the gap when a branch leaves, and drops the stack with its last branch', async () => {
+    const { workspace, stack } = await buildStack();
 
-    await expectORPCError(
-      call(appRouter.reviews.setParent, { workspaceId: workspace.id, branch: 'feature', parentBranch: 'feature-ui' }),
-      { code: errorCodes.PARENT_CYCLE },
-    );
+    const remaining = await call(appRouter.stacks.removeBranch, { stackId: stack.id, branch: 'feature' });
+    expect(remaining?.branches).toMatchObject([{ branch: 'feature-ui', parentBranch: 'main', commitsAhead: 2 }]);
+    expect(await call(appRouter.stacks.removeBranch, { stackId: stack.id, branch: 'feature-ui' })).toBeNull();
+    expect(await call(appRouter.stacks.list, { workspaceId: workspace.id })).toEqual([]);
   });
 
-  it('keeps the snapshot after a parent change and compares the next one with the new parent', async () => {
-    const workspace = await addWorkspace(createStackRepo());
+  it('keeps branches of stacks listed and their reviews on the branch they merge into', async () => {
+    const { workspace, stack } = await buildStack();
+    expect(await branchNamed(workspace.id, 'feature-ui')).toMatchObject({ isDefault: false });
     const started = await call(appRouter.reviews.start, {
       workspaceId: workspace.id,
       branch: 'feature-ui',
       parentBranch: 'feature',
     });
 
-    await call(appRouter.reviews.setParent, { workspaceId: workspace.id, branch: 'feature-ui', parentBranch: 'main' });
+    await call(appRouter.stacks.removeBranch, { stackId: stack.id, branch: 'feature' });
     const status = await call(appRouter.reviews.liveStatus, { snapshotId: started.snapshotId });
     expect(status.isParentChanged).toBe(true);
     expect((await call(appRouter.reviews.snapshot, { snapshotId: started.snapshotId })).parentBranch).toBe('feature');

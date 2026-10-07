@@ -4,48 +4,57 @@ import { CODE_HOSTS } from '@chaff/common/enums/code-host.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import { buildOverviewStacks } from '@~/features/overview/overview.utils';
-import { buildLocalStacks } from '@~/features/workspaces/local-stacks.utils';
 
 import { reviewTarget, snapshotSummary } from '../reviews/review-fixtures';
+import { builtStack, stackMember } from '../stacks/stack-fixtures';
 import { branch, workspace } from '../workspaces/workspace-fixtures';
-import { inboxProject, remoteChange } from './overview-fixtures';
+import { remoteChange } from './overview-fixtures';
 
-describe('overview stack grouping', () => {
-  it('joins local and hosted branches once, preserves local progress and prefers the merge request title', () => {
-    const local = [branch('retry'), branch('dead-letter', { parent: 'retry' })];
+describe('overview stacks', () => {
+  it("lists each built stack's branches bottom first with their review, preferring the merge request title", () => {
     const target = reviewTarget('retry', {
       latestSnapshot: snapshotSummary('2026-10-03', { regionCount: 18, accountedRegionCount: 2 }),
     });
-    const stacks = buildOverviewStacks({
-      workspaces: [workspace],
-      localStacks: buildLocalStacks(workspace, local),
-      projects: [
-        inboxProject([
-          remoteChange(42, 'dead-letter', 'retry'),
-          remoteChange(41, 'retry', 'main', { title: 'Add **retry** support' }),
-        ]),
+    const stack = builtStack(['retry', 'dead-letter'], {
+      branches: [
+        stackMember('retry', {
+          parentBranch: 'main',
+          change: remoteChange(41, 'retry', 'main', { title: 'Add **retry** support' }),
+        }),
+        stackMember('dead-letter', { parentBranch: 'retry' }),
       ],
+    });
+
+    const [overview] = buildOverviewStacks({
+      workspace,
+      stacks: [stack],
+      branches: [branch('retry'), branch('dead-letter')],
       targets: [target],
     });
-    expect(stacks).toHaveLength(1);
-    expect(stacks[0]?.branches.map((item) => item.name)).toEqual(['retry', 'dead-letter']);
-    expect(stacks[0]?.branches[0]).toMatchObject({
+
+    expect(overview?.branches.map((item) => [item.name, item.parent])).toEqual([
+      ['retry', 'main'],
+      ['dead-letter', 'retry'],
+    ]);
+    expect(overview?.branches[0]).toMatchObject({
       title: 'Add **retry** support',
       target,
       localTarget: target,
-      change: { number: 41 },
+      change: { host: CODE_HOSTS.GITLAB, project: 'group/project', number: 41 },
+      local: { name: 'retry' },
     });
+    expect(overview).toMatchObject({ id: stack.id, tipBranch: 'dead-letter', title: 'Dead Letter', base: 'main' });
   });
 
   it('titles branches without a merge request by their name, ticket first', () => {
-    const local = [branch('AB-10326-integrate-extraction', { remote: 'origin' }), branch('cleanup-tests')];
     const stacks = buildOverviewStacks({
-      workspaces: [workspace],
-      localStacks: buildLocalStacks(workspace, local),
-      projects: [],
+      workspace,
+      stacks: [builtStack(['AB-10326-integrate-extraction']), builtStack(['cleanup-tests'])],
+      branches: [],
       targets: [],
     });
-    expect(stacks.map((stack) => stack.title).sort()).toEqual(['AB-10326 | Integrate Extraction', 'Cleanup Tests']);
+
+    expect(stacks.map((stack) => stack.title)).toEqual(['AB-10326 | Integrate Extraction', 'Cleanup Tests']);
   });
 
   it('uses the matching hosted review regardless of response order, without losing a separate local review', () => {
@@ -61,47 +70,14 @@ describe('overview stack grouping', () => {
         webUrl: 'https://gitlab.com/group/project/-/merge_requests/41',
       },
     });
+    const stack = builtStack(['retry'], { branches: [stackMember('retry', { change: remoteChange(41, 'retry') })] });
+
     for (const targets of [
       [local, hosted],
       [hosted, local],
     ]) {
-      const stacks = buildOverviewStacks({
-        workspaces: [workspace],
-        localStacks: [],
-        projects: [inboxProject([remoteChange(41, 'retry')])],
-        targets,
-      });
-      expect(stacks[0]?.branches[0]).toMatchObject({ target: hosted, localTarget: local });
+      const [overview] = buildOverviewStacks({ workspace, stacks: [stack], branches: [], targets });
+      expect(overview?.branches[0]).toMatchObject({ target: hosted, localTarget: local });
     }
-  });
-
-  it('keeps forks separate with their shared prerequisite, and isolates repositories', () => {
-    const other = { ...workspace, id: 'other', name: 'other' };
-    const stacks = buildOverviewStacks({
-      workspaces: [workspace, other],
-      localStacks: [],
-      targets: [],
-      projects: [
-        inboxProject([remoteChange(3, 'c', 'a'), remoteChange(2, 'b', 'a'), remoteChange(1, 'a')]),
-        inboxProject([remoteChange(1, 'a')], { workspaceId: other.id }),
-      ],
-    });
-    expect(stacks.map((stack) => [stack.workspace.id, stack.branches.map((item) => item.name)])).toEqual([
-      [workspace.id, ['a', 'c']],
-      [workspace.id, ['a', 'b']],
-      [other.id, ['a']],
-    ]);
-  });
-
-  it('keeps cyclic requests visible with a warning instead of dropping or endlessly tracing them', () => {
-    const stacks = buildOverviewStacks({
-      workspaces: [workspace],
-      localStacks: [],
-      targets: [],
-      projects: [inboxProject([remoteChange(1, 'a', 'b'), remoteChange(2, 'b', 'a')])],
-    });
-    expect(stacks).toHaveLength(1);
-    expect(stacks[0]?.hasCycle).toBe(true);
-    expect(stacks[0]?.branches.map((item) => item.name).sort()).toEqual(['a', 'b']);
   });
 });
