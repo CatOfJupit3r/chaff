@@ -7,7 +7,15 @@ import type { UnitMark } from '@chaff/common/enums/review.enums';
 import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
 import type { ShortcutAction } from '@chaff/common/enums/shortcuts.enums';
 
-import { CheckIcon, ClockIcon, MessageIcon, NextIcon, QuestionIcon, SkipIcon } from '@~/components/icons/icons';
+import {
+  CheckIcon,
+  ClockIcon,
+  FlagIcon,
+  MessageIcon,
+  NextIcon,
+  QuestionIcon,
+  SkipIcon,
+} from '@~/components/icons/icons';
 import { Kbd } from '@~/components/ui/kbd';
 import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
 import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
@@ -19,6 +27,8 @@ import type { iNoteUnitSource } from './note-options';
 
 interface iDecisionDockProps {
   mark?: UnitMark;
+  /** The card already has a concern or question, so Later finishes it as Done. */
+  hasNote: boolean;
   noteMark?: NoteMark;
   headSha: string;
   isSaving: boolean;
@@ -65,6 +75,7 @@ function GroupHeading({ title, hint }: { title: string; hint: string }) {
  */
 export function DecisionDock({
   mark,
+  hasNote,
   noteMark,
   headSha,
   isSaving,
@@ -138,8 +149,8 @@ export function DecisionDock({
                   'border-line-strong bg-raised text-fg hover:bg-hover aria-pressed:border-fg',
                 )}
               >
-                <ClockIcon />
-                Later
+                {hasNote ? <FlagIcon /> : <ClockIcon />}
+                {hasNote ? 'Done' : 'Later'}
                 <Kbd>{keyFor(SHORTCUT_ACTIONS.FOCUS_LATER)}</Kbd>
                 <NextIcon className="size-3.5! text-faint" />
               </button>

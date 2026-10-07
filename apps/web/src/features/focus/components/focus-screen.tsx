@@ -9,7 +9,7 @@ import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import { ReviewTopBar } from '@~/features/reviews/components/review-top-bar';
 import { cn } from '@~/lib/utils';
 
-import { cardMark } from '../focus-cards.utils';
+import { cardMark, cardNoteMark } from '../focus-cards.utils';
 import { countRegions, tallyMarks } from '../focus-queue.utils';
 import { CARD_EXITS, CARD_VIEWS, FOCUS_QUEUES } from '../focus.enums';
 import type { CardExit } from '../focus.enums';
@@ -165,6 +165,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
           {card ? (
             <DecisionDock
               mark={cardMark(card)}
+              hasNote={cardNoteMark(card) !== undefined}
               noteMark={noteMark}
               headSha={snapshot.headSha}
               isSaving={focus.isSaving}

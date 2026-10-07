@@ -14,7 +14,7 @@ import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
 import { cn } from '@~/lib/utils';
 
-import { cardMark } from '../focus-cards.utils';
+import { cardListMark } from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
 import { REVIEW_PROGRESSION_LABELS, UNIT_MARK_SEGMENT_CLASSES } from '../focus.enums';
 import { ContextFindings } from './context-findings';
@@ -78,7 +78,7 @@ export function FocusContextPanel({
         </div>
         <div className="flex flex-col">
           {cards.map((card, cardIndex) => {
-            const mark = cardMark(card);
+            const mark = cardListMark(card);
             return (
               <button
                 key={card.id}

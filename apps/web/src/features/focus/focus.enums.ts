@@ -126,6 +126,9 @@ export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive<CardExit | undefined>()(
   [UNIT_MARKS.SKIPPED, CARD_EXITS.DOWN],
 );
 
+/** A card finished after a concern or question leaves the way Later does. */
+export const DONE_EXIT = CARD_EXITS.DOWN;
+
 /** The mark a note on picked lines puts on the card's units under them; a plain note leaves them as they are. */
 export const LINE_NOTE_MARKS = findingKindsEnumwaii.derive<UnitMark | undefined>()(
   [FINDING_KINDS.CONCERN, UNIT_MARKS.CONCERN],

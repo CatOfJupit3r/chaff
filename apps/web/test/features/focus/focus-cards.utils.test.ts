@@ -12,10 +12,13 @@ import type { UnitMark } from '@chaff/common/enums/review.enums';
 import type { iChangeUnit } from '@~/features/change-units/change-units.types';
 import {
   buildFocusCards,
+  cardListMark,
   cardMark,
+  cardNoteMark,
   FOCUS_END,
   findNextIndex,
   resolveIndex,
+  undecidedUnits,
   withMarks,
 } from '@~/features/focus/focus-cards.utils';
 import { FOCUS_QUEUES } from '@~/features/focus/focus.enums';
@@ -76,6 +79,28 @@ describe('focus cards', () => {
     const [same] = buildFocusCards(units, [change('y', ['a', 'a'])], REVIEW_PROGRESSIONS.changes);
     expect(mixed && cardMark(mixed)).toBeUndefined();
     expect(same && cardMark(same)).toBe(UNIT_MARKS.LOOKS_GOOD);
+  });
+
+  it('colors a change by its concern, then its question, before the mark its units share', () => {
+    const card = (marks: (UnitMark | undefined)[]) => ({
+      id: 'x',
+      title: 'x',
+      units: marks.map((mark, index) => unit(`u${index}`, mark)),
+    });
+    const both = card([UNIT_MARKS.QUESTION, UNIT_MARKS.CONCERN, undefined]);
+    const asked = card([UNIT_MARKS.LOOKS_GOOD, UNIT_MARKS.QUESTION]);
+    const fine = card([UNIT_MARKS.LOOKS_GOOD, UNIT_MARKS.LOOKS_GOOD]);
+    expect([both, asked, fine].map(cardNoteMark)).toEqual([UNIT_MARKS.CONCERN, UNIT_MARKS.QUESTION, undefined]);
+    expect([both, asked, fine].map(cardListMark)).toEqual([
+      UNIT_MARKS.CONCERN,
+      UNIT_MARKS.QUESTION,
+      UNIT_MARKS.LOOKS_GOOD,
+    ]);
+  });
+
+  it('leaves units decided on or skipped out of those still waiting, and counts Later as waiting', () => {
+    const [card] = buildFocusCards(units, [change('x', ['a', 'b', 'c', 'e'])], REVIEW_PROGRESSIONS.changes);
+    expect(card && undecidedUnits(card).map((member) => member.id)).toEqual(['b', 'c']);
   });
 
   it('opens on the first card without a decision, or the card holding the unit in the URL', () => {

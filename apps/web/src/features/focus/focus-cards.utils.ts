@@ -1,4 +1,4 @@
-import { REVIEW_PROGRESSIONS, UNIT_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
+import { IS_ACCOUNTED_MARK, REVIEW_PROGRESSIONS, UNIT_KINDS, UNIT_MARKS } from '@chaff/common/enums/review.enums';
 import type { ReviewProgression, UnitMark } from '@chaff/common/enums/review.enums';
 
 import type { iChangeUnit } from '@~/features/change-units/change-units.types';
@@ -53,6 +53,23 @@ export function cardMark(card: iFocusCard): UnitMark | undefined {
   const [first, ...rest] = card.units;
   const mark = first?.mark;
   return rest.every((unit) => unit.mark === mark) ? mark : undefined;
+}
+
+/** The card's concern or question: a concern wins when its units have both; undefined when they have neither. */
+export function cardNoteMark(card: iFocusCard) {
+  const marks = new Set(card.units.map((unit) => unit.mark));
+  if (marks.has(UNIT_MARKS.CONCERN)) return UNIT_MARKS.CONCERN;
+  return marks.has(UNIT_MARKS.QUESTION) ? UNIT_MARKS.QUESTION : undefined;
+}
+
+/** The mark that colors the card in lists: its concern or question, otherwise the mark its units share. */
+export function cardListMark(card: iFocusCard) {
+  return cardNoteMark(card) ?? cardMark(card);
+}
+
+/** Units still waiting for a decision: none yet, or put off with Later. */
+export function undecidedUnits(card: iFocusCard) {
+  return card.units.filter((unit) => unit.mark === undefined || !IS_ACCOUNTED_MARK.get(unit.mark));
 }
 
 function isQueued(card: iFocusCard, queue: FocusQueue) {

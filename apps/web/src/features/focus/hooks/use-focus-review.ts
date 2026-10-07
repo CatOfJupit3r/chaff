@@ -19,10 +19,18 @@ import { useSettings } from '@~/features/settings/hooks/use-settings';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 
-import { buildFocusCards, FOCUS_END, findNextIndex, resolveIndex, withMarks } from '../focus-cards.utils';
+import {
+  buildFocusCards,
+  cardNoteMark,
+  FOCUS_END,
+  findNextIndex,
+  resolveIndex,
+  undecidedUnits,
+  withMarks,
+} from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
-import { CARD_VIEWS, LINE_NOTE_MARKS, NOTE_SCOPES, UNIT_MARK_EXITS } from '../focus.enums';
-import type { NoteScope } from '../focus.enums';
+import { CARD_VIEWS, DONE_EXIT, LINE_NOTE_MARKS, NOTE_SCOPES, UNIT_MARK_EXITS } from '../focus.enums';
+import type { CardExit, NoteScope } from '../focus.enums';
 import { useCardExit } from './use-card-exit';
 import { useFocusPosition } from './use-focus-position';
 import { useSetMarks } from './use-set-marks';
@@ -93,6 +101,12 @@ export function useFocusReview(snapshotId: string) {
     setMarks.mutate({ snapshotId, marks }, { onError: (error) => showToast(getErrorMessage(error)) });
   };
 
+  /** Slides the card out and opens the next one in the queue, counting the marks just written. */
+  const leave = (exit: CardExit, decided: ReadonlyMap<string, UnitMark>) => {
+    const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
+    cardExit.run(exit, () => goTo(nextIndex));
+  };
+
   /**
    * Marks the units and moves on when that decides the card with a mark that leaves it; a concern or
    * question, or a note on other units, keeps the card up.
@@ -104,13 +118,22 @@ export function useFocusReview(snapshotId: string) {
     if (marked.length > 0) writeMarks(marked.map((unit) => ({ unitId: unit.id, mark, skipReason })));
     const exit = UNIT_MARK_EXITS.get(mark);
     if (!exit || !current.units.every((unit) => marked.some((candidate) => candidate.id === unit.id))) return;
-    const decided = new Map(marked.map((unit) => [unit.id, mark]));
-    const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
-    cardExit.run(exit, () => goTo(nextIndex));
+    leave(exit, new Map(marked.map((unit) => [unit.id, mark])));
   };
 
+  /** Finishes a card with a concern or question: its units without a decision take that mark, and it moves on. */
+  const finish = (current: iFocusCard, mark: UnitMark) => {
+    const marked = undecidedUnits(current);
+    record(current, mark, { marked });
+    leave(DONE_EXIT, new Map(marked.map((unit) => [unit.id, mark])));
+  };
+
+  /** Later on a card that already has a concern or question finishes it instead of putting it off. */
   const decide = (mark: typeof UNIT_MARKS.LOOKS_GOOD | typeof UNIT_MARKS.LATER) => {
-    if (card) record(card, mark);
+    if (!card) return;
+    const noteMark = mark === UNIT_MARKS.LATER ? cardNoteMark(card) : undefined;
+    if (noteMark) finish(card, noteMark);
+    else record(card, mark);
   };
 
   /** The units a note goes on: the card's, the ones picked, or none for the whole branch or stack. */
