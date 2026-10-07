@@ -1,15 +1,18 @@
-import { mkdir, rm } from 'node:fs/promises';
-import path from 'node:path';
 import { inject, singleton } from 'tsyringe';
 
-import { DIGEST_RUNNER_LABELS, DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
+import { DIGEST_RUNNER_LABELS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
-import type { iCoreOptions } from '@~/core.types';
-import { CORE_OPTIONS_TOKEN, DIGEST_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { DIGEST_REPOSITORY_TOKEN, DIGEST_REVISION_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { AgentAdaptersService } from '@~/features/agents/agent-adapters.service';
+import { AgentCheckoutService } from '@~/features/agents/agent-checkout.service';
 import { AgentCommandsService } from '@~/features/agents/agent-commands.service';
+import { agentFailureMessage } from '@~/features/agents/agent-failure.utils';
+import { AgentRuns } from '@~/features/agents/agent-runs';
+import type { iAgentCheckout } from '@~/features/agents/agents.types';
+import { createLatestThrottle } from '@~/features/agents/latest-throttle.utils';
 import { RemoteChangesService } from '@~/features/code-hosts/remote-changes.service';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
 import { PreferencesService } from '@~/features/preferences/preferences.service';
@@ -21,16 +24,17 @@ import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot
 import type { iSnapshotRecord } from '@~/features/reviews/snapshots/snapshots.types';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
-import { ClaudeCodeAdapter } from './claude-code.adapter';
-import { CodexAdapter } from './codex.adapter';
 import { checkDigest } from './digest-check.utils';
-import { writeDiffFiles } from './digest-diff-files.utils';
 import { AGENT_DIGEST_JSON_SCHEMA, agentDigestSchema } from './digest-output.schema';
 import { fitPatch } from './digest-patch.utils';
 import { previewOf } from './digest-preview.utils';
+import { shortIdsOf, toPromptUnits } from './digest-prompt-units.utils';
 import { buildDigestPrompt } from './digest-prompt.utils';
 import type { iDigestRepository } from './digest.repository';
-import type { iDigestPreview, iDigestRunnerAdapter, iDigestStartOptions, iPromptUnit } from './digests.types';
+import type { iDigestPreview, iDigestRecord, iDigestStartOptions } from './digests.types';
+import type { iDigestRevisionRepository } from './revisions/digest-revision.repository';
+import { DigestRevisionResolver } from './revisions/digest-revision.resolver';
+import { applyRevisions } from './revisions/digest-revision.utils';
 
 const DIGESTS_DIRECTORY = 'digests';
 /**
@@ -38,16 +42,11 @@ const DIGESTS_DIRECTORY = 'digests';
  * diff folder as it needs them, so a long merge request doesn't arrive as one huge prompt.
  */
 const MAX_PROMPT_PATCH_CHARS = 30_000;
-/** Folder in the digest's scratch space holding every file's diff. */
-const DIFF_DIRECTORY = 'diff';
 const MAX_COMMIT_MESSAGES = 50;
 /** A digest that takes longer than this is stopped. */
 const DIGEST_TIMEOUT_MS = 20 * 60 * 1000;
 /** Progress is written at most this often, so a chatty agent doesn't hammer the database. */
 const PROGRESS_INTERVAL_MS = 400;
-
-const lineRange = (start?: number, end?: number) =>
-  start === undefined || end === undefined ? undefined : `${start}-${end}`;
 
 /**
  * AI digests: a coding agent already installed on this machine reads a disposable, read-only checkout
@@ -56,18 +55,19 @@ const lineRange = (start?: number, end?: number) =>
  */
 @singleton()
 export class DigestsService {
-  private readonly running = new Map<string, AbortController>();
+  private readonly runs = new AgentRuns();
 
   private readonly logger;
 
   constructor(
-    @inject(CORE_OPTIONS_TOKEN) private readonly options: iCoreOptions,
     @inject(DIGEST_REPOSITORY_TOKEN) private readonly digestRepository: iDigestRepository,
+    @inject(DIGEST_REVISION_REPOSITORY_TOKEN) private readonly revisionRepository: iDigestRevisionRepository,
     @inject(SNAPSHOT_REPOSITORY_TOKEN) private readonly snapshotRepository: iSnapshotRepository,
+    private readonly revisionResolver: DigestRevisionResolver,
     private readonly reviewsService: ReviewsService,
     private readonly snapshotStoreService: SnapshotStoreService,
-    private readonly claudeCodeAdapter: ClaudeCodeAdapter,
-    private readonly codexAdapter: CodexAdapter,
+    private readonly agentAdaptersService: AgentAdaptersService,
+    private readonly agentCheckoutService: AgentCheckoutService,
     private readonly agentCommandsService: AgentCommandsService,
     private readonly preferencesService: PreferencesService,
     private readonly changeUnitsService: ChangeUnitsService,
@@ -79,7 +79,18 @@ export class DigestsService {
 
   public async get(snapshotId: string) {
     await this.reviewsService.getContext(snapshotId);
-    return (await this.digestRepository.findLatest(snapshotId)) ?? null;
+    const digest = await this.digestRepository.findLatest(snapshotId);
+    return digest ? this.respond(digest) : null;
+  }
+
+  /** The digest as the reviewer reads it: each part's selected version in place, and every version listed. */
+  public async respond(digest: iDigestRecord) {
+    const revisions = await this.revisionRepository.listForDigest(digest.id);
+    return {
+      ...digest,
+      content: digest.content && applyRevisions(digest.content, revisions),
+      revisions: revisions.map((revision) => this.revisionResolver.toRevisionResponse(revision)),
+    };
   }
 
   public async runners() {
@@ -89,39 +100,36 @@ export class DigestsService {
   public async start(snapshotId: string, runner: DigestRunner, options: iDigestStartOptions) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
     const latest = await this.digestRepository.findLatest(snapshotId);
-    if (latest?.status === DIGEST_STATUSES.RUNNING && this.running.has(latest.id)) {
+    if (latest?.status === DIGEST_STATUSES.RUNNING && this.runs.has(latest.id)) {
       throw ORPCBadRequestError(errorCodes.DIGEST_ALREADY_RUNNING);
     }
     const command = await this.agentCommandsService.resolve(runner);
 
     const digest = await this.digestRepository.create(snapshotId, runner, options);
-    const controller = new AbortController();
-    this.running.set(digest.id, controller);
-    const timeout = setTimeout(
-      () => controller.abort(new Error('The digest took too long and was stopped')),
-      DIGEST_TIMEOUT_MS,
+    this.runs.start(
+      digest.id,
+      async (signal) => this.write(digest.id, command, runner, options, snapshot, target, signal),
+      {
+        timeoutMs: DIGEST_TIMEOUT_MS,
+        timeoutMessage: 'The digest took too long and was stopped',
+        onError: (error) => this.logger.error('Digest failed', { digestId: digest.id, error: String(error) }),
+      },
     );
-    this.write(digest.id, command, runner, options, snapshot, target, controller.signal)
-      .catch((error: unknown) => this.logger.error('Digest failed', { digestId: digest.id, error: String(error) }))
-      .finally(() => {
-        clearTimeout(timeout);
-        this.running.delete(digest.id);
-      });
-    return digest;
+    return this.respond(digest);
   }
 
   public async cancel(digestId: string) {
     const digest = await this.digestRepository.findById(digestId);
     if (!digest) throw ORPCNotFoundError(errorCodes.DIGEST_NOT_FOUND);
-    if (digest.status !== DIGEST_STATUSES.RUNNING) return digest;
+    if (digest.status !== DIGEST_STATUSES.RUNNING) return this.respond(digest);
     const cancelled = await this.digestRepository.update(digestId, {
       status: DIGEST_STATUSES.CANCELLED,
       progress: null,
       preview: null,
       finishedAt: new Date(),
     });
-    this.running.get(digestId)?.abort(new Error('Stopped'));
-    return cancelled ?? digest;
+    this.runs.abort(digestId, 'Stopped');
+    return this.respond(cancelled ?? digest);
   }
 
   /** Called once at startup: nothing can still be running from an earlier launch. */
@@ -131,11 +139,7 @@ export class DigestsService {
 
   /** Stops every running agent; used when the app quits. */
   public stopAll() {
-    for (const controller of this.running.values()) controller.abort(new Error('Chaff is closing'));
-  }
-
-  private adapterFor(runner: DigestRunner): iDigestRunnerAdapter {
-    return runner === DIGEST_RUNNERS.CODEX ? this.codexAdapter : this.claudeCodeAdapter;
+    this.runs.stopAll();
   }
 
   private async write(
@@ -147,99 +151,87 @@ export class DigestsService {
     target: iReviewTargetRecord,
     signal: AbortSignal,
   ) {
-    const folder = path.join(this.options.dataDir, DIGESTS_DIRECTORY, digestId);
-    const checkout = path.join(folder, 'checkout');
-    const scratchDir = path.join(folder, 'scratch');
-    const diffDirectory = path.join(scratchDir, DIFF_DIRECTORY);
-    let lastProgressAt = 0;
-    const onProgress = (progress: string) => {
-      const now = Date.now();
-      if (now - lastProgressAt < PROGRESS_INTERVAL_MS) return;
-      lastProgressAt = now;
-      this.digestRepository.update(digestId, { progress }).catch(() => undefined);
-    };
-    // The preview is written at most once per interval, always ending with the newest one received.
-    let latestPreview: iDigestPreview | undefined;
+    const progress = createLatestThrottle((text: string) => {
+      this.digestRepository.update(digestId, { progress: text }).catch(() => undefined);
+    }, PROGRESS_INTERVAL_MS);
     let writtenPreview: string | undefined;
-    let previewWrittenAt = 0;
-    let previewTimer: ReturnType<typeof setTimeout> | undefined;
-    const writePreview = () => {
-      previewTimer = undefined;
-      const serialized = JSON.stringify(latestPreview);
-      if (!latestPreview || serialized === writtenPreview || signal.aborted) return;
+    const preview = createLatestThrottle((latest: iDigestPreview) => {
+      const serialized = JSON.stringify(latest);
+      if (serialized === writtenPreview || signal.aborted) return;
       writtenPreview = serialized;
-      previewWrittenAt = Date.now();
-      this.digestRepository.update(digestId, { preview: latestPreview }).catch(() => undefined);
+      this.digestRepository.update(digestId, { preview: latest }).catch(() => undefined);
+    }, PROGRESS_INTERVAL_MS);
+    const stopWriting = () => {
+      progress.stop();
+      preview.stop();
     };
-    const showPreview = (preview: iDigestPreview | undefined) => {
-      if (!preview) return;
-      latestPreview = preview;
-      previewTimer ??= setTimeout(writePreview, Math.max(0, previewWrittenAt + PROGRESS_INTERVAL_MS - Date.now()));
-    };
-    const stopPreview = () => clearTimeout(previewTimer);
 
     try {
-      await mkdir(scratchDir, { recursive: true });
-      onProgress('Checking out the snapshot');
-      await this.snapshotStoreService.addWorktree(target.workspaceId, snapshot.headSha, checkout);
-      const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(
+      progress.push('Checking out the snapshot');
+      await this.agentCheckoutService.withCheckout(
+        target.workspaceId,
         snapshot,
-        target,
-        diffDirectory,
-        instructions,
+        { directory: DIGESTS_DIRECTORY, runId: digestId },
+        async (checkout) => {
+          const { prompt, unitIds, shortIds, outlinedPaths } = await this.preparePrompt(
+            snapshot,
+            target,
+            checkout,
+            instructions,
+          );
+          progress.push(`Starting ${DIGEST_RUNNER_LABELS.get(runner)}`);
+          const answer = await this.agentAdaptersService.adapterFor(runner).run(command, {
+            cwd: checkout.checkout,
+            scratchDir: checkout.scratchDir,
+            diffDirectory: checkout.diffDirectory,
+            prompt,
+            model,
+            schema: AGENT_DIGEST_JSON_SCHEMA,
+            signal,
+            onProgress: progress.push,
+            onPartialAnswer: (partial) => {
+              const latest = previewOf(partial, unitIds.length);
+              if (latest) preview.push(latest);
+            },
+          });
+          stopWriting();
+          const parsed = agentDigestSchema.safeParse(answer);
+          if (!parsed.success) throw new Error('The agent answered in an unexpected shape');
+          const content = { ...(await checkDigest(parsed.data, unitIds, shortIds, checkout.checkout)), outlinedPaths };
+          await this.changeUnitsService.adoptDigest(snapshot.id, content);
+          await this.digestRepository.update(digestId, {
+            status: DIGEST_STATUSES.READY,
+            content,
+            progress: null,
+            preview: null,
+            finishedAt: new Date(),
+          });
+        },
       );
-      onProgress(`Starting ${DIGEST_RUNNER_LABELS.get(runner)}`);
-      const answer = await this.adapterFor(runner).run(command, {
-        cwd: checkout,
-        scratchDir,
-        diffDirectory,
-        prompt,
-        model,
-        schema: AGENT_DIGEST_JSON_SCHEMA,
-        signal,
-        onProgress,
-        onPartialAnswer: (partial) => showPreview(previewOf(partial, unitIds.length)),
-      });
-      stopPreview();
-      const parsed = agentDigestSchema.safeParse(answer);
-      if (!parsed.success) throw new Error('The agent answered in an unexpected shape');
-      const content = { ...(await checkDigest(parsed.data, unitIds, shortIds, checkout)), outlinedPaths };
-      await this.changeUnitsService.adoptDigest(snapshot.id, content);
-      await this.digestRepository.update(digestId, {
-        status: DIGEST_STATUSES.READY,
-        content,
-        progress: null,
-        preview: null,
-        finishedAt: new Date(),
-      });
     } catch (error) {
-      stopPreview();
+      stopWriting();
       // A cancelled digest is already marked; anything else that stops the run is a failure.
       const current = await this.digestRepository.findById(digestId);
       if (current?.status === DIGEST_STATUSES.RUNNING) {
-        const reason: unknown = signal.aborted ? signal.reason : error;
         await this.digestRepository.update(digestId, {
           status: DIGEST_STATUSES.FAILED,
-          error: reason instanceof Error ? reason.message : String(reason),
+          error: agentFailureMessage(error, signal),
           progress: null,
           preview: null,
           finishedAt: new Date(),
         });
       }
       throw error;
-    } finally {
-      await this.snapshotStoreService.removeWorktree(target.workspaceId, checkout).catch(() => undefined);
-      await rm(folder, { recursive: true, force: true }).catch(() => undefined);
     }
   }
 
   private async preparePrompt(
     snapshot: iSnapshotRecord,
     target: iReviewTargetRecord,
-    diffDirectory: string,
+    { patch: fullPatch, diffDirectory }: iAgentCheckout,
     instructions?: string,
   ) {
-    const [units, files, commits, fullPatch, preferences, change] = await Promise.all([
+    const [units, files, commits, preferences, change] = await Promise.all([
       this.snapshotRepository.listUnits(snapshot.id),
       this.snapshotRepository.listFiles(snapshot.id),
       this.snapshotStoreService.commitMessages(
@@ -248,27 +240,13 @@ export class DigestsService {
         snapshot.headSha,
         MAX_COMMIT_MESSAGES,
       ),
-      this.snapshotStoreService.patch(target.workspaceId, snapshot.baseSha, snapshot.headSha),
       this.preferencesService.texts(target.workspaceId),
       target.kind === REVIEW_TARGET_KINDS.CHANGE_REQUEST
         ? this.remoteChangesService.describe(target).catch(() => undefined)
         : undefined,
     ]);
-    await writeDiffFiles(diffDirectory, fullPatch);
     const { patch, outlined } = fitPatch(fullPatch, MAX_PROMPT_PATCH_CHARS);
-    const paths = new Map(files.map((file) => [file.id, file.path]));
-    const promptUnits: iPromptUnit[] = units.map((unit, index) => ({
-      shortId: `u${index + 1}`,
-      unitId: unit.id,
-      kind: unit.kind,
-      title: unit.title,
-      path: paths.get(unit.fileId) ?? '',
-      change: unit.change,
-      oldLines: lineRange(unit.oldStartLine, unit.oldEndLine),
-      newLines: lineRange(unit.newStartLine, unit.newEndLine),
-      additions: unit.additions,
-      deletions: unit.deletions,
-    }));
+    const promptUnits = toPromptUnits(units, files);
     const prompt = buildDigestPrompt({
       branch: target.branch,
       parentBranch: snapshot.parentBranch,
@@ -286,7 +264,7 @@ export class DigestsService {
     return {
       prompt,
       unitIds: units.map((unit) => unit.id),
-      shortIds: new Map(promptUnits.map((unit) => [unit.shortId, unit.unitId])),
+      shortIds: shortIdsOf(promptUnits),
       outlinedPaths: outlined.map((file) => file.path),
     };
   }

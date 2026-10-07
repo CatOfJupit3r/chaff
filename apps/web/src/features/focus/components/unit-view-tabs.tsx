@@ -13,7 +13,7 @@ interface iUnitViewTabsProps {
   onChange: (view: CardView) => void;
 }
 
-/** Code, Usages, Diagram and Tests, switched with 1 to 4. */
+/** Code, Usages, Diagram, Tests and Q&A, switched with 1 to 5. */
 export function UnitViewTabs({ view, counts, onChange }: iUnitViewTabsProps) {
   return (
     <div role="tablist" className="flex gap-0.5 overflow-x-auto border-t border-line bg-canvas px-3.5">

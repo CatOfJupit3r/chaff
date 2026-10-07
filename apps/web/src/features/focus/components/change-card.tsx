@@ -1,3 +1,5 @@
+import { CardQuestions } from '@~/features/assistant/components/card-questions';
+import { useAssistantThread } from '@~/features/assistant/hooks/use-assistant-thread';
 import { ChangeDigestNote } from '@~/features/digests/components/change-digest-note';
 import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
 import type { iDigest } from '@~/features/digests/digests.types';
@@ -58,7 +60,11 @@ export function ChangeCard({
     card.units.map((unit) => unit.id),
   );
   const testCount = tests.length > 0 ? tests.length : found.length;
-  const counts = new Map<CardView, number>([[CARD_VIEWS.code, card.units.length]]);
+  const questions = useAssistantThread({ snapshotId: snapshot.id, cardId: card.id });
+  const counts = new Map<CardView, number>([
+    [CARD_VIEWS.code, card.units.length],
+    [CARD_VIEWS.qa, questions.length],
+  ]);
   if (content) counts.set(CARD_VIEWS.diagram, diagrams.length);
   if (content || testCount > 0) counts.set(CARD_VIEWS.tests, testCount);
   const fileOf = (fileId: string) => snapshot.files.find((file) => file.id === fileId);
@@ -106,7 +112,7 @@ export function ChangeCard({
           <UnitDiagramView
             snapshotId={snapshot.id}
             diagrams={diagrams}
-            hasDigest={content !== undefined}
+            digest={digest}
             currentUnitIds={unitIds}
             onOpenUnit={onOpenUnit}
           />
@@ -119,6 +125,16 @@ export function ChangeCard({
           headSha={snapshot.headSha}
           hasDigest={content !== undefined}
           onOpenInEditor={onOpenInEditor}
+        />
+      ) : null}
+      {view === CARD_VIEWS.qa ? (
+        <CardQuestions
+          card={{
+            snapshotId: snapshot.id,
+            cardId: card.id,
+            cardTitle: card.title,
+            unitIds: card.units.map((unit) => unit.id),
+          }}
         />
       ) : null}
     </FocusCardShell>

@@ -3,6 +3,7 @@ import z from 'zod';
 
 import {
   diagramKindSchema,
+  digestPartSchema,
   digestRunnerSchema,
   digestStatusSchema,
   intentSourceSchema,
@@ -92,6 +93,28 @@ export const digestPreviewSchema = z.object({
   diagramCount: z.number().int(),
 });
 
+/** Which part of a digest: the overview, one unit's note by unit id, or one diagram by its id. */
+export const digestPartRefSchema = z.object({
+  part: digestPartSchema,
+  /** The unit id for a unit note, the diagram id for a diagram; left out for the overview. */
+  partId: idSchema.optional(),
+});
+
+/** A version of one part written on the reviewer's instructions; the digest's own version is the first. */
+export const digestRevisionSchema = digestPartRefSchema.extend({
+  id: z.string(),
+  instructions: z.string(),
+  runner: digestRunnerSchema,
+  model: z.string().optional(),
+  status: digestStatusSchema,
+  progress: z.string().optional(),
+  error: z.string().optional(),
+  /** The version shown, and used everywhere the digest is read; when none of a part's is, the digest's own is. */
+  isSelected: z.boolean(),
+  startedAt: z.date(),
+  finishedAt: z.date().optional(),
+});
+
 export const digestSchema = z.object({
   id: z.string(),
   snapshotId: z.string(),
@@ -102,9 +125,12 @@ export const digestSchema = z.object({
   status: digestStatusSchema,
   progress: z.string().optional(),
   error: z.string().optional(),
+  /** With the selected version of every part that has been rewritten. */
   content: digestContentSchema.optional(),
   /** While running, with an agent that streams its answer. */
   preview: digestPreviewSchema.optional(),
+  /** Every rewritten version of the digest's parts, oldest first. */
+  revisions: z.array(digestRevisionSchema),
   startedAt: z.date(),
   finishedAt: z.date().optional(),
 });
@@ -147,6 +173,29 @@ export const digestsContract = oc.router({
   cancel: oc
     .route({ summary: 'Stop a digest', description: 'Stops a running digest and discards what it wrote.' })
     .input(z.object({ digestId: idSchema }))
+    .output(digestSchema),
+
+  revise: oc
+    .route({
+      summary: 'Rewrite part of a digest',
+      description:
+        "Has the coding agent picked in Settings rewrite the overview, one unit's note or one diagram as the reviewer instructs, starting from the version shown, in a read-only checkout of the snapshot. Earlier versions are kept; the new one is selected once it is ready. Fails with DIGEST_REVISION_RUNNING while that part is already being rewritten.",
+    })
+    .input(digestPartRefSchema.extend({ digestId: idSchema, instructions: digestInstructionsSchema }))
+    .output(digestSchema),
+
+  cancelRevision: oc
+    .route({ summary: 'Stop rewriting a part', description: 'Stops a running rewrite and keeps the version shown.' })
+    .input(z.object({ revisionId: idSchema }))
+    .output(digestSchema),
+
+  selectVersion: oc
+    .route({
+      summary: "Pick a part's version",
+      description:
+        "Shows one ready version of a part everywhere the digest is read; without revisionId, the digest's own version.",
+    })
+    .input(digestPartRefSchema.extend({ digestId: idSchema, revisionId: idSchema.optional() }))
     .output(digestSchema),
 
   runners: oc

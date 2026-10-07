@@ -15,7 +15,7 @@ const agentTestSchema = z.strictObject({
   note: z.string(),
 });
 
-const agentUnitNoteSchema = z.strictObject({
+export const agentUnitNoteSchema = z.strictObject({
   unit: z.string(),
   summary: z.string(),
   worthChecking: z.array(z.string()),
@@ -31,7 +31,7 @@ const agentGroupSchema = z.strictObject({
   units: z.array(z.string()),
 });
 
-const agentDiagramSchema = z.strictObject({
+export const agentDiagramSchema = z.strictObject({
   title: z.string(),
   kind: z.literal(diagramKindsEnumwaii.rawValues).transform((value) => diagramKindsEnumwaii.parse(value)),
   mermaid: z.string(),
@@ -48,6 +48,10 @@ export const agentDigestSchema = z.strictObject({
 });
 
 export type iAgentDigest = z.infer<typeof agentDigestSchema>;
+
+export type iAgentUnitNote = z.infer<typeof agentUnitNoteSchema>;
+
+export type iAgentDiagram = z.infer<typeof agentDiagramSchema>;
 
 /** The JSON schema handed to the agent CLIs. */
 export const AGENT_DIGEST_JSON_SCHEMA = z.toJSONSchema(agentDigestSchema, { target: 'draft-7', io: 'input' });

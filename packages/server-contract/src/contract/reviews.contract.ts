@@ -382,9 +382,15 @@ export const reviewsContract = oc.router({
     .route({
       summary: 'Get the code of units in one file',
       description:
-        'Returns the given units of one file whole on both sides, cut from the file together with their changes marked, and the newest commit that touched the file. Fails with UNITS_IN_DIFFERENT_FILES when the units are not all in one file.',
+        'Returns the given units of one file whole on both sides, cut from the file together with their changes marked, and the newest commit that touched the file. With isWholeFile, returns every line of the file with all of its changes instead of the cut. Fails with UNITS_IN_DIFFERENT_FILES when the units are not all in one file.',
     })
-    .input(snapshotIdInput.extend({ unitIds: z.array(idSchema).min(1).max(MAX_DETAIL_UNITS) }))
+    .input(
+      snapshotIdInput.extend({
+        unitIds: z.array(idSchema).min(1).max(MAX_DETAIL_UNITS),
+        /** Every line of the file with all of its changes, rather than only the units' lines. */
+        isWholeFile: z.boolean().optional(),
+      }),
+    )
     .output(unitDetailSchema),
 
   unitInterdiff: oc

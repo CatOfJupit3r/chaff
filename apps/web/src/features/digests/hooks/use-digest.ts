@@ -4,13 +4,22 @@ import { DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
-/** How often a running digest is asked for progress. */
+import type { iDigest } from '../digests.types';
+
+/** How often a running digest, or a part being rewritten, is asked for progress. */
 const RUNNING_POLL_MS = 800;
+
+function isWriting(digest: iDigest | null | undefined) {
+  return (
+    digest?.status === DIGEST_STATUSES.RUNNING ||
+    digest?.revisions.some((revision) => revision.status === DIGEST_STATUSES.RUNNING) === true
+  );
+}
 
 export function digestQueryOptions(snapshotId: string) {
   return tanstackRPC.digests.get.queryOptions({
     input: { snapshotId },
-    refetchInterval: (query) => (query.state.data?.status === DIGEST_STATUSES.RUNNING ? RUNNING_POLL_MS : false),
+    refetchInterval: (query) => (isWriting(query.state.data) ? RUNNING_POLL_MS : false),
   });
 }
 

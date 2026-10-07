@@ -33,6 +33,13 @@ export const DIGEST_STATUSES = digestStatusesEnumwaii.enum;
 export type DigestStatus = InferEnumwaii<typeof digestStatusesEnumwaii>;
 export const digestStatusSchema = emToZodSchema(digestStatusesEnumwaii);
 
+/** The parts of a digest the reviewer can have rewritten with instructions; earlier versions are kept. */
+export const digestPartsEnumwaii = em(['OVERVIEW', 'UNIT_NOTE', 'DIAGRAM']);
+
+export const DIGEST_PARTS = digestPartsEnumwaii.enum;
+export type DigestPart = InferEnumwaii<typeof digestPartsEnumwaii>;
+export const digestPartSchema = emToZodSchema(digestPartsEnumwaii);
+
 /** How much a test claim is worth: a relevant test exists, it was read, or it passed against the snapshot. */
 export const testTiersEnumwaii = em(['EXISTS', 'INSPECTED', 'PASSED']);
 

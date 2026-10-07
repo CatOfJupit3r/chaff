@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { INTENT_SOURCES, TEST_TIERS } from '@chaff/common/enums/digest.enums';
 
-import type { iAgentDigest } from './digest-output.schema';
+import type { iAgentDiagram, iAgentDigest, iAgentUnitNote } from './digest-output.schema';
 import type { iDigestContent } from './digests.types';
 
 const MAX_WORTH_CHECKING = 5;
@@ -28,6 +28,61 @@ function nodeUnits(mermaid: string, shortIds: ReadonlyMap<string, string>) {
   });
 }
 
+/** Resolves short ids to unit ids, dropping unknown ones and repeats. */
+function resolveShortIds(ids: readonly string[], shortIds: ReadonlyMap<string, string>) {
+  return [...new Set(ids.map((id) => shortIds.get(id.trim())).filter((id): id is string => id !== undefined))];
+}
+
+/**
+ * One unit's note as the reviewer can trust it: at most a few things worth checking, tests inside `root`
+ * with their paths made relative to it, and no test claimed to have passed, because nothing ran.
+ */
+export async function checkUnitNote(
+  note: Omit<iAgentUnitNote, 'unit'>,
+  unitId: string,
+  root: string,
+): Promise<iDigestContent['units'][number]> {
+  const tests: iDigestContent['units'][number]['tests'] = [];
+  for (const test of note.tests.slice(0, MAX_TESTS)) {
+    const relative = await toRepoPath(root, test.path);
+    if (!relative) continue;
+    tests.push({
+      path: relative,
+      line: test.line !== null && test.line > 0 ? test.line : undefined,
+      tier: test.tier === TEST_TIERS.PASSED ? TEST_TIERS.INSPECTED : test.tier,
+      note: test.note.trim(),
+    });
+  }
+  return {
+    unitId,
+    summary: note.summary.trim(),
+    worthChecking: note.worthChecking
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, MAX_WORTH_CHECKING),
+    tests,
+  };
+}
+
+/** A diagram with its units resolved and the nodes that open them; undefined when it draws nothing. */
+export function checkDiagram(
+  diagram: iAgentDiagram,
+  id: string,
+  shortIds: ReadonlyMap<string, string>,
+): iDigestContent['diagrams'][number] | undefined {
+  const mermaid = diagram.mermaid.trim();
+  if (!mermaid) return undefined;
+  return {
+    id,
+    title: diagram.title.trim(),
+    kind: diagram.kind,
+    mermaid,
+    unitIds: resolveShortIds(diagram.units, shortIds),
+    nodeUnits: nodeUnits(diagram.mermaid, shortIds),
+    isSuggestion: diagram.isSuggestion,
+  };
+}
+
 /**
  * Turns the agent's answer into a digest the reviewer can trust to be complete: unknown unit ids are
  * dropped, a unit belongs to one group at most, units no group explains land in a visible "Other
@@ -42,9 +97,7 @@ export async function checkDigest(
   root: string,
 ) {
   const resolve = (shortId: string) => shortIds.get(shortId.trim());
-  const resolveAll = (ids: readonly string[]) => [
-    ...new Set(ids.map(resolve).filter((id): id is string => id !== undefined)),
-  ];
+  const resolveAll = (ids: readonly string[]) => resolveShortIds(ids, shortIds);
 
   const grouped = new Set<string>();
   const groups: iDigestContent['groups'] = answer.groups.flatMap((group, index) => {
@@ -88,39 +141,12 @@ export async function checkDigest(
     const unitId = resolve(note.unit);
     if (!unitId || seenNotes.has(unitId)) continue;
     seenNotes.add(unitId);
-    const tests: iDigestContent['units'][number]['tests'] = [];
-    for (const test of note.tests.slice(0, MAX_TESTS)) {
-      const relative = await toRepoPath(root, test.path);
-      if (!relative) continue;
-      tests.push({
-        path: relative,
-        line: test.line !== null && test.line > 0 ? test.line : undefined,
-        tier: test.tier === TEST_TIERS.PASSED ? TEST_TIERS.INSPECTED : test.tier,
-        note: test.note.trim(),
-      });
-    }
-    units.push({
-      unitId,
-      summary: note.summary.trim(),
-      worthChecking: note.worthChecking
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .slice(0, MAX_WORTH_CHECKING),
-      tests,
-    });
+    units.push(await checkUnitNote(note, unitId, root));
   }
 
-  const diagrams: iDigestContent['diagrams'] = answer.diagrams
+  const diagrams = answer.diagrams
     .filter((diagram) => diagram.mermaid.trim().length > 0)
-    .map((diagram, index) => ({
-      id: `d${index + 1}`,
-      title: diagram.title.trim(),
-      kind: diagram.kind,
-      mermaid: diagram.mermaid.trim(),
-      unitIds: resolveAll(diagram.units),
-      nodeUnits: nodeUnits(diagram.mermaid, shortIds),
-      isSuggestion: diagram.isSuggestion,
-    }));
+    .flatMap((diagram, index) => checkDiagram(diagram, `d${index + 1}`, shortIds) ?? []);
 
   return {
     overview: answer.overview.trim(),

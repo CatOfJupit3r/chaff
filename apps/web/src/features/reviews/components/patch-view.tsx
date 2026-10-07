@@ -24,8 +24,8 @@ interface iPatchViewProps {
   patch: string;
   layout: DiffLayout;
   isWrapped: boolean;
-  /** Shows every unchanged line of the file, whatever the diff settings say. */
-  isExpanded?: boolean;
+  /** The patch leaves out some of the file's changes, so its hidden lines cannot be filled in from the file. */
+  isCut?: boolean;
   /** More CSS for the renderer, such as outlines around units. */
   extraCss?: string;
 }
@@ -35,15 +35,7 @@ interface iPatchViewProps {
  * diff, lines show the decision on their unit, findings and merge request threads sit under the lines they
  * point at, and the + beside a line, or a picked range, opens a note.
  */
-export function PatchView({
-  snapshotId,
-  file,
-  patch,
-  layout,
-  isWrapped,
-  isExpanded = false,
-  extraCss,
-}: iPatchViewProps) {
+export function PatchView({ snapshotId, file, patch, layout, isWrapped, isCut = false, extraCss }: iPatchViewProps) {
   const isDark = useIsDarkMode();
   const { viewerOptions } = useDiffPreferences();
   const loadDiffFiles = useLoadDiffFiles(snapshotId, file);
@@ -67,16 +59,16 @@ export function PatchView({
       overflow: isWrapped ? ('wrap' as const) : ('scroll' as const),
       disableFileHeader: true,
       preferredHighlighter: 'shiki-js' as const,
-      loadDiffFiles,
+      loadDiffFiles: isCut ? undefined : loadDiffFiles,
       diffIndicators: 'classic' as const,
       lineDiffType: viewerOptions.lineDiffType,
-      expandUnchanged: isExpanded || viewerOptions.expandUnchanged,
+      expandUnchanged: !isCut && viewerOptions.expandUnchanged,
       unsafeCSS: [UNIFIED_LINE_NUMBERS_CSS, gutterCss, extraCss].filter(Boolean).join('\n'),
       enableLineSelection: startDraft !== undefined,
       enableGutterUtility: startDraft !== undefined,
       onGutterUtilityClick: (range: SelectedLineRange) => startDraft?.(draftFromSelection(file.id, range)),
     }),
-    [isDark, layout, isWrapped, isExpanded, loadDiffFiles, viewerOptions, gutterCss, extraCss, startDraft, file.id],
+    [isDark, layout, isWrapped, isCut, loadDiffFiles, viewerOptions, gutterCss, extraCss, startDraft, file.id],
   );
 
   return (

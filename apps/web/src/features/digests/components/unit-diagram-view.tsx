@@ -1,8 +1,12 @@
+import { DIGEST_PARTS } from '@chaff/common/enums/digest.enums';
+
 import { Pill } from '@~/components/ui/pill';
 import { useUnits } from '@~/features/focus/hooks/use-units';
 
 import { DIAGRAM_KIND_LABELS } from '../digests.enums';
-import type { iDigestDiagram } from '../digests.types';
+import type { iDigest, iDigestDiagram } from '../digests.types';
+import { readyContent } from '../digests.utils';
+import { DigestPartControls } from './digest-part-controls';
 import { MermaidDiagram } from './mermaid-diagram';
 
 interface iDiagramUnitsProps {
@@ -44,24 +48,21 @@ function DiagramUnits({ snapshotId, diagram, currentUnitIds, onOpenUnit }: iDiag
 interface iUnitDiagramViewProps {
   snapshotId: string;
   diagrams: readonly iDigestDiagram[];
-  hasDigest: boolean;
+  digest: iDigest | undefined;
   /** The units on the card showing the diagrams. */
   currentUnitIds: ReadonlySet<string>;
   onOpenUnit: (unitId: string) => void;
 }
 
-/** Diagrams the digest drew for this unit; a suggested design is labelled as one, and its boxes open the units they stand for. */
-export function UnitDiagramView({
-  snapshotId,
-  diagrams,
-  hasDigest,
-  currentUnitIds,
-  onOpenUnit,
-}: iUnitDiagramViewProps) {
-  if (diagrams.length === 0) {
+/**
+ * Diagrams the digest drew for this unit; a suggested design is labelled as one, its boxes open the units they
+ * stand for, and Improve has the agent redraw it.
+ */
+export function UnitDiagramView({ snapshotId, diagrams, digest, currentUnitIds, onOpenUnit }: iUnitDiagramViewProps) {
+  if (!digest || diagrams.length === 0) {
     return (
       <p className="m-0 px-[22px] py-5 text-[13px] text-muted">
-        {hasDigest
+        {readyContent(digest)
           ? 'No diagram for this one. The digest draws one only where boxes explain more than the code.'
           : 'Diagrams come from the AI digest. Write one from the top bar.'}
       </p>
@@ -77,6 +78,7 @@ export function UnitDiagramView({
             <Pill variant="neutral">{DIAGRAM_KIND_LABELS.get(diagram.kind)}</Pill>
             {diagram.isSuggestion ? <Pill variant="question">suggested design, not the code</Pill> : null}
           </header>
+          <DigestPartControls digest={digest} partRef={{ part: DIGEST_PARTS.DIAGRAM, partId: diagram.id }} />
           <MermaidDiagram
             source={diagram.mermaid}
             title={diagram.title}

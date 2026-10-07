@@ -5,12 +5,13 @@ import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { PatchView } from '@~/features/reviews/components/patch-view';
 import { DiffSkeleton } from '@~/features/reviews/components/skeleton-components';
-import type { iSnapshotFile, iUnit, iUnitDetail } from '@~/features/reviews/reviews.types';
+import type { iSnapshotFile, iUnit } from '@~/features/reviews/reviews.types';
 
 import { CODE_SCOPE_LABELS, CODE_SCOPES, codeScopeValues } from '../focus.enums';
 import type { CodeScope } from '../focus.enums';
 import { useCodeExpansion } from '../hooks/use-code-expansion';
 import { useScrollToCodeRow } from '../hooks/use-scroll-to-code-row';
+import { useUnitCode } from '../hooks/use-unit-detail';
 import { useUnitInterdiff } from '../hooks/use-unit-interdiff';
 import { buildUnitAreaCss, buildUnitAreas, firstAreaRowSelector, hasRowsOutsideUnits } from '../unit-areas.utils';
 import { CodeFileBar } from './code-file-bar';
@@ -21,7 +22,6 @@ interface iUnitCodeViewProps {
   snapshotId: string;
   unit: iUnit;
   file: iSnapshotFile;
-  detail: iUnitDetail | undefined;
   onOpenInEditor: (path: string, line?: number) => void;
 }
 
@@ -29,12 +29,13 @@ interface iUnitCodeViewProps {
  * The unit's file bar and its code, whole, with the changes marked. A unit edited since the reviewer
  * decided on it shows only what changed since then, with the whole change a click away.
  */
-export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }: iUnitCodeViewProps) {
+export function UnitCodeView({ snapshotId, unit, file, onOpenInEditor }: iUnitCodeViewProps) {
   const line = unit.newStartLine ?? unit.oldStartLine ?? 1;
   const interdiff = useUnitInterdiff(snapshotId, unit);
   const [scope, setScope] = useState<CodeScope>(CODE_SCOPES['since-review']);
   const isSinceReview = interdiff.reviewed !== undefined && scope === CODE_SCOPES['since-review'];
   const expansion = useCodeExpansion([unit.id]);
+  const { detail, isCut } = useUnitCode(snapshotId, [unit.id], expansion.isExpanded);
   const widePatch = detail?.patch && hasRowsOutsideUnits(detail.patch, [unit]) ? detail.patch : undefined;
   const areas = buildUnitAreas([unit]);
   const scrollRef = useScrollToCodeRow(widePatch ? firstAreaRowSelector(widePatch, areas) : undefined);
@@ -67,7 +68,7 @@ export function UnitCodeView({ snapshotId, unit, file, detail, onOpenInEditor }:
             patch={detail.patch}
             layout={DIFF_LAYOUTS.unified}
             isWrapped={false}
-            isExpanded={expansion.isExpanded}
+            isCut={isCut}
             extraCss={widePatch ? buildUnitAreaCss(widePatch, areas) : undefined}
           />
         ) : null}

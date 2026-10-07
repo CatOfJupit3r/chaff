@@ -5,7 +5,9 @@ import type { iChaffCore, iCoreOptions } from './core.types';
 import { DatabaseService } from './db/database.service';
 import { registerServices } from './di/container';
 import { CORE_HOST_TOKEN, CORE_OPTIONS_TOKEN } from './di/tokens';
+import { AssistantService } from './features/assistant/assistant.service';
 import { DigestsService } from './features/digests/digests.service';
+import { DigestRevisionsService } from './features/digests/revisions/digest-revisions.service';
 import { FindingTasksService } from './features/findings/finding-tasks.service';
 import { FixesService } from './features/fixes/fixes.service';
 import { configureLogger } from './features/logger/logger';
@@ -32,6 +34,10 @@ export async function createChaffCore(options: iCoreOptions): Promise<iChaffCore
   await fixesService.failInterrupted();
   const findingTasksService = container.resolve(FindingTasksService);
   await findingTasksService.failInterrupted();
+  const digestRevisionsService = container.resolve(DigestRevisionsService);
+  await digestRevisionsService.failInterrupted();
+  const assistantService = container.resolve(AssistantService);
+  await assistantService.failInterrupted();
 
   return {
     router: appRouter,
@@ -39,6 +45,8 @@ export async function createChaffCore(options: iCoreOptions): Promise<iChaffCore
       digestsService.stopAll();
       fixesService.stopAll();
       findingTasksService.stopAll();
+      digestRevisionsService.stopAll();
+      assistantService.stopAll();
       databaseService.close();
     },
   };

@@ -61,7 +61,7 @@ export function FocusContextPanel({
           <RightIcon />
         </Button>
       </div>
-      {digest && content ? <DigestOverview runner={digest.runner} content={content} /> : null}
+      {digest && content ? <DigestOverview digest={digest} content={content} /> : null}
       {digest?.status === DIGEST_STATUSES.RUNNING ? <DigestPreview digest={digest} /> : null}
       <ContextFindings title="Notes on this card" findings={findings} empty="None yet." />
       <ContextFindings title="Notes on this branch" findings={branchFindings} />

@@ -1,10 +1,14 @@
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 
+import type { iAssistantExchangeRepository } from '@~/features/assistant/assistant-exchange.repository';
+import { DrizzleAssistantExchangeRepository } from '@~/features/assistant/drizzle-assistant-exchange.repository';
 import type { iConnectionRepository } from '@~/features/code-hosts/connection.repository';
 import { DrizzleConnectionRepository } from '@~/features/code-hosts/drizzle-connection.repository';
 import type { iDigestRepository } from '@~/features/digests/digest.repository';
 import { DrizzleDigestRepository } from '@~/features/digests/drizzle-digest.repository';
+import type { iDigestRevisionRepository } from '@~/features/digests/revisions/digest-revision.repository';
+import { DrizzleDigestRevisionRepository } from '@~/features/digests/revisions/drizzle-digest-revision.repository';
 import { DrizzleFindingRepository } from '@~/features/findings/drizzle-finding.repository';
 import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import { DrizzleFixRepository } from '@~/features/fixes/drizzle-fix.repository';
@@ -27,7 +31,9 @@ import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repo
 import {
   CHANGE_UNIT_REPOSITORY_TOKEN,
   CONNECTION_REPOSITORY_TOKEN,
+  ASSISTANT_EXCHANGE_REPOSITORY_TOKEN,
   DIGEST_REPOSITORY_TOKEN,
+  DIGEST_REVISION_REPOSITORY_TOKEN,
   FIX_REPOSITORY_TOKEN,
   PREFERENCE_REPOSITORY_TOKEN,
   FINDING_REPOSITORY_TOKEN,
@@ -48,6 +54,14 @@ export function registerServices() {
   container.registerSingleton<iChangeUnitRepository>(CHANGE_UNIT_REPOSITORY_TOKEN, DrizzleChangeUnitRepository);
   container.registerSingleton<iFindingRepository>(FINDING_REPOSITORY_TOKEN, DrizzleFindingRepository);
   container.registerSingleton<iDigestRepository>(DIGEST_REPOSITORY_TOKEN, DrizzleDigestRepository);
+  container.registerSingleton<iDigestRevisionRepository>(
+    DIGEST_REVISION_REPOSITORY_TOKEN,
+    DrizzleDigestRevisionRepository,
+  );
+  container.registerSingleton<iAssistantExchangeRepository>(
+    ASSISTANT_EXCHANGE_REPOSITORY_TOKEN,
+    DrizzleAssistantExchangeRepository,
+  );
   container.registerSingleton<iFixRepository>(FIX_REPOSITORY_TOKEN, DrizzleFixRepository);
   container.registerSingleton<iPreferenceRepository>(PREFERENCE_REPOSITORY_TOKEN, DrizzlePreferenceRepository);
   container.registerSingleton<iConnectionRepository>(CONNECTION_REPOSITORY_TOKEN, DrizzleConnectionRepository);

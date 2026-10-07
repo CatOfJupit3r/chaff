@@ -9,10 +9,8 @@ import { FINDING_TASK_STATES } from '@chaff/common/enums/review.enums';
 
 import type { iCoreOptions } from '@~/core.types';
 import { CORE_OPTIONS_TOKEN, FINDING_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { AgentAdaptersService } from '@~/features/agents/agent-adapters.service';
 import { AgentCommandsService } from '@~/features/agents/agent-commands.service';
-import { ClaudeCodeAdapter } from '@~/features/digests/claude-code.adapter';
-import { CodexAdapter } from '@~/features/digests/codex.adapter';
-import type { iDigestRunnerAdapter } from '@~/features/digests/digests.types';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
 import { SettingsService } from '@~/features/settings/settings.service';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
@@ -41,8 +39,7 @@ export class FindingTasksService {
     @inject(FINDING_REPOSITORY_TOKEN) private readonly findingRepository: iFindingRepository,
     private readonly agentCommandsService: AgentCommandsService,
     private readonly settingsService: SettingsService,
-    private readonly claudeCodeAdapter: ClaudeCodeAdapter,
-    private readonly codexAdapter: CodexAdapter,
+    private readonly agentAdaptersService: AgentAdaptersService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('finding-tasks');
@@ -102,10 +99,6 @@ export class FindingTasksService {
     for (const controller of this.running.values()) controller.abort(new Error('Chaff is closing'));
   }
 
-  private adapterFor(runner: DigestRunner): iDigestRunnerAdapter {
-    return runner === DIGEST_RUNNERS.CODEX ? this.codexAdapter : this.claudeCodeAdapter;
-  }
-
   /** Runs the agent in an empty folder and returns the task it wrote, or why it failed. */
   private async write(
     findingId: string,
@@ -119,7 +112,7 @@ export class FindingTasksService {
     try {
       await mkdir(cwd, { recursive: true });
       await mkdir(scratchDir, { recursive: true });
-      const answer = await this.adapterFor(runner).run(command, {
+      const answer = await this.agentAdaptersService.adapterFor(runner).run(command, {
         cwd,
         scratchDir,
         prompt: buildTaskPrompt(await this.getFinding(findingId)),

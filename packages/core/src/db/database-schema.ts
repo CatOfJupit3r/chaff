@@ -1,4 +1,6 @@
+import { assistantExchanges } from './schema/assistant-exchanges.schema';
 import { connections } from './schema/connections.schema';
+import { digestRevisions } from './schema/digest-revisions.schema';
 import { digests } from './schema/digests.schema';
 import { findingAnchors, findingEvents, findings } from './schema/findings.schema';
 import { reviewTargets } from './schema/review-targets.schema';
@@ -21,4 +23,6 @@ export const schema = {
   findingAnchors,
   findingEvents,
   digests,
+  digestRevisions,
+  assistantExchanges,
 };

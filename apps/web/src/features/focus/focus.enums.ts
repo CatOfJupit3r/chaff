@@ -19,7 +19,7 @@ import {
 } from '@chaff/common/enums/review.enums';
 
 // Card views and queues are lowercase because they appear in the URL.
-export const cardViewsEnumwaii = em(['code', 'usages', 'diagram', 'tests']);
+export const cardViewsEnumwaii = em(['code', 'usages', 'diagram', 'tests', 'qa']);
 
 export const CARD_VIEWS = cardViewsEnumwaii.enum;
 export type CardView = InferEnumwaii<typeof cardViewsEnumwaii>;
@@ -30,6 +30,7 @@ export const CARD_VIEW_LABELS = cardViewsEnumwaii.derive(
   [CARD_VIEWS.usages, 'Usages'],
   [CARD_VIEWS.diagram, 'Diagram'],
   [CARD_VIEWS.tests, 'Tests'],
+  [CARD_VIEWS.qa, 'Q&A'],
 );
 
 /**
@@ -113,10 +114,11 @@ export const UNIT_MARK_LABELS = unitMarksEnumwaii.derive(
   [UNIT_MARKS.SKIPPED, 'Skipped'],
 );
 
-export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive(
+/** Where a card leaves to after the mark; a concern or question keeps the card up. */
+export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive<CardExit | undefined>()(
   [UNIT_MARKS.LOOKS_GOOD, CARD_EXITS.RIGHT],
-  [UNIT_MARKS.CONCERN, CARD_EXITS.LEFT],
-  [UNIT_MARKS.QUESTION, CARD_EXITS.LEFT],
+  [UNIT_MARKS.CONCERN, undefined],
+  [UNIT_MARKS.QUESTION, undefined],
   [UNIT_MARKS.LATER, CARD_EXITS.DOWN],
   [UNIT_MARKS.SKIPPED, CARD_EXITS.DOWN],
 );

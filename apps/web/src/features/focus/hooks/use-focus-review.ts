@@ -92,16 +92,20 @@ export function useFocusReview(snapshotId: string) {
     setMarks.mutate({ snapshotId, marks }, { onError: (error) => showToast(getErrorMessage(error)) });
   };
 
-  /** Marks the units and moves on when that decides the card; a note on other units keeps the card up. */
+  /**
+   * Marks the units and moves on when that decides the card with a mark that leaves it; a concern or
+   * question, or a note on other units, keeps the card up.
+   */
   const record = (current: iFocusCard, mark: UnitMark, options: iRecordOptions = {}) => {
     const { findingId, skipReason, marked = current.units } = options;
     const previous = marked.map((unit) => ({ unitId: unit.id, mark: unit.mark, skipReason: unit.skipReason }));
     setHistory((steps) => [...steps, { cardId: current.id, previous, findingId }]);
     if (marked.length > 0) writeMarks(marked.map((unit) => ({ unitId: unit.id, mark, skipReason })));
-    if (!current.units.every((unit) => marked.some((candidate) => candidate.id === unit.id))) return;
+    const exit = UNIT_MARK_EXITS.get(mark);
+    if (!exit || !current.units.every((unit) => marked.some((candidate) => candidate.id === unit.id))) return;
     const decided = new Map(marked.map((unit) => [unit.id, mark]));
     const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
-    cardExit.run(UNIT_MARK_EXITS.get(mark), () => goTo(nextIndex));
+    cardExit.run(exit, () => goTo(nextIndex));
   };
 
   const decide = (mark: typeof UNIT_MARKS.LOOKS_GOOD | typeof UNIT_MARKS.LATER) => {
@@ -116,8 +120,8 @@ export function useFocusReview(snapshotId: string) {
   };
 
   /**
-   * Writes the note as a finding, or as the reason for skipping the card, and moves on when the card is
-   * decided; resolves false when it could not be saved.
+   * Writes the note as a finding, which keeps the card up, or as the reason for skipping the card, which
+   * moves on; resolves false when it could not be saved.
    */
   const comment = async (mark: NoteMark, body: string, options: iNoteOptions = CARD_NOTE) => {
     if (!card) return false;
