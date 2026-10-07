@@ -14,7 +14,7 @@ import { useImportReport } from '../hooks/use-import-report';
 const SKIP_REASON_LABELS = reportSkipReasonsEnumwaii.derive(
   [REPORT_SKIP_REASONS.UNSUPPORTED_STATUS, 'the status is not fix_proposed or answered'],
   [REPORT_SKIP_REASONS.WRONG_KIND, 'fixes are for concerns, answers for questions'],
-  [REPORT_SKIP_REASONS.NOT_ACTIVE, 'it is verified, closed or withdrawn'],
+  [REPORT_SKIP_REASONS.NOT_ALLOWED, 'an agent cannot move it from its status'],
   [REPORT_SKIP_REASONS.ALREADY_SET, 'it already has that status'],
   [REPORT_SKIP_REASONS.MISSING_NOTE, 'an answer needs a note'],
 );

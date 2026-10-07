@@ -11,7 +11,7 @@ export const exportScopeSchema = emToZodSchema(exportScopesEnumwaii);
 export const exportScopeValues = exportScopesEnumwaii.values;
 
 /** Statuses a coding agent may report for a finding. Lowercase because agents write them in JSON. */
-export const agentReportStatusesEnumwaii = em(['fix_proposed', 'answered']);
+export const agentReportStatusesEnumwaii = em(['fix_proposed', 'answered', 'reopened']);
 
 export const AGENT_REPORT_STATUSES = agentReportStatusesEnumwaii.enum;
 export type AgentReportStatus = InferEnumwaii<typeof agentReportStatusesEnumwaii>;
@@ -21,7 +21,7 @@ export const agentReportStatusValues = agentReportStatusesEnumwaii.values;
 export const reportSkipReasonsEnumwaii = em([
   'UNSUPPORTED_STATUS',
   'WRONG_KIND',
-  'NOT_ACTIVE',
+  'NOT_ALLOWED',
   'ALREADY_SET',
   'MISSING_NOTE',
 ]);

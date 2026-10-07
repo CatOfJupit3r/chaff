@@ -170,6 +170,7 @@ export function agentPrompt(packet: iPacket, markdown: string) {
     '- Work only on the findings below and leave everything else as it is.',
     '- Concerns: change the code so the concern no longer applies, then report it as `fix_proposed`.',
     '- Questions: answer them; report `answered` with the answer in `note`. Notes need no action.',
+    '- If a finding that was fixed, verified, answered or closed is still wrong, report it as `reopened` with the reason in `note`.',
     '- Never mark a finding resolved or verified. The reviewer checks every fix.',
     '- If you disagree with a finding, leave it out of the report and explain why in your reply.',
     '',

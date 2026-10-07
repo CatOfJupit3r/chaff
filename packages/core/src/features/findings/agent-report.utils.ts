@@ -6,9 +6,10 @@ import {
   REPORT_SKIP_REASONS,
   agentReportStatusesEnumwaii,
 } from '@chaff/common/enums/export.enums';
-import type { AgentReportStatus, ReportSkipReason } from '@chaff/common/enums/export.enums';
+import type { ReportSkipReason } from '@chaff/common/enums/export.enums';
 import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 import type { FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
+import { canAgentSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
 
 const MAX_NOTE_LENGTH = 20_000;
 const MAX_COMMITS = 100;
@@ -68,31 +69,36 @@ export function reportedNumber(id: string | number) {
   return match ? Number(match[1]) : undefined;
 }
 
-const OPEN_STATUSES = new Set<FindingStatus>([
-  FINDING_STATUSES.OPEN,
-  FINDING_STATUSES.REOPENED,
-  FINDING_STATUSES.UNMATCHED,
-]);
+/** The finding kinds each reported status applies to, and the status it moves them to. */
+const REPORTED_TARGETS = agentReportStatusesEnumwaii.derive<{ kinds: readonly FindingKind[]; status: FindingStatus }>()(
+  [AGENT_REPORT_STATUSES.fix_proposed, { kinds: [FINDING_KINDS.CONCERN], status: FINDING_STATUSES.FIX_PROPOSED }],
+  [AGENT_REPORT_STATUSES.answered, { kinds: [FINDING_KINDS.QUESTION], status: FINDING_STATUSES.ANSWERED }],
+  [
+    AGENT_REPORT_STATUSES.reopened,
+    { kinds: [FINDING_KINDS.CONCERN, FINDING_KINDS.QUESTION], status: FINDING_STATUSES.REOPENED },
+  ],
+);
 
-const REPORTED_TARGETS = new Map<AgentReportStatus, { kind: FindingKind; status: FindingStatus }>([
-  [AGENT_REPORT_STATUSES.fix_proposed, { kind: FINDING_KINDS.CONCERN, status: FINDING_STATUSES.FIX_PROPOSED }],
-  [AGENT_REPORT_STATUSES.answered, { kind: FINDING_KINDS.QUESTION, status: FINDING_STATUSES.ANSWERED }],
-]);
+/** Moves that need the agent to say why: an answer, or the reason to reopen. */
+const NOTED_STATUSES = new Set<FindingStatus>([FINDING_STATUSES.ANSWERED, FINDING_STATUSES.REOPENED]);
 
 /**
- * What a reported item does to a finding: the status it moves to, or why it is left alone. Agents can
- * only propose a fix for a concern or answer a question that is still open; verifying stays with the reviewer.
+ * What a reported item does to a finding: the status it moves to, or why it is left alone. Agents follow
+ * `agentFindingStatuses`: propose a fix for a concern, answer a question, or reopen with a reason what they
+ * find still wrong; verifying stays with the reviewer.
  */
 export function reportedStatus(
   finding: { kind: FindingKind; status: FindingStatus },
   item: Pick<iReportItem, 'status' | 'note'>,
 ): { status: FindingStatus } | { reason: ReportSkipReason } {
   const reported = emToZodSchema(agentReportStatusesEnumwaii).safeParse(item.status.toLowerCase());
-  const target = reported.success ? REPORTED_TARGETS.get(reported.data) : undefined;
-  if (!target) return { reason: REPORT_SKIP_REASONS.UNSUPPORTED_STATUS };
-  if (finding.kind !== target.kind) return { reason: REPORT_SKIP_REASONS.WRONG_KIND };
+  if (!reported.success) return { reason: REPORT_SKIP_REASONS.UNSUPPORTED_STATUS };
+  const target = REPORTED_TARGETS.get(reported.data);
+  if (!target.kinds.includes(finding.kind)) return { reason: REPORT_SKIP_REASONS.WRONG_KIND };
   if (finding.status === target.status) return { reason: REPORT_SKIP_REASONS.ALREADY_SET };
-  if (!OPEN_STATUSES.has(finding.status)) return { reason: REPORT_SKIP_REASONS.NOT_ACTIVE };
-  if (target.status === FINDING_STATUSES.ANSWERED && !item.note) return { reason: REPORT_SKIP_REASONS.MISSING_NOTE };
+  if (!canAgentSetFindingStatus(finding.kind, finding.status, target.status)) {
+    return { reason: REPORT_SKIP_REASONS.NOT_ALLOWED };
+  }
+  if (NOTED_STATUSES.has(target.status) && !item.note) return { reason: REPORT_SKIP_REASONS.MISSING_NOTE };
   return { status: target.status };
 }

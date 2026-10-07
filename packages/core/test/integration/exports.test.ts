@@ -216,7 +216,7 @@ describe('agent reports', () => {
 
     expect(result.applied).toEqual([]);
     expect(result.skipped.map((item) => item.reason)).toEqual([
-      REPORT_SKIP_REASONS.NOT_ACTIVE,
+      REPORT_SKIP_REASONS.NOT_ALLOWED,
       REPORT_SKIP_REASONS.WRONG_KIND,
       REPORT_SKIP_REASONS.MISSING_NOTE,
       REPORT_SKIP_REASONS.UNSUPPORTED_STATUS,

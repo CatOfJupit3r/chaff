@@ -4,13 +4,21 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 import {
   ANCHOR_MATCHES,
   DIFF_SIDES,
+  FINDING_AUTHORS,
   FINDING_KINDS,
   FINDING_SCOPES,
   FINDING_STATUSES,
   IS_ACTIVE_FINDING_STATUS,
 } from '@chaff/common/enums/review.enums';
-import type { DiffSide, FindingScope, FindingSeverity, FindingStatus } from '@chaff/common/enums/review.enums';
-import { canSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
+import type {
+  DiffSide,
+  FindingAuthor,
+  FindingKind,
+  FindingScope,
+  FindingSeverity,
+  FindingStatus,
+} from '@chaff/common/enums/review.enums';
+import { canAgentSetFindingStatus, canSetFindingStatus } from '@chaff/common/helpers/finding-transitions.helper';
 
 import { FINDING_REPOSITORY_TOKEN, REVIEW_TARGET_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { EventBus } from '@~/features/events/event-bus';
@@ -127,17 +135,23 @@ export class FindingsService {
 
   /**
    * Adds a message to the finding's discussion, recorded against the review's newest snapshot. A status given
-   * with it moves the finding in the same step, under the same rules as moving it by hand.
+   * with it moves the finding in the same step: the reviewer under the rules for moving it by hand, a coding
+   * agent under the agent's (propose a fix, answer, or reopen with the message as the reason).
    */
-  public async reply(findingId: string, { author, body, status }: iReplyInput) {
+  public async reply(findingId: string, { author, body, status, commits }: iReplyInput) {
     const finding = await this.getFinding(findingId);
-    if (status && !canSetFindingStatus(finding.kind, finding.status, status)) {
-      throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS);
+    if (status && !this.canMove(author, finding, status)) {
+      throw ORPCBadRequestError(errorCodes.INVALID_FINDING_STATUS, {
+        finding: `F-${finding.number}`,
+        from: finding.status,
+        to: status,
+      });
     }
     const snapshotId = await this.latestSnapshotId(finding);
+    const answer = status === FINDING_STATUSES.ANSWERED ? body : undefined;
     const updated = await this.findingRepository.addMessage(
       { findingId, snapshotId, author, body },
-      status ? { status, change: { source: author } } : undefined,
+      status ? { status, change: { source: author, commits, answer } } : undefined,
     );
     if (!updated) throw ORPCNotFoundError(errorCodes.FINDING_NOT_FOUND);
     await this.eventBus.emit(FINDINGS_CHANGED, { findingIds: [findingId] });
@@ -222,6 +236,13 @@ export class FindingsService {
       endLine: anchor.endLine,
       text: anchor.quote,
     };
+  }
+
+  /** Whether the author may move the finding to the status. */
+  private canMove(author: FindingAuthor, finding: { kind: FindingKind; status: FindingStatus }, to: FindingStatus) {
+    return author === FINDING_AUTHORS.AGENT
+      ? canAgentSetFindingStatus(finding.kind, finding.status, to)
+      : canSetFindingStatus(finding.kind, finding.status, to);
   }
 
   private async getFinding(findingId: string) {

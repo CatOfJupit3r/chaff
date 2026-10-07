@@ -100,6 +100,8 @@ export interface iReplyInput {
   author: FindingAuthor;
   body: string;
   status?: FindingStatus;
+  /** Commits a coding agent names for the fix it proposes. */
+  commits?: string[];
 }
 
 /** Who moved a finding, and what they said about it. */
