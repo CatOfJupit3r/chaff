@@ -26,6 +26,16 @@ export interface iFindingPlacement {
   finding: iFinding;
   side: DiffSide;
   line: number;
+  /** The finding's first anchor in the snapshot, where its whole note shows; its other anchors point there. */
+  isPrimary: boolean;
+  primary: iPrimaryNote;
+}
+
+/** Where a finding's whole note shows in a snapshot. */
+export interface iPrimaryNote {
+  fileId: string;
+  path: string;
+  line: number;
 }
 
 /** The note being written on picked lines, and the saved notes shown under the lines they point at. */

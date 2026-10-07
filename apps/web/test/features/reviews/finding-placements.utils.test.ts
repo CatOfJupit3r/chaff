@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { DIFF_SIDES } from '@chaff/common/enums/review.enums';
+import { ANCHOR_MATCHES, DIFF_SIDES } from '@chaff/common/enums/review.enums';
 
 import type { iFindingAnchor } from '@~/features/findings/findings.types';
-import { isFindingOnUnit, linesTouchUnit, placeFindings } from '@~/features/reviews/finding-placements.utils';
+import {
+  isFindingOnUnit,
+  linesTouchUnit,
+  placeFindings,
+  primaryNoteLabel,
+} from '@~/features/reviews/finding-placements.utils';
 
 import { findingFixture } from '../findings/finding-fixtures';
 import { unitFixture } from './review-fixtures';
@@ -79,6 +84,66 @@ describe('finding placements', () => {
       [onUnit.id, 10],
       [onLines.id, 15],
     ]);
+  });
+
+  it('shows a finding on several units in full once, at its first anchor, and points there from the others', () => {
+    const onChange = findingFixture({
+      anchors: [
+        anchor({ unitId: 'unit-1', path: 'src/a.ts', startLine: 10, endLine: 20 }),
+        anchor({ unitId: 'unit-2', fileId: 'file-2', path: 'src/b.ts', startLine: 3, endLine: 9 }),
+        anchor({ unitId: 'unit-3', fileId: 'file-2', path: 'src/b.ts', startLine: 30, endLine: 40 }),
+      ],
+    });
+    const placements = placeFindings('s1', [onChange]);
+    const shown = [...placements.values()].flat().map(({ line, isPrimary, primary }) => ({ line, isPrimary, primary }));
+    const primary = { fileId: 'file-1', path: 'src/a.ts', line: 10 };
+    expect(shown).toEqual([
+      { line: 10, isPrimary: true, primary },
+      { line: 3, isPrimary: false, primary },
+      { line: 30, isPrimary: false, primary },
+    ]);
+  });
+
+  it('puts the whole note on the first anchor found in the snapshot when the first one was lost', () => {
+    const lost = anchor({
+      snapshotId: 's0',
+      unitId: 'unit-0',
+      locations: [
+        {
+          id: 'l1',
+          snapshotId: 's1',
+          version: 2,
+          headSha: 'sha',
+          match: ANCHOR_MATCHES.UNMATCHED,
+        },
+      ],
+    });
+    const kept = anchor({
+      snapshotId: 's0',
+      path: 'src/b.ts',
+      locations: [
+        {
+          id: 'l2',
+          snapshotId: 's1',
+          version: 2,
+          headSha: 'sha',
+          match: ANCHOR_MATCHES.EXACT,
+          fileId: 'file-2',
+          startLine: 4,
+          endLine: 6,
+        },
+      ],
+    });
+    const placements = placeFindings('s1', [findingFixture({ anchors: [lost, kept] })]);
+    expect(placements.get('file-2')?.map(({ isPrimary, primary }) => [isPrimary, primary])).toEqual([
+      [true, { fileId: 'file-2', path: 'src/b.ts', line: 6 }],
+    ]);
+  });
+
+  it('points to the note by line in its own file, and by file name and line from another file', () => {
+    const primary = { fileId: 'file-1', path: 'apps/web/src/a.ts', line: 58 };
+    expect(primaryNoteLabel(primary, 'file-1')).toBe('line 58');
+    expect(primaryNoteLabel(primary, 'file-2')).toBe('a.ts:58');
   });
 
   it('can leave findings on whole units out', () => {

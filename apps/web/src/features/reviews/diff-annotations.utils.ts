@@ -4,13 +4,12 @@ import { DIFF_SIDES, diffSidesEnumwaii } from '@chaff/common/enums/review.enums'
 import type { DiffSide } from '@chaff/common/enums/review.enums';
 
 import type { iDiscussion } from '@~/features/code-hosts/code-hosts.types';
-import type { iFinding } from '@~/features/findings/findings.types';
 
 import type { iFindingPlacement, iLineDraft } from './line-notes.context';
 
 /** A note under a diff line: a saved finding, a merge request thread, or the composer when both are absent. */
 export interface iDiffNote {
-  finding?: iFinding;
+  placement?: iFindingPlacement;
   discussion?: iDiscussion;
 }
 
@@ -22,10 +21,10 @@ export function buildNoteAnnotations(
   draft: iLineDraft | undefined,
   discussions: readonly iDiscussion[] = [],
 ): DiffLineAnnotation<iDiffNote>[] {
-  const annotations: DiffLineAnnotation<iDiffNote>[] = placements.map(({ finding, side, line }) => ({
-    side: ANNOTATION_SIDES.get(side),
-    lineNumber: line,
-    metadata: { finding },
+  const annotations: DiffLineAnnotation<iDiffNote>[] = placements.map((placement) => ({
+    side: ANNOTATION_SIDES.get(placement.side),
+    lineNumber: placement.line,
+    metadata: { placement },
   }));
   for (const discussion of discussions) {
     const side = discussion.newLine === undefined ? DIFF_SIDES.OLD : DIFF_SIDES.NEW;

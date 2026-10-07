@@ -16,7 +16,7 @@ import { useLoadDiffFiles } from '../hooks/use-load-diff-files';
 import { useOptionalLineNotes } from '../line-notes.context';
 import { buildDecisionGutterCss } from '../review-coverage.utils';
 import type { iSnapshotFile } from '../reviews.types';
-import { DiffFindingNote } from './diff-finding-note';
+import { DiffFindingNote, DiffFindingPointer } from './diff-finding-note';
 import { DiffNoteComposer } from './diff-note-composer';
 
 interface iPatchViewProps {
@@ -77,7 +77,8 @@ export function PatchView({ snapshotId, file, patch, layout, isWrapped, isCut = 
       patch={patch}
       lineAnnotations={annotations}
       renderAnnotation={({ metadata }) => {
-        if (metadata.finding) return <DiffFindingNote finding={metadata.finding} />;
+        if (metadata.placement?.isPrimary) return <DiffFindingNote finding={metadata.placement.finding} />;
+        if (metadata.placement) return <DiffFindingPointer placement={metadata.placement} fileId={file.id} />;
         if (metadata.discussion) {
           return <DiscussionThread discussion={metadata.discussion} className="mx-4 my-2 max-w-[640px]" />;
         }
