@@ -6,21 +6,20 @@ import { LocalDataCleaner } from '../src/main/local-data-cleaner';
 import { APP_USER_DATA_FOLDER, DEVELOPMENT_USER_DATA_FOLDER } from '../src/main/local-data.constants';
 
 /**
- * Clears the local data of Chaff from the command line while Chaff is not running.
+ * Clears the local data of Chaff from the command line while Chaff is not running. Each case has its own
+ * command, which passes `--app` and `--full` here:
  *
- *   pnpm run data:clear                   reviews and snapshots of `pnpm run dev` (Chaff Dev); keeps connections, tokens and settings
- *   pnpm run data:clear --full            everything Chaff wrote there, including tokens and settings
- *   pnpm run data:clear --app             the same for the installed app (Chaff)
- *   pnpm run data:clear --app --full
- *
- * `pnpm run data:clear -- --full` works too: pnpm hands the `--` on to this script.
+ *   pnpm run data:clear            reviews and snapshots of `pnpm run dev` (Chaff Dev); keeps connections, tokens and settings
+ *   pnpm run data:clear:full       everything Chaff Dev wrote, including tokens and settings
+ *   pnpm run data:clear:app        reviews and snapshots of the installed app (Chaff)
+ *   pnpm run data:clear:app:full   everything the installed app wrote, including tokens and settings
  */
 
-const USAGE = `Usage: pnpm run data:clear [--full] [--app]
-
-  --full  also remove GitLab and GitHub connections, tokens and settings
-  --app   clear the installed app (Chaff) instead of the development data (Chaff Dev)
-  --help  show this message`;
+const USAGE = `Usage:
+  pnpm run data:clear            reviews and snapshots of Chaff Dev; keeps connections, tokens and settings
+  pnpm run data:clear:full       everything in Chaff Dev, including connections, tokens and settings
+  pnpm run data:clear:app        reviews and snapshots of the installed app (Chaff)
+  pnpm run data:clear:app:full   everything in the installed app, including connections, tokens and settings`;
 
 /** The folder Electron keeps each app's `userData` folder in, per OS. */
 function resolveAppDataDir() {
@@ -75,7 +74,10 @@ async function run() {
   if (clearedTables.every(({ rowCount }) => rowCount === 0) && removedEntries.length === 0) {
     console.log('  nothing to remove');
   }
-  if (!isFull) console.log('Connections, tokens and settings were kept. Add --full to remove them too.');
+  if (!isFull) {
+    const fullCommand = isInstalledApp ? 'data:clear:app:full' : 'data:clear:full';
+    console.log(`Connections, tokens and settings were kept. Run pnpm run ${fullCommand} to remove them too.`);
+  }
 }
 
 run().catch((error: unknown) => {

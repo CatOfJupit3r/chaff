@@ -199,7 +199,7 @@ apps/desktop/test/                    # mirrors apps/desktop/src
 - `pnpm run prettify` formats the workspace.
 - `pnpm run test` runs the test suite across the workspace.
 - `pnpm run db:generate` generates a Drizzle migration from the current schema (root alias for the `@chaff/core` package script).
-- `pnpm run data:clear` deletes the review data of the development app (`Chaff Dev`) while Chaff is not running and keeps connections, tokens and settings; `--full` also removes tokens and settings, `--app` targets the installed app (`Chaff`) instead.
+- `pnpm run data:clear` deletes the review data of the development app (`Chaff Dev`) while Chaff is not running and keeps connections, tokens and settings; `pnpm run data:clear:full` also removes connections, tokens and settings. `pnpm run data:clear:app` and `pnpm run data:clear:app:full` do the same for the installed app (`Chaff`).
 - `pnpm install` installs dependencies across the workspace.
 
 ## Workflow
