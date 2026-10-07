@@ -7,10 +7,11 @@ import { showToast } from '@~/components/toast/toast-store';
 import { useChangeUnits } from '@~/features/change-units/hooks/use-change-units';
 import { readyContent, orderByReading } from '@~/features/digests/digests.utils';
 import { useDigest } from '@~/features/digests/hooks/use-digest';
-import { isOnUnit } from '@~/features/findings/findings.utils';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
 import { useStackFindings } from '@~/features/findings/hooks/use-stack-findings';
+import { isFindingOnUnit, linesTouchUnit } from '@~/features/reviews/finding-placements.utils';
+import type { LineNoteSaved } from '@~/features/reviews/hooks/use-line-note-draft';
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
 import { useSnapshot } from '@~/features/reviews/hooks/use-snapshot';
 import type { iUnit } from '@~/features/reviews/reviews.types';
@@ -20,7 +21,7 @@ import { getErrorMessage } from '@~/utils/rpc-errors';
 
 import { buildFocusCards, FOCUS_END, findNextIndex, resolveIndex, withMarks } from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
-import { CARD_VIEWS, NOTE_SCOPES, UNIT_MARK_EXITS } from '../focus.enums';
+import { CARD_VIEWS, LINE_NOTE_MARKS, NOTE_SCOPES, UNIT_MARK_EXITS } from '../focus.enums';
 import type { NoteScope } from '../focus.enums';
 import { useCardExit } from './use-card-exit';
 import { useFocusPosition } from './use-focus-position';
@@ -81,7 +82,7 @@ export function useFocusReview(snapshotId: string) {
   const index = resolveIndex(cards, position.unit, position.queue);
   const card: iFocusCard | undefined = cards[index];
   const cardFindings = card
-    ? findingsInReview.filter((finding) => card.units.some((unit) => isOnUnit(finding, snapshotId, unit.id)))
+    ? findingsInReview.filter((finding) => card.units.some((unit) => isFindingOnUnit(finding, snapshotId, unit)))
     : [];
 
   const goTo = (nextIndex: number) => {
@@ -149,6 +150,20 @@ export function useFocusReview(snapshotId: string) {
     }
   };
 
+  /**
+   * Keeps a note saved on picked lines for Undo; a concern or question also marks the card's units under the
+   * lines, keeping the card up.
+   */
+  const recordLineNote: LineNoteSaved = (finding, lines, note) => {
+    if (!card) return;
+    const mark = LINE_NOTE_MARKS.get(note.kind);
+    if (mark) {
+      record(card, mark, { findingId: finding.id, marked: card.units.filter((unit) => linesTouchUnit(lines, unit)) });
+      return;
+    }
+    setHistory((steps) => [...steps, { cardId: card.id, previous: [], findingId: finding.id }]);
+  };
+
   const undo = () => {
     const step = history.at(-1);
     if (!step) {
@@ -195,6 +210,7 @@ export function useFocusReview(snapshotId: string) {
     isSaving: findings.create.isPending,
     decide,
     comment,
+    recordLineNote,
     undo,
     move,
     goTo,

@@ -2,6 +2,8 @@ import { em } from 'enumwaii';
 import type { InferEnumwaii } from 'enumwaii';
 
 import {
+  FINDING_KINDS,
+  findingKindsEnumwaii,
   REVIEW_PROGRESSIONS,
   reviewProgressionsEnumwaii,
   FILE_KINDS,
@@ -17,6 +19,7 @@ import {
   unitMarksEnumwaii,
   unitRevisionsEnumwaii,
 } from '@chaff/common/enums/review.enums';
+import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 // Card views and queues are lowercase because they appear in the URL.
 export const cardViewsEnumwaii = em(['code', 'usages', 'diagram', 'tests', 'qa']);
@@ -121,6 +124,13 @@ export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive<CardExit | undefined>()(
   [UNIT_MARKS.QUESTION, undefined],
   [UNIT_MARKS.LATER, CARD_EXITS.DOWN],
   [UNIT_MARKS.SKIPPED, CARD_EXITS.DOWN],
+);
+
+/** The mark a note on picked lines puts on the card's units under them; a plain note leaves them as they are. */
+export const LINE_NOTE_MARKS = findingKindsEnumwaii.derive<UnitMark | undefined>()(
+  [FINDING_KINDS.CONCERN, UNIT_MARKS.CONCERN],
+  [FINDING_KINDS.QUESTION, UNIT_MARKS.QUESTION],
+  [FINDING_KINDS.NOTE, undefined],
 );
 
 /** Progress segment color for each mark; Later is striped with the `bg-stripes` utility. */

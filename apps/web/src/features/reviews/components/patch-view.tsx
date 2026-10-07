@@ -13,6 +13,7 @@ import { useOptionalDiffReview } from '../diff-review.context';
 import { DIFF_THEME_NAME, UNIFIED_LINE_NUMBERS_CSS } from '../diff-theme';
 import { useDiffPreferences } from '../hooks/use-diff-preferences';
 import { useLoadDiffFiles } from '../hooks/use-load-diff-files';
+import { useOptionalLineNotes } from '../line-notes.context';
 import { buildDecisionGutterCss } from '../review-coverage.utils';
 import type { iSnapshotFile } from '../reviews.types';
 import { DiffFindingNote } from './diff-finding-note';
@@ -32,19 +33,19 @@ interface iPatchViewProps {
 
 /**
  * A file's patch with syntax highlighting; hidden context can be expanded from the snapshot. In the Full
- * diff, lines show the decision on their unit, findings and merge request threads sit under the lines they
- * point at, and the + beside a line, or a picked range, opens a note.
+ * diff, lines show the decision on their unit. In the Full diff and on Focus cards, findings and merge request
+ * threads sit under the lines they point at, and the + beside a line, or a picked range, opens a note.
  */
 export function PatchView({ snapshotId, file, patch, layout, isWrapped, isCut = false, extraCss }: iPatchViewProps) {
   const isDark = useIsDarkMode();
   const { viewerOptions } = useDiffPreferences();
   const loadDiffFiles = useLoadDiffFiles(snapshotId, file);
-  const review = useOptionalDiffReview();
-  const units = review?.unitsByFile.get(file.id);
-  const placements = review?.placementsByFile.get(file.id);
-  const discussions = review?.discussionsByFile.get(file.id);
-  const draft = review?.draft;
-  const startDraft = review?.startDraft;
+  const units = useOptionalDiffReview()?.unitsByFile.get(file.id);
+  const notes = useOptionalLineNotes();
+  const placements = notes?.placementsByFile.get(file.id);
+  const discussions = notes?.discussionsByFile.get(file.id);
+  const draft = notes?.draft;
+  const startDraft = notes?.startDraft;
   const gutterCss = useMemo(() => (units ? buildDecisionGutterCss(units) : undefined), [units]);
   const annotations = useMemo(
     () => buildNoteAnnotations(file.id, placements ?? [], draft, discussions),

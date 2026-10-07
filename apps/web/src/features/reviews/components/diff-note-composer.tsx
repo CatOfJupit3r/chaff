@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { FINDING_KINDS, findingKindsEnumwaii, FINDING_KIND_LABELS } from '@chaff/common/enums/review.enums';
-import type { FindingKind } from '@chaff/common/enums/review.enums';
+import type { FindingKind, FindingSeverity } from '@chaff/common/enums/review.enums';
 
 import { Button } from '@~/components/ui/button';
 import { Kbd } from '@~/components/ui/kbd';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
+import { SeverityPicker } from '@~/features/findings/components/severity-picker';
 
-import { useDiffReview } from '../diff-review.context';
+import { useLineNotes } from '../line-notes.context';
 
 const KIND_OPTIONS = findingKindsEnumwaii.values.map((value) => ({ value, label: FINDING_KIND_LABELS.get(value) }));
 
 /** Writes a finding on the picked lines: Enter saves, Shift+Enter adds a line, Escape cancels. */
 export function DiffNoteComposer() {
-  const { draft, headSha, isSaving, cancelDraft, saveDraft } = useDiffReview();
+  const { draft, headSha, isSaving, cancelDraft, saveDraft } = useLineNotes();
   const [kind, setKind] = useState<FindingKind>(FINDING_KINDS.CONCERN);
+  const [severity, setSeverity] = useState<FindingSeverity>();
   const [body, setBody] = useState('');
   const textArea = useRef<HTMLTextAreaElement>(null);
 
@@ -24,7 +26,7 @@ export function DiffNoteComposer() {
 
   const save = async () => {
     if (isSaving || body.trim().length === 0) return;
-    if (await saveDraft(kind, body)) setBody('');
+    if (await saveDraft({ kind, body, severity })) setBody('');
   };
 
   if (!draft) return null;
@@ -40,6 +42,9 @@ export function DiffNoteComposer() {
       <div className="flex flex-wrap items-center gap-2.5 text-[12.5px] text-muted">
         <SegmentedControl label="Kind of note" options={KIND_OPTIONS} value={kind} onChange={setKind} />
         <span>on {lines}</span>
+        {kind === FINDING_KINDS.CONCERN ? (
+          <SeverityPicker severity={severity} onChange={setSeverity} className="ml-auto" />
+        ) : null}
       </div>
       <textarea
         ref={textArea}

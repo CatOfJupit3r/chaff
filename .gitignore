@@ -9,3 +9,6 @@ mongo/data
 
 # macOS Finder metadata
 .DS_Store
+
+# Claude Code worktrees
+.claude/worktrees/
