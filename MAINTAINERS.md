@@ -6,7 +6,7 @@ The repository settings and chores that the code cannot carry. Contributor instr
 
 - **Pages:** Settings → Pages → Source: **GitHub Actions**. The `Pages` workflow deploys `site/`, `docs/videos` and the icon on every push to `main` that touches them; run it by hand after changing the setting.
 - **Security:** turn on private vulnerability reporting, the dependency graph, Dependabot alerts, secret scanning and push protection. The dependency review workflow only runs once the repository is public.
-- **Default branch ruleset for `main`:** require pull requests and the `Type Check & Lint` and `Build` checks, block force-pushes and deletion.
+- **Default branch ruleset for `main`:** require pull requests and the `Type Check & Lint`, `Build` and `Tests` checks, block force-pushes and deletion.
 - **Pull requests:** turn on automatically deleting head branches.
 - **About:** description, homepage `https://catofjupit3r.github.io/chaff/` and topics.
 
