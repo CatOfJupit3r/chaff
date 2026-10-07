@@ -502,10 +502,10 @@ This writes an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/
 
 There is no updater. There is `git pull`.
 
-On macOS, `install-app` also sets up a git hook: after each `git pull` (merge or rebase) on `main`, it rebuilds Chaff in the background, swaps it into `/Applications`, reopens it if it was running and shows a notification when the new build is in. The build log is in `~/Library/Logs/Chaff/install-app.log`. To turn it off for your checkout:
+On macOS, the first time you run `install-app` in a terminal it asks whether Chaff should rebuild itself after every `git pull`. Say yes, and each pull (merge or rebase) on `main` rebuilds Chaff in the background, swaps it into `/Applications`, reopens it if it was running and shows a notification when the new build is in. The build log is in `~/Library/Logs/Chaff/install-app.log`. Nothing happens on pull until you have said yes, so contributors who only run `pnpm run dev` never get `/Applications` touched. To change your answer later:
 
 ```bash
-git config chaff.autoInstall false
+git config chaff.autoInstall true   # or false
 ```
 
 On Windows and Linux, pull and package again, then run the new installer:

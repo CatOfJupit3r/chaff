@@ -287,10 +287,10 @@ pnpm run package</code></pre>
 
         <h3 id="updating">updating</h3>
         <p>
-          On macOS it's just <code>git pull</code>. <code>install-app</code> leaves a git hook behind, so every pull on
-          main rebuilds Chaff in the background, swaps it into <code>/Applications</code>, reopens it if it was running
-          and sends a notification when the new build is in. Don't want that?
-          <code>git config chaff.autoInstall false</code>.
+          On macOS it's just <code>git pull</code>. The first time you run <code>install-app</code>, it asks whether
+          Chaff should rebuild itself after every pull. Say yes, and each pull on main rebuilds it in the background,
+          swaps it into <code>/Applications</code>, reopens it if it was running and sends a notification when the new
+          build is in. Changed your mind? <code>git config chaff.autoInstall true</code> (or <code>false</code>).
         </p>
         <div class="code-block">
           <div class="code-block-bar">
@@ -323,7 +323,7 @@ Install Chaff on this machine for me. It's a desktop app built from source: http
 1. Check that Git 2.40+, Node.js 24 and pnpm 11.5 are available. If pnpm is missing, run `corepack enable`. If Git or Node is missing or too old, tell me what to install and stop. Don't install system packages without asking.
 2. Clone the repo into ~/chaff. If that folder already exists, ask me where to put it instead.
 3. Run `pnpm install` in the clone.
-4. On macOS, run `pnpm run install-app`. It builds Chaff and installs it as /Applications/Chaff.app.
+4. On macOS, ask me whether Chaff should rebuild and reinstall itself after every `git pull` on main, and run `git config chaff.autoInstall true` (or `false`) in the clone with my answer. Then run `pnpm run install-app`. It builds Chaff and installs it as /Applications/Chaff.app.
    On Windows or Linux, run `pnpm run package` and tell me which installer it wrote to apps/desktop/release and how to open an unsigned build.
 5. Don't change anything outside the cloned folder, apart from what install-app does.
 6. When it's done, tell me how to open Chaff and how to add my first repository.</pre>
@@ -338,6 +338,7 @@ Install Chaff on this machine for me. It's a desktop app built from source: http
         <span class="footer-links">
           <a href="https://github.com/CatOfJupit3r/chaff#readme">README</a>
           <a href="https://github.com/CatOfJupit3r/chaff/issues">Issues</a>
+          <a href="https://github.com/CatOfJupit3r/chaff/blob/main/LICENSE">AGPL-3.0</a>
           <a href="https://github.com/CatOfJupit3r/chaff">GitHub</a>
         </span>
         <small class="footer-sponsor">sponsored by the voices in my head</small>
