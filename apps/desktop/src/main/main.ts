@@ -6,6 +6,7 @@ import type { iChaffCore } from '@~/core.types';
 
 import { AgentAccessServer } from './agent-access-server';
 import { agentAccessSocketPath } from './agent-access-socket.utils';
+import { AgentBridge } from './agent-bridge';
 import { APP_PATHS } from './app-paths';
 import { APP_ORIGIN, registerAppScheme, serveRenderer } from './app-protocol';
 import { ElectronCoreHost } from './electron-core-host';
@@ -52,6 +53,7 @@ async function start() {
     treeSitterDir: APP_PATHS.treeSitter,
     logFilePath: path.join(app.getPath('logs'), 'chaff.log'),
     appVersion: app.getVersion(),
+    agentBridge: await new AgentBridge(app.getPath('userData')).resolve(),
     host: new ElectronCoreHost(() => mainWindow, path.join(app.getPath('userData'), SECRETS_FILE)),
   });
   serveCoreOverIpc(core.router, isTrustedUrl);

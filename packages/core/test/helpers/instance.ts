@@ -16,6 +16,14 @@ if (process.env.NODE_ENV !== 'test') {
 
 export const TEST_APP_VERSION = '0.0.0-test';
 
+/** How agents would start the bridge to the test core. */
+export const TEST_AGENT_BRIDGE = {
+  serverName: 'chaff-test',
+  command: '/Applications/Chaff Test.app/chaff',
+  args: ['/opt/chaff/mcp-bridge.cjs', '/data/Chaff Test'],
+  env: { ELECTRON_RUN_AS_NODE: '1' },
+};
+
 export const fakeHost = new FakeCoreHost();
 
 export const testDataDir = mkdtempSync(path.join(tmpdir(), 'chaff-core-'));
@@ -31,6 +39,7 @@ const core = await createChaffCore({
   migrationsDir: fileURLToPath(new URL('../../src/db/migrations', import.meta.url)),
   databasePath: ':memory:',
   appVersion: TEST_APP_VERSION,
+  agentBridge: TEST_AGENT_BRIDGE,
   host: fakeHost,
   agentCommands,
 });

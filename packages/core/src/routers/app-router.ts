@@ -1,5 +1,6 @@
 import { base } from '@~/lib/orpc';
 
+import { agentAccessRouter } from './agent-access.router';
 import { appInfoRouter } from './app.router';
 import { assistantRouter } from './assistant.router';
 import { changeUnitsRouter } from './change-units.router';
@@ -16,6 +17,7 @@ import { stacksRouter } from './stacks.router';
 import { workspacesRouter } from './workspaces.router';
 
 export const appRouter = base.router({
+  agentAccess: agentAccessRouter,
   app: appInfoRouter,
   assistant: assistantRouter,
   changeUnits: changeUnitsRouter,

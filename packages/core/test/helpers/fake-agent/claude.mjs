@@ -4,12 +4,21 @@
 // for one digest part, it rewrites that part; asked a question, it answers it. FAKE_AGENT_MODE picks the behaviour:
 // unset answers, `fail` exits with an error, `hang` never answers, `stream-hang` streams the start of a digest and
 // then never finishes. FAKE_AGENT_PROMPT_FILE, when set, receives the prompt; FAKE_AGENT_ARGS_FILE the arguments as JSON;
-// FAKE_AGENT_ADD_DIR_FILE the files it can read in its --add-dir folder, as JSON.
+// FAKE_AGENT_ADD_DIR_FILE the files it can read in its --add-dir folder, as JSON. `mcp get <name>` and
+// `mcp add <name> ...` keep the MCP servers it lists in FAKE_AGENT_MCP_FILE.
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const READ_ONLY_TOOLS = ['--tools', 'Read,Grep,Glob'];
 const FIX_TOOLS = 'Read,Grep,Glob,Edit,Write';
+
+if (process.argv[2] === 'mcp') {
+  const file = process.env.FAKE_AGENT_MCP_FILE;
+  const servers = file && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
+  const [, action, name, ...rest] = process.argv.slice(2);
+  if (action === 'add' && file) writeFileSync(file, JSON.stringify({ ...servers, [name]: rest }));
+  process.exit(action === 'add' || servers[name] ? 0 : 1);
+}
 
 function emit(event) {
   process.stdout.write(`${JSON.stringify(event)}\n`);

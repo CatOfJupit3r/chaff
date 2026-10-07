@@ -18,9 +18,19 @@ export interface iCoreOptions {
   logFilePath?: string;
   /** Executables for the coding agents when Settings names none; `claude` and `codex` from PATH by default. */
   agentCommands?: ReadonlyMap<DigestRunner, string>;
+  /** How coding agents start the bridge to this app; agents cannot be set up without it. */
+  agentBridge?: iAgentBridge;
   /** Version string reported by `app.info`. */
   appVersion: string;
   host: iCoreHost;
+}
+
+/** The command a coding agent runs to reach this app, and the name it lists the server under. */
+export interface iAgentBridge {
+  serverName: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
 }
 
 /** Coding agents reaching Chaff through its MCP server. */

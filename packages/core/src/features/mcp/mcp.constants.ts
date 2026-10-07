@@ -7,3 +7,6 @@ export const AGENT_INSTRUCTIONS = [
 ].join(' ');
 
 export const SERVER_NAME = 'chaff';
+
+/** How long a coding agent CLI may take to list or add an MCP server. */
+export const AGENT_SETUP_TIMEOUT_MS = 30_000;

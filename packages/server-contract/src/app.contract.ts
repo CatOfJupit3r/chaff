@@ -1,3 +1,4 @@
+import { agentAccessContract } from './contract/agent-access.contract';
 import { appContract } from './contract/app.contract';
 import { assistantContract } from './contract/assistant.contract';
 import { changeUnitsContract } from './contract/change-units.contract';
@@ -14,6 +15,7 @@ import { stacksContract } from './contract/stacks.contract';
 import { workspacesContract } from './contract/workspaces.contract';
 
 export const CONTRACT = {
+  agentAccess: agentAccessContract,
   app: appContract,
   assistant: assistantContract,
   changeUnits: changeUnitsContract,
