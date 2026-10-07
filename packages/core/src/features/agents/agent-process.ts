@@ -85,10 +85,7 @@ export async function runAgentProcess({ command, args, cwd, input, signal, onLin
   });
 }
 
-/**
- * Finds an executable on PATH. Apps started from a desktop launcher often get a shorter PATH than a
- * terminal, so the user's login shell is asked as well.
- */
+/** Finds an executable on PATH; the desktop app puts the user's shell PATH there before the core starts. */
 export async function resolveExecutable(command: string): Promise<string | undefined> {
   if (command.includes('/') || command.includes('\\')) {
     try {
@@ -98,21 +95,11 @@ export async function resolveExecutable(command: string): Promise<string | undef
       return undefined;
     }
   }
-  const lookups: [string, string[]][] =
-    process.platform === 'win32'
-      ? [['where', [command]]]
-      : [
-          ['sh', ['-c', `command -v "${command}"`]],
-          [process.env.SHELL ?? '/bin/sh', ['-lc', `command -v "${command}"`]],
-        ];
-  for (const [file, args] of lookups) {
-    try {
-      const { stdout } = await execFileAsync(file, args, { timeout: 5000, windowsHide: true });
-      const found = stdout.split(/\r?\n/)[0]?.trim();
-      if (found) return found;
-    } catch {
-      // Not found by this lookup; try the next one.
-    }
+  const [file, args] = process.platform === 'win32' ? ['where', [command]] : ['sh', ['-c', `command -v "${command}"`]];
+  try {
+    const { stdout } = await execFileAsync(file, args, { timeout: 5000, windowsHide: true });
+    return stdout.split(/\r?\n/)[0]?.trim() || undefined;
+  } catch {
+    return undefined;
   }
-  return undefined;
 }

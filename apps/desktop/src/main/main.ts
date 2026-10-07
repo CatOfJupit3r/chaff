@@ -7,6 +7,7 @@ import type { iChaffCore } from '@~/core.types';
 import { APP_PATHS } from './app-paths';
 import { APP_ORIGIN, registerAppScheme, serveRenderer } from './app-protocol';
 import { ElectronCoreHost } from './electron-core-host';
+import { LoginShellPath } from './login-shell-path';
 import { createMainWindow } from './main-window';
 import { serveCoreOverIpc } from './rpc-bridge';
 import { createTrustedUrlCheck } from './trusted-origin';
@@ -32,8 +33,12 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
+async function adoptLoginShellPath() {
+  process.env.PATH = await new LoginShellPath().resolve(process.env);
+}
+
 async function start() {
-  await app.whenReady();
+  await Promise.all([app.whenReady(), adoptLoginShellPath()]);
   hardenWebContents(isTrustedUrl);
 
   core = await createChaffCore({
