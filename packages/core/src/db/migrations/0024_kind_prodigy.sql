@@ -1,0 +1,1 @@
+ALTER TABLE `workspaces` ADD `should_include_remote_branches` integer DEFAULT false NOT NULL;

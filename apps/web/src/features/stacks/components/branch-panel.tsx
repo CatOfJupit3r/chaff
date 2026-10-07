@@ -6,20 +6,19 @@ import { useStartReview } from '@~/features/reviews/hooks/use-start-review';
 import type { iReviewTarget } from '@~/features/reviews/reviews.types';
 import type { iStackLink } from '@~/features/reviews/stack-review.utils';
 import { RemoteBranchPill } from '@~/features/workspaces/components/remote-branch-pill';
-import type { iBranch } from '@~/features/workspaces/workspaces.types';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
+import { useStackActions } from '../hooks/use-stack-actions';
 import { STACK_VIEWS } from '../stacks.enums';
 import type { StackView } from '../stacks.enums';
 import { BranchStatus } from './branch-status';
 import { BranchUnits } from './branch-units';
-import { ParentPicker } from './parent-picker';
 import { WorkingChangesNote } from './working-changes-note';
 
 interface iBranchPanelProps {
   workspaceId: string;
+  stackId: string;
   link: iStackLink;
-  branches: readonly iBranch[];
   base: string | undefined;
   /** Branches above this one in the stack. */
   dependents: readonly string[];
@@ -29,11 +28,11 @@ interface iBranchPanelProps {
   onViewChange: (view: StackView) => void;
 }
 
-/** One branch of the stack: its parent, what moved, its units, and the way into its review. */
+/** One branch of the stack: what it merges into, what moved, its units, and the way into its review. */
 export function BranchPanel({
   workspaceId,
+  stackId,
   link,
-  branches,
   base,
   dependents,
   view,
@@ -43,6 +42,7 @@ export function BranchPanel({
 }: iBranchPanelProps) {
   const openFocus = useStartReview();
   const openDiff = useStartReview({ opensDiff: true });
+  const { removeBranch } = useStackActions();
   const hasCumulative = base !== undefined && link.parentBranch !== undefined && link.parentBranch !== base;
   const isCumulative = hasCumulative && view === STACK_VIEWS.cumulative;
   const target = isCumulative ? cumulativeTarget : link.target;
@@ -52,24 +52,37 @@ export function BranchPanel({
     parentBranch &&
     opener.mutate({
       workspaceId,
-      branch: link.branch.name,
+      branch: link.name,
       parentBranch,
       kind: isCumulative ? REVIEW_TARGET_KINDS.CUMULATIVE : REVIEW_TARGET_KINDS.BRANCH,
     });
 
   return (
-    <section aria-label={link.branch.name} className="overflow-hidden rounded-xl border border-line bg-surface">
+    <section aria-label={link.name} className="overflow-hidden rounded-xl border border-line bg-surface">
       <div className="flex flex-col gap-3 border-b border-line p-5">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="m-0 font-mono text-[16px] font-medium break-all text-fg">{link.branch.name}</h2>
-            <RemoteBranchPill branch={link.branch} />
+            <h2 className="m-0 font-mono text-[16px] font-medium break-all text-fg">{link.name}</h2>
+            {link.branch ? <RemoteBranchPill branch={link.branch} /> : null}
           </div>
           <p className="m-0 mt-1 text-[12.5px] text-muted">
-            {link.branch.subject} · {link.branch.authorName} · {formatRelativeTime(link.branch.committedAt)}
+            {link.branch
+              ? `${link.branch.subject} · ${link.branch.authorName} · ${formatRelativeTime(link.branch.committedAt)}`
+              : 'Not in the repository, locally or on a remote.'}
           </p>
         </div>
-        <ParentPicker workspaceId={workspaceId} branch={link.branch} branches={branches} />
+        <div className="flex flex-wrap items-center gap-2.5 text-[13px] text-muted">
+          <span>Merges into</span>
+          <span className="font-mono text-[12.5px] text-fg">{link.parentBranch ?? 'not chosen yet'}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={removeBranch.isPending}
+            onClick={() => removeBranch.mutate({ stackId, branch: link.name })}
+          >
+            Remove from stack
+          </Button>
+        </div>
         {hasCumulative ? (
           <SegmentedControl
             label="Changes to review"
@@ -83,7 +96,9 @@ export function BranchPanel({
         ) : null}
       </div>
       {target && snapshot ? <BranchStatus targetId={target.id} snapshotId={snapshot.id} /> : null}
-      <WorkingChangesNote workspaceId={workspaceId} branch={link.branch} target={workingTarget} />
+      {link.branch ? (
+        <WorkingChangesNote workspaceId={workspaceId} branch={link.branch} target={workingTarget} />
+      ) : null}
       {dependents.length > 0 ? (
         <p className="m-0 border-b border-line px-5 py-4 text-[12.5px] text-muted">
           <span className="font-mono">{dependents.join(', ')}</span> {dependents.length === 1 ? 'builds' : 'build'} on

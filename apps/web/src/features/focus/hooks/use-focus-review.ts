@@ -7,10 +7,11 @@ import { showToast } from '@~/components/toast/toast-store';
 import { useChangeUnits } from '@~/features/change-units/hooks/use-change-units';
 import { readyContent, orderByReading } from '@~/features/digests/digests.utils';
 import { useDigest } from '@~/features/digests/hooks/use-digest';
-import { isOnUnit } from '@~/features/findings/findings.utils';
 import { useFindingMutations } from '@~/features/findings/hooks/use-finding-mutations';
 import { useFindings } from '@~/features/findings/hooks/use-findings';
 import { useStackFindings } from '@~/features/findings/hooks/use-stack-findings';
+import { isFindingOnUnit, linesTouchUnit } from '@~/features/reviews/finding-placements.utils';
+import type { LineNoteSaved } from '@~/features/reviews/hooks/use-line-note-draft';
 import { useOpenInEditor } from '@~/features/reviews/hooks/use-open-in-editor';
 import { useSnapshot } from '@~/features/reviews/hooks/use-snapshot';
 import type { iUnit } from '@~/features/reviews/reviews.types';
@@ -18,10 +19,18 @@ import { useSettings } from '@~/features/settings/hooks/use-settings';
 import { useWorkspaces } from '@~/features/workspaces/hooks/use-workspaces';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 
-import { buildFocusCards, FOCUS_END, findNextIndex, resolveIndex, withMarks } from '../focus-cards.utils';
+import {
+  buildFocusCards,
+  cardNoteMark,
+  FOCUS_END,
+  findNextIndex,
+  resolveIndex,
+  undecidedUnits,
+  withMarks,
+} from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
-import { CARD_VIEWS, NOTE_SCOPES, UNIT_MARK_EXITS } from '../focus.enums';
-import type { NoteScope } from '../focus.enums';
+import { CARD_VIEWS, DONE_EXIT, LINE_NOTE_MARKS, NOTE_SCOPES, UNIT_MARK_EXITS } from '../focus.enums';
+import type { CardExit, NoteScope } from '../focus.enums';
 import { useCardExit } from './use-card-exit';
 import { useFocusPosition } from './use-focus-position';
 import { useSetMarks } from './use-set-marks';
@@ -81,7 +90,7 @@ export function useFocusReview(snapshotId: string) {
   const index = resolveIndex(cards, position.unit, position.queue);
   const card: iFocusCard | undefined = cards[index];
   const cardFindings = card
-    ? findingsInReview.filter((finding) => card.units.some((unit) => isOnUnit(finding, snapshotId, unit.id)))
+    ? findingsInReview.filter((finding) => card.units.some((unit) => isFindingOnUnit(finding, snapshotId, unit)))
     : [];
 
   const goTo = (nextIndex: number) => {
@@ -92,20 +101,39 @@ export function useFocusReview(snapshotId: string) {
     setMarks.mutate({ snapshotId, marks }, { onError: (error) => showToast(getErrorMessage(error)) });
   };
 
-  /** Marks the units and moves on when that decides the card; a note on other units keeps the card up. */
+  /** Slides the card out and opens the next one in the queue, counting the marks just written. */
+  const leave = (exit: CardExit, decided: ReadonlyMap<string, UnitMark>) => {
+    const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
+    cardExit.run(exit, () => goTo(nextIndex));
+  };
+
+  /**
+   * Marks the units and moves on when that decides the card with a mark that leaves it; a concern or
+   * question, or a note on other units, keeps the card up.
+   */
   const record = (current: iFocusCard, mark: UnitMark, options: iRecordOptions = {}) => {
     const { findingId, skipReason, marked = current.units } = options;
     const previous = marked.map((unit) => ({ unitId: unit.id, mark: unit.mark, skipReason: unit.skipReason }));
     setHistory((steps) => [...steps, { cardId: current.id, previous, findingId }]);
     if (marked.length > 0) writeMarks(marked.map((unit) => ({ unitId: unit.id, mark, skipReason })));
-    if (!current.units.every((unit) => marked.some((candidate) => candidate.id === unit.id))) return;
-    const decided = new Map(marked.map((unit) => [unit.id, mark]));
-    const nextIndex = findNextIndex(withMarks(cards, decided), index, position.queue);
-    cardExit.run(UNIT_MARK_EXITS.get(mark), () => goTo(nextIndex));
+    const exit = UNIT_MARK_EXITS.get(mark);
+    if (!exit || !current.units.every((unit) => marked.some((candidate) => candidate.id === unit.id))) return;
+    leave(exit, new Map(marked.map((unit) => [unit.id, mark])));
   };
 
+  /** Finishes a card with a concern or question: its units without a decision take that mark, and it moves on. */
+  const finish = (current: iFocusCard, mark: UnitMark) => {
+    const marked = undecidedUnits(current);
+    record(current, mark, { marked });
+    leave(DONE_EXIT, new Map(marked.map((unit) => [unit.id, mark])));
+  };
+
+  /** Later on a card that already has a concern or question finishes it instead of putting it off. */
   const decide = (mark: typeof UNIT_MARKS.LOOKS_GOOD | typeof UNIT_MARKS.LATER) => {
-    if (card) record(card, mark);
+    if (!card) return;
+    const noteMark = mark === UNIT_MARKS.LATER ? cardNoteMark(card) : undefined;
+    if (noteMark) finish(card, noteMark);
+    else record(card, mark);
   };
 
   /** The units a note goes on: the card's, the ones picked, or none for the whole branch or stack. */
@@ -116,8 +144,8 @@ export function useFocusReview(snapshotId: string) {
   };
 
   /**
-   * Writes the note as a finding, or as the reason for skipping the card, and moves on when the card is
-   * decided; resolves false when it could not be saved.
+   * Writes the note as a finding, which keeps the card up, or as the reason for skipping the card, which
+   * moves on; resolves false when it could not be saved.
    */
   const comment = async (mark: NoteMark, body: string, options: iNoteOptions = CARD_NOTE) => {
     if (!card) return false;
@@ -143,6 +171,20 @@ export function useFocusReview(snapshotId: string) {
       showToast(getErrorMessage(error));
       return false;
     }
+  };
+
+  /**
+   * Keeps a note saved on picked lines for Undo; a concern or question also marks the card's units under the
+   * lines, keeping the card up.
+   */
+  const recordLineNote: LineNoteSaved = (finding, lines, note) => {
+    if (!card) return;
+    const mark = LINE_NOTE_MARKS.get(note.kind);
+    if (mark) {
+      record(card, mark, { findingId: finding.id, marked: card.units.filter((unit) => linesTouchUnit(lines, unit)) });
+      return;
+    }
+    setHistory((steps) => [...steps, { cardId: card.id, previous: [], findingId: finding.id }]);
   };
 
   const undo = () => {
@@ -191,6 +233,7 @@ export function useFocusReview(snapshotId: string) {
     isSaving: findings.create.isPending,
     decide,
     comment,
+    recordLineNote,
     undo,
     move,
     goTo,

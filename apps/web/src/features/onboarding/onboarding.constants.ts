@@ -44,7 +44,7 @@ export const ONBOARDING_ITEM_GUIDES = onboardingItemsEnumwaii.derive<iOnboarding
       group: ONBOARDING_GROUPS.READ,
       screen: ONBOARDING_SCREENS.FOCUS,
       title: 'Open a diagram or usages',
-      tip: 'These tabs show where a unit is used and, after a digest, how it connects to the rest. Keys 1 to 4 switch them.',
+      tip: 'These tabs show where a unit is used and, after a digest, how it connects to the rest. Keys 1 to 5 switch them.',
       missing: 'The tabs sit under each card. Go back to a card to see them.',
     },
   ],

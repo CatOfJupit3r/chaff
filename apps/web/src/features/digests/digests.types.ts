@@ -1,6 +1,6 @@
 import type z from 'zod';
 
-import type { digestStartOptionsSchema } from '@chaff/server-contract/contract/digests.contract';
+import type { digestPartRefSchema, digestStartOptionsSchema } from '@chaff/server-contract/contract/digests.contract';
 
 import type { ORPCOutputs } from '@~/utils/orpc';
 
@@ -15,6 +15,12 @@ export type iDigestGroup = iDigestContent['groups'][number];
 export type iDigestDiagram = iDigestContent['diagrams'][number];
 
 export type iDigestTest = iDigestUnitNote['tests'][number];
+
+/** A version of one part written on the reviewer's instructions. */
+export type iDigestRevision = iDigest['revisions'][number];
+
+/** The overview, one unit's note by unit id, or one diagram by its id. */
+export type iDigestPartRef = z.infer<typeof digestPartRefSchema>;
 
 export type iDigestRunnerStatus = ORPCOutputs['digests']['runners'][number];
 

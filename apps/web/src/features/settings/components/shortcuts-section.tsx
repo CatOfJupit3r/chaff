@@ -35,7 +35,7 @@ export function ShortcutsSection() {
         </Button>
       </div>
       <p className="m-0 text-[12.5px] text-muted">
-        Click a key and press the one you want. Arrows always move, and 1 to 4 switch the card&apos;s views in Focus.
+        Click a key and press the one you want. Arrows always move, and 1 to 5 switch the card&apos;s views in Focus.
       </p>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
         {shortcutScreenValues.map((screen) => (

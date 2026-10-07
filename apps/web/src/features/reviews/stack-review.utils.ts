@@ -1,12 +1,16 @@
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
-import type { iBranch, iLocalStack } from '@~/features/workspaces/workspaces.types';
+import type { iStack, iStackMember } from '@~/features/stacks/stacks.types';
+import type { iBranch } from '@~/features/workspaces/workspaces.types';
 
 import type { iReviewTarget } from './reviews.types';
 
 /** One branch of a stack, reviewed against the branch below it (or the stack's base). */
 export interface iStackLink {
-  branch: iBranch;
+  name: string;
+  member: iStackMember;
+  /** The branch as read from the repository; missing once it is deleted or not fetched. */
+  branch?: iBranch;
   parentBranch?: string;
   target?: iReviewTarget;
 }
@@ -15,16 +19,19 @@ export interface iStackLink {
  * Pairs a stack's branches with their reviews. The branch to continue is the one whose newest
  * snapshot was taken last; a stack without reviews starts at its bottom branch.
  */
-export function summarizeStackReview(stack: iLocalStack, targets: readonly iReviewTarget[]) {
+export function summarizeStackReview(stack: iStack, branches: readonly iBranch[], targets: readonly iReviewTarget[]) {
   const targetsByBranch = new Map(
     targets
-      .filter((target) => target.workspaceId === stack.workspace.id && target.kind === REVIEW_TARGET_KINDS.BRANCH)
+      .filter((target) => target.workspaceId === stack.workspaceId && target.kind === REVIEW_TARGET_KINDS.BRANCH)
       .map((target) => [target.branch, target]),
   );
-  const links: iStackLink[] = stack.branches.map((branch, index) => ({
-    branch,
-    parentBranch: index === 0 ? stack.base : stack.branches[index - 1]?.name,
-    target: targetsByBranch.get(branch.name),
+  const branchesByName = new Map(branches.map((branch) => [branch.name, branch]));
+  const links: iStackLink[] = stack.branches.map((member) => ({
+    name: member.branch,
+    member,
+    branch: branchesByName.get(member.branch),
+    parentBranch: member.parentBranch,
+    target: targetsByBranch.get(member.branch),
   }));
 
   const started = links.filter((link) => link.target?.latestSnapshot);

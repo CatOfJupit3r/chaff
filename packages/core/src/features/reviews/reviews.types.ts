@@ -6,8 +6,6 @@ import type { iSnapshotFileSummary, iSnapshotRecord } from './snapshots/snapshot
 
 export type iStartReviewInput = Omit<iNewReviewTarget, 'kind'> & { kind: ReviewTargetKind };
 
-export type iSetParentInput = Pick<iNewReviewTarget, 'workspaceId' | 'branch' | 'parentBranch'>;
-
 export type iSnapshotSummary = Pick<
   iSnapshotRecord,
   'id' | 'version' | 'headSha' | 'fileCount' | 'additions' | 'deletions' | 'regionCount' | 'unitCount' | 'createdAt'

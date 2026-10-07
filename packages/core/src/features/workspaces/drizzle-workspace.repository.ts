@@ -49,22 +49,15 @@ export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
     return row ? this.workspaceResolver.toWorkspaceRecord(row) : undefined;
   }
 
-  public async updateStackView(
-    workspaceId: string,
-    view: Partial<Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters'>>,
-  ) {
+  public async updateStackFilters(workspaceId: string, stackFilters: iWorkspaceRecord['stackFilters']) {
     const row = this.databaseService
       .getDb()
       .update(workspaces)
-      .set(view)
+      .set({ stackFilters })
       .where(eq(workspaces.id, workspaceId))
       .returning()
       .get();
     return row ? this.workspaceResolver.toWorkspaceRecord(row) : undefined;
-  }
-
-  public async updateKnownParents(workspaceId: string, knownParents: iWorkspaceRecord['knownParents']) {
-    this.databaseService.getDb().update(workspaces).set({ knownParents }).where(eq(workspaces.id, workspaceId)).run();
   }
 
   public async delete(workspaceId: string) {

@@ -32,7 +32,10 @@ export class SettingsService {
     if (conflicts.length > 0) throw ORPCBadRequestError(errorCodes.SHORTCUT_CONFLICT, { actions: conflicts });
     return this.settingsMutex.run(SETTINGS_ROW_ID, async () => {
       const current = await this.get();
-      const saved = await this.settingsRepository.save({ ...current, ...this.withoutUndefined(changes) });
+      const saved = await this.settingsRepository.save({
+        ...current,
+        ...this.withoutUndefined({ ...changes, authorEmails: this.uniqueEmails(changes.authorEmails) }),
+      });
       if (saved.theme !== current.theme) await this.host.applyTheme(saved.theme);
       return saved;
     });
@@ -61,6 +64,10 @@ export class SettingsService {
   public async applyStoredTheme() {
     const { theme } = await this.get();
     await this.host.applyTheme(theme);
+  }
+
+  private uniqueEmails(emails: iSettingsUpdate['authorEmails']) {
+    return emails ? [...new Set(emails)] : undefined;
   }
 
   private withoutUndefined(changes: iSettingsUpdate): iSettingsUpdate {

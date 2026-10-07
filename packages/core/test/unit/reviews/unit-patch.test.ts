@@ -65,6 +65,19 @@ describe('buildUnitPatch', () => {
     expect(patch).toBe(`${HEADER}\n@@ -1,2 +1,2 @@\n-a\n-b\n+A\n+B\n@@ -6,1 +6,1 @@\n-f\n+F\n`);
   });
 
+  it('keeps every line and every change of the file for the whole file, including changes outside the unit', () => {
+    const oldContents = 'a\nb\nc\nd\ne\nf\ng\n';
+    const newContents = 'a\nadded\nb\nc\nd\ne\nF\ng\n';
+    const patch = unitPatch('@@ -1,2 +1,3 @@\n a\n+added\n b\n@@ -4,4 +5,4 @@\n d\n e\n-f\n+F\n g\n', {
+      units: [{ oldRange: { start: 6, end: 6 }, newRange: { start: 7, end: 7 } }],
+      oldContents,
+      newContents,
+      isWholeFile: true,
+    });
+
+    expect(patch).toBe(`${HEADER}\n@@ -1,7 +1,8 @@\n a\n+added\n b\n c\n d\n e\n-f\n+F\n g\n`);
+  });
+
   it('returns nothing for a unit without a line range', () => {
     expect(unitPatch('@@ -1 +1 @@\n-a\n+b\n', { units: [{}] })).toBeUndefined();
   });

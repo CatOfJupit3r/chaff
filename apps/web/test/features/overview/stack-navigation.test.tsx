@@ -1,42 +1,47 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { StackNeighborhood } from '@~/features/overview/components/stack-neighborhood';
 import { StackOutline } from '@~/features/overview/components/stack-outline';
+import { StackTrain } from '@~/features/overview/components/stack-train';
 import type { useStackList } from '@~/features/overview/hooks/use-stack-list';
 import { INCLUSIVE_STACK_FILTERS } from '@~/features/overview/overview.constants';
 import type { iOverviewBranch, iOverviewStack } from '@~/features/overview/overview.types';
 import { listStacks } from '@~/features/overview/stack-list.utils';
 
+import { builtStack, stackMember } from '../stacks/stack-fixtures';
 import { workspace } from '../workspaces/workspace-fixtures';
 
-const longStack: iOverviewStack = {
-  id: 'delivery',
-  title: 'Delivery reliability',
-  tipBranch: 'branch-20',
-  workspace,
-  base: 'main',
-  hasCycle: false,
-  branches: Array.from({ length: 20 }, (_, index) => ({
-    name: `branch-${index + 1}`,
-    title: `Change ${index + 1}`,
-    parent: index === 0 ? 'main' : `branch-${index}`,
-  })),
-};
-const otherStack: iOverviewStack = {
-  id: 'signatures',
-  title: 'Webhook signatures',
-  tipBranch: 'signature',
-  workspace,
-  base: 'main',
-  hasCycle: false,
-  branches: [{ name: 'signature', title: 'Verify signatures', parent: 'main' }],
-};
+function overviewStack(id: string, title: string, names: readonly string[], titles: readonly string[]) {
+  return {
+    id,
+    title,
+    tipBranch: names.at(-1) ?? '',
+    workspace,
+    base: 'main',
+    isHidden: false,
+    stack: builtStack(names),
+    branches: names.map((name, index) => ({
+      name,
+      title: titles[index] ?? name,
+      parent: index === 0 ? 'main' : names[index - 1],
+      member: stackMember(name),
+    })),
+  } satisfies iOverviewStack;
+}
+
+const longNames = Array.from({ length: 20 }, (_, index) => `branch-${index + 1}`);
+const longStack = overviewStack(
+  'delivery',
+  'Delivery reliability',
+  longNames,
+  longNames.map((_, index) => `Change ${index + 1}`),
+);
+const otherStack = overviewStack('signatures', 'Webhook signatures', ['signature'], ['Verify signatures']);
 
 function NavigationExample() {
-  const [stack, setStack] = useState(longStack);
+  const [stack, setStack] = useState<iOverviewStack>(longStack);
   const [query, setQuery] = useState('');
   const [selectedName, setSelectedName] = useState('branch-7');
   const branch = stack.branches.find((item) => item.name === selectedName) ?? stack.branches[0];
@@ -57,13 +62,7 @@ function NavigationExample() {
     filters: INCLUSIVE_STACK_FILTERS,
     setFilters: vi.fn(),
     toggleHidden: vi.fn(),
-    ...listStacks({
-      stacks: [longStack, otherStack],
-      filters: INCLUSIVE_STACK_FILTERS,
-      hiddenStacks: [],
-      query,
-      isShowingHidden: false,
-    }),
+    ...listStacks({ stacks: [longStack, otherStack], filters: INCLUSIVE_STACK_FILTERS, query, isShowingHidden: false }),
   };
   if (!branch) return null;
   return (
@@ -74,32 +73,51 @@ function NavigationExample() {
         branch={branch}
         selectStack={selectStack}
         selectBranch={selectBranch}
+        onNewStack={vi.fn()}
+        importLabel="Import"
       />
-      <StackNeighborhood stack={stack} branch={branch} onSelectBranch={selectBranch} />
+      <StackTrain
+        stack={stack}
+        branch={branch}
+        onSelectBranch={selectBranch}
+        branches={[]}
+        stackedBranches={new Set()}
+      />
     </>
   );
 }
 
-describe('long stack navigation', () => {
+function dockedCar() {
+  return within(screen.getByRole('toolbar', { name: 'Stack branches' })).getByRole('button', { pressed: true });
+}
+
+describe('stack train', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
+    globalThis.ResizeObserver = class {
+      public observe() {}
+      public unobserve() {}
+      public disconnect() {}
+    };
   });
 
-  it('jumps to the twentieth branch through search, shows only its neighbors, and returns to the first', async () => {
+  it('jumps to the twentieth branch through search and docks it, then returns to the first', async () => {
     const user = userEvent.setup();
     render(<NavigationExample />);
     const preview = screen.getByRole('region', { name: 'Stack preview' });
     expect(within(preview).getByText('Branch 7 of 20')).toBeInTheDocument();
-    expect(within(preview).getAllByRole('listitem')).toHaveLength(3);
-    await user.type(screen.getByRole('textbox', { name: 'Find stack or branch' }), 'Change 20');
+    expect(dockedCar()).toHaveTextContent('Change 7');
+
+    const search = screen.getByRole('textbox', { name: 'Find stack or branch' });
+    fireEvent.change(search, { target: { value: 'Change 20' } });
     await user.click(
       within(screen.getByRole('navigation', { name: 'Stack branches' })).getByRole('button', { name: /Change 20/ }),
     );
     expect(within(preview).getByText('Branch 20 of 20')).toBeInTheDocument();
-    expect(within(preview).getAllByRole('listitem')).toHaveLength(2);
+    expect(dockedCar()).toHaveTextContent('Change 20');
     expect(screen.getByRole('button', { name: 'Next branch' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Show later branches' })).toBeDisabled();
-    await user.clear(screen.getByRole('textbox', { name: 'Find stack or branch' }));
+
+    fireEvent.change(search, { target: { value: '' } });
     await user.click(
       within(screen.getByRole('navigation', { name: 'Stack branches' })).getByText('Change 1', { exact: true }),
     );
@@ -107,7 +125,21 @@ describe('long stack navigation', () => {
     expect(screen.getByRole('button', { name: 'Previous branch' })).toBeDisabled();
   });
 
-  it('switches stacks without leaving the old selection or dependency preview behind', async () => {
+  it('moves one branch per flick of the wheel over the train, and by arrow keys', async () => {
+    const user = userEvent.setup();
+    render(<NavigationExample />);
+    const train = screen.getByRole('toolbar', { name: 'Stack branches' });
+
+    fireEvent.wheel(train, { deltaY: 120 });
+    fireEvent.wheel(train, { deltaY: 120 });
+    expect(dockedCar()).toHaveTextContent('Change 8');
+
+    train.focus();
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(dockedCar()).toHaveTextContent('Change 6');
+  });
+
+  it('switches stacks without leaving the old selection behind', async () => {
     const user = userEvent.setup();
     render(<NavigationExample />);
     await user.click(screen.getByRole('button', { name: /Webhook signatures/ }));

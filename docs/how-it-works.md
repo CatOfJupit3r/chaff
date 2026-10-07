@@ -40,20 +40,21 @@ flowchart TB
 
 Adding a repository stores its path and default branch. From then on Chaff runs your installed `git` against it with read-only commands such as `for-each-ref`, `rev-list`, `rev-parse` and `merge-base`, and the snapshot store fetches from it. It does not check out branches, add refs, touch the index or the stash, or write anywhere inside the repository.
 
-## Finding stacks
+## Building stacks
 
-Chaff lists your local branches and suggests a parent for each one:
+Chaff does not group branches on its own; you build each stack, like a chain of local merge requests:
 
-- It walks the branch's history, merged-in commits included, and collects the tips of other local branches it finds.
-- It picks the one with the fewest commits between that tip and the branch, so a branch that merged newer commits from its parent (or from the default branch) still stacks on its parent.
-- Ties go to the branch's upstream, then the default branch, then alphabetical order. At the branch's own tip, only the default branch or an alphabetically earlier branch can be the parent, so two branches on the same commit don't claim each other.
-- A branch with no other branch in its history stacks on the default branch.
+- **New stack** starts a stack from one branch: an open merge request, one of your recent branches, or any other branch, local or remote-only. A branch belongs to one stack of its repository at most, and the default branch to none.
+- Faint slots sit at both ends of a stack. **Stack down** picks the branch the bottom one merges into; picking the default branch makes it the stack's base, as it is never part of a stack. **Stack up** picks a branch that merges into the top one.
+- Each slot suggests branches. The linked project's open changes come first, as a chain: below the bottom branch, the target of its change, then that branch's target, down to the default branch; above the top one, the changes that target it. You apply a chain one step at a time. The nearest branches in the history follow: tips found in the branch's history (merged-in commits included) with the fewest commits between, or branches that contain it. Branches the default branch already merged are left out.
+- **Import** turns a chain of open changes, each targeting the one below it, into a stack in one go. Nothing changes on the host.
+- For a stack in a repository with a linked project, Chaff compares the stack with the host and lists the differences: a new change targeting the top branch (add it on top or dismiss it), or a branch whose change now targets another branch than the one it merges into here (follow the host, which takes the branches in between out of the stack, or keep yours until the change is retargeted again).
 
-Branches that chain this way form a stack, shown on the Reviews screen as `feature/async-input <- feature/job-options <- feature/consent`. Each branch is reviewed against its parent, so you read only what that branch adds. On the Stack overview you can confirm a suggested parent or pick another one; a confirmed parent is stored with the review target and wins over the suggestion from then on. Chaff refuses a parent that already builds on the branch, so a stack can't loop. When a parent moves under a branch you are reviewing, the snapshot chip says so and **Update** compares against the new parent.
+Each branch is reviewed against the branch below it, or the base for the bottom one, so you read only what that branch adds. Taking a branch out of a stack makes the branch above it merge into the one below. When a stack changes, the reviews of its branches move to their new parents; snapshots already taken stay as they are, the snapshot chip says the parent changed and **Update** compares against the new one. When a parent moves under a branch, the stack marks it.
 
 A **cumulative** review reads a branch against the stack's base instead of its parent, so the whole stack up to that branch is one review. It is its own review target, so its marks and findings never mix with the branch's own review.
 
-A finding lives on the branch it was written on. A finding has a scope: code (it has anchors), the whole branch (none) or the whole stack (none, by choice). A review shows the active concerns on the branches below it (following the stored parents through the reviewed branches) and active whole-stack findings from any other branch of its stack, without copying them.
+A finding lives on the branch it was written on. A finding has a scope: code (it has anchors), the whole branch (none) or the whole stack (none, by choice). A review shows the active concerns on the branches below it (following the branches of its stack) and active whole-stack findings from any other branch of its stack, without copying them.
 
 ## Working changes
 
@@ -125,7 +126,7 @@ A preference is a rule you state for one repository, often promoted from a findi
 
 ## Agents and keys
 
-- **Finding an agent.** For each of Claude Code and Codex, Chaff uses the command or path saved in Settings, else `claude` or `codex`. A name is looked up on PATH and then through your login shell, because apps started from a desktop launcher often get a shorter PATH; a path must point at an executable file. Digests, fixes, suggested tasks and the run dialogs all use the same lookup.
+- **Finding an agent.** For each of Claude Code and Codex, Chaff uses the command or path saved in Settings, else `claude` or `codex`. A name is looked up on PATH, which the app reads from your login shell when it starts, because apps started from a desktop launcher often get a shorter PATH; a path must point at an executable file. Digests, fixes, suggested tasks and the run dialogs all use the same lookup.
 - **Suggested tasks.** The agent picked in Settings gets the finding's comment, kind, severity and quoted code in the prompt, runs read-only in an empty folder, and must answer with a task and a way to verify it. The answer is trimmed and refused when empty or longer than a short paragraph. It is stored apart from the comment, and only a task you accepted (as written or edited) goes into exports.
 - **Customization.** Appearance settings are mirrored onto `<html>` as `data-*` attributes (`data-code-font`, `data-code-line-height`, `data-density`, `data-syntax-light`, `data-syntax-dark`), and `index.css` maps each value to theme tokens. The code line height is the code size times a ratio. Compact density lowers Tailwind's `--spacing`, which every spacing utility is computed from. A syntax theme only redefines the `--tok-*` colors, so the diff viewer, quotes and digests all follow it. A frozen snapshot keeps 3 lines of context. Other context or ignored whitespace diffs that file again between the snapshot's commits in the store (`git diff -U<n> --ignore-all-space`); a file whose only changes are whitespace keeps its frozen patch. "Whole file" unfolds the hidden lines in the viewer.
 - **Keys.** Settings stores only the keys you changed. Each screen (Focus, Verify) resolves its actions against the defaults; the core refuses a map where two actions on one screen share a key or an action takes 1 to 4 in Focus. Arrows always move, whatever the map says.
@@ -162,7 +163,7 @@ GitLab merge requests and GitHub pull requests are read through one provider int
 
 - **Connections.** Settings takes the host's address and a token. Chaff calls the host's `/user` endpoint to check it, then hands the token to the main process's secret store, which encrypts it with Electron `safeStorage` (the OS keychain) into `secrets.json` next to `chaff.db`. Nothing is stored when the OS has no keychain. Tokens go only over https, or plain http to this computer for a local instance, and are never sent to the renderer.
 - **Projects.** A repository's project is the one picked in Settings, or else the first remote (origin first) whose host matches a connection.
-- **Inbox.** For each repository with a project, Chaff lists the open changes and filters them: assigned to you or awaiting your review, opened by you, or all. A change whose target branch is another change's source branch is shown stacked on it.
+- **Open changes.** For each repository with a project, Chaff reads the open changes, leaving out those from forks. They start stacks, suggest the next branch of a stack, are imported as stacks, and show where a stack differs from the host.
 - **Snapshots.** Starting a review fetches `refs/merge-requests/<n>/head` (GitLab) or `refs/pull/<n>/head` (GitHub) and the target branch into the snapshot store. The token travels in an `http.extraHeader` set through `GIT_CONFIG_*` environment variables, so it never appears in a process list or a config file. The target branch is copied from your local repository first when it has it, so only missing objects come over the network. Your repository is not touched.
 - **New versions.** The snapshot chip asks the host for the change's head and the target branch's tip (at most every 30 seconds) and counts new commits from the change's commit list. **Update** freezes a new snapshot as with local branches.
 - **Discussions** are read from the host and shown read-only on the lines and units they are about. Threads written against another commit are marked as such and stay out of the Full diff.

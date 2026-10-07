@@ -14,7 +14,7 @@ import {
 import { markdownUrl } from './markdown-url.utils';
 import type { iMarkdownProps } from './markdown.types';
 
-export function MarkdownBody({ text, baseUrl, className }: iMarkdownProps) {
+export function MarkdownBody({ text, baseUrl, className, image }: iMarkdownProps) {
   return (
     <div
       className={cn(
@@ -24,11 +24,11 @@ export function MarkdownBody({ text, baseUrl, className }: iMarkdownProps) {
     >
       <Markdown
         remarkPlugins={[remarkGfm]}
-        urlTransform={(url) => markdownUrl(url, baseUrl) ?? ''}
+        urlTransform={(url, key) => (image && key === 'src' ? url : (markdownUrl(url, baseUrl) ?? ''))}
         components={{
           pre: MarkdownCodeBlock,
           a: MarkdownLink,
-          img: MarkdownAttachment,
+          img: image ?? MarkdownAttachment,
           table: MarkdownTable,
           th: MarkdownTableHeading,
           td: MarkdownTableCell,

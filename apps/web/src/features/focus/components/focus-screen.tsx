@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { UNIT_MARKS } from '@chaff/common/enums/review.enums';
@@ -9,7 +9,7 @@ import { reportGuideAction } from '@~/features/onboarding/guide-action-events';
 import { ReviewTopBar } from '@~/features/reviews/components/review-top-bar';
 import { cn } from '@~/lib/utils';
 
-import { cardMark } from '../focus-cards.utils';
+import { cardMark, cardNoteMark } from '../focus-cards.utils';
 import { countRegions, tallyMarks } from '../focus-queue.utils';
 import { CARD_EXITS, CARD_VIEWS, FOCUS_QUEUES } from '../focus.enums';
 import type { CardExit } from '../focus.enums';
@@ -22,7 +22,7 @@ import { DecisionDock } from './decision-dock';
 import { FocusContextPanel } from './focus-context-panel';
 import { FocusEndCard } from './focus-end-card';
 import { FocusHeader } from './focus-header';
-import { FocusHints } from './focus-hints';
+import { FocusLineNotes } from './focus-line-notes';
 import { SecondPassBanner } from './second-pass-banner';
 import { StackFindingsBanner } from './stack-findings-banner';
 import { UnitCard } from './unit-card';
@@ -36,6 +36,7 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
   const [isEditingChanges, setIsEditingChanges] = useState(false);
   const [noteMark, setNoteMark] = useState<NoteMark>();
   const expansion = useCodeExpansion(card?.units.map((member) => member.id) ?? []);
+  const closeDockNote = useCallback(() => setNoteMark(undefined), []);
 
   const saveNote = async (mark: NoteMark, body: string, options: iNoteOptions) => {
     const isSaved = await focus.comment(mark, body, options);
@@ -107,36 +108,46 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
             <div className="relative w-full max-w-[920px]">
               <div className="absolute inset-x-[22px] top-[-7px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-55" />
               <div className="absolute inset-x-[44px] top-[-13px] h-[30px] rounded-t-xl border border-b-0 border-line bg-surface opacity-30" />
-              {card?.change ? (
-                <ChangeCard
+              {card ? (
+                <FocusLineNotes
                   key={card.id}
                   snapshot={snapshot}
-                  card={card}
-                  findings={focus.cardFindings}
-                  digest={focus.digest}
-                  view={focus.view}
-                  exit={focus.exit}
-                  onViewChange={focus.setView}
-                  onOpenInEditor={focus.openInEditor}
-                  onOpenUnit={focus.openUnit}
-                  onEdit={() => setIsEditingChanges(true)}
-                  onSwipe={swipe}
-                />
-              ) : null}
-              {unit ? (
-                <UnitCard
-                  key={unit.id}
-                  snapshot={snapshot}
-                  unit={unit}
-                  findings={focus.cardFindings}
-                  digest={focus.digest}
-                  view={focus.view}
-                  exit={focus.exit}
-                  onViewChange={focus.setView}
-                  onOpenInEditor={focus.openInEditor}
-                  onOpenUnit={focus.openUnit}
-                  onSwipe={swipe}
-                />
+                  findings={focus.findingsInReview}
+                  onSaved={focus.recordLineNote}
+                  onDraft={closeDockNote}
+                >
+                  {card.change ? (
+                    <ChangeCard
+                      key={card.id}
+                      snapshot={snapshot}
+                      card={card}
+                      findings={focus.cardFindings}
+                      digest={focus.digest}
+                      view={focus.view}
+                      exit={focus.exit}
+                      onViewChange={focus.setView}
+                      onOpenInEditor={focus.openInEditor}
+                      onOpenUnit={focus.openUnit}
+                      onEdit={() => setIsEditingChanges(true)}
+                      onSwipe={swipe}
+                    />
+                  ) : null}
+                  {unit ? (
+                    <UnitCard
+                      key={unit.id}
+                      snapshot={snapshot}
+                      unit={unit}
+                      findings={focus.cardFindings}
+                      digest={focus.digest}
+                      view={focus.view}
+                      exit={focus.exit}
+                      onViewChange={focus.setView}
+                      onOpenInEditor={focus.openInEditor}
+                      onOpenUnit={focus.openUnit}
+                      onSwipe={swipe}
+                    />
+                  ) : null}
+                </FocusLineNotes>
               ) : null}
               {card ? null : (
                 <FocusEndCard
@@ -148,11 +159,11 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                 />
               )}
             </div>
-            <FocusHints />
           </div>
           {card ? (
             <DecisionDock
               mark={cardMark(card)}
+              hasNote={cardNoteMark(card) !== undefined}
               noteMark={noteMark}
               headSha={snapshot.headSha}
               isSaving={focus.isSaving}

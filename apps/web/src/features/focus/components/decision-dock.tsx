@@ -7,10 +7,16 @@ import type { UnitMark } from '@chaff/common/enums/review.enums';
 import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
 import type { ShortcutAction } from '@chaff/common/enums/shortcuts.enums';
 
-import { CheckIcon, ClockIcon, MessageIcon, NextIcon, QuestionIcon, SkipIcon } from '@~/components/icons/icons';
-import { Kbd } from '@~/components/ui/kbd';
-import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
-import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
+import {
+  CheckIcon,
+  ClockIcon,
+  FlagIcon,
+  MessageIcon,
+  NextIcon,
+  QuestionIcon,
+  SkipIcon,
+} from '@~/components/icons/icons';
+import { ShortcutKbd } from '@~/features/settings/components/shortcut-kbd';
 import { cn } from '@~/lib/utils';
 
 import type { iNoteOptions, NoteMark } from '../hooks/use-focus-review';
@@ -19,6 +25,8 @@ import type { iNoteUnitSource } from './note-options';
 
 interface iDecisionDockProps {
   mark?: UnitMark;
+  /** The card already has a concern or question, so Later finishes it as Done. */
+  hasNote: boolean;
   noteMark?: NoteMark;
   headSha: string;
   isSaving: boolean;
@@ -65,6 +73,7 @@ function GroupHeading({ title, hint }: { title: string; hint: string }) {
  */
 export function DecisionDock({
   mark,
+  hasNote,
   noteMark,
   headSha,
   isSaving,
@@ -75,10 +84,8 @@ export function DecisionDock({
   onLooksGood,
   onLater,
 }: iDecisionDockProps) {
-  const keys = useShortcutBindings();
-  const keyFor = (action: ShortcutAction) => shortcutKeyLabel(keys.get(action) ?? '');
   const isPressed = (candidate: UnitMark) => noteMark === candidate || (!noteMark && mark === candidate);
-  const commentButton = (candidate: NoteMark, icon: ReactNode, label: string, key: string) => (
+  const commentButton = (candidate: NoteMark, icon: ReactNode, label: string, action: ShortcutAction) => (
     <button
       type="button"
       aria-pressed={isPressed(candidate)}
@@ -92,7 +99,7 @@ export function DecisionDock({
     >
       {icon}
       {label}
-      <Kbd>{key}</Kbd>
+      <ShortcutKbd action={action} />
     </button>
   );
 
@@ -114,20 +121,15 @@ export function DecisionDock({
           <div className="flex min-w-0 flex-col gap-1.5">
             <GroupHeading title="Comment" hint="write a note first" />
             <div className="grid grid-cols-2 gap-2">
-              {commentButton(UNIT_MARKS.CONCERN, <MessageIcon />, 'Concern…', keyFor(SHORTCUT_ACTIONS.FOCUS_CONCERN))}
-              {commentButton(
-                UNIT_MARKS.QUESTION,
-                <QuestionIcon />,
-                'Question…',
-                keyFor(SHORTCUT_ACTIONS.FOCUS_QUESTION),
-              )}
+              {commentButton(UNIT_MARKS.CONCERN, <MessageIcon />, 'Concern…', SHORTCUT_ACTIONS.FOCUS_CONCERN)}
+              {commentButton(UNIT_MARKS.QUESTION, <QuestionIcon />, 'Question…', SHORTCUT_ACTIONS.FOCUS_QUESTION)}
             </div>
           </div>
           <div aria-hidden="true" className="self-stretch bg-line" />
           <div className="flex min-w-0 flex-col gap-1.5">
             <GroupHeading title="Resolve" hint="close this card and move on" />
             <div className="grid grid-cols-3 gap-2">
-              {commentButton(UNIT_MARKS.SKIPPED, <SkipIcon />, 'Skip…', keyFor(SHORTCUT_ACTIONS.FOCUS_SKIP))}
+              {commentButton(UNIT_MARKS.SKIPPED, <SkipIcon />, 'Skip…', SHORTCUT_ACTIONS.FOCUS_SKIP)}
               <button
                 type="button"
                 aria-pressed={isPressed(UNIT_MARKS.LATER)}
@@ -138,9 +140,9 @@ export function DecisionDock({
                   'border-line-strong bg-raised text-fg hover:bg-hover aria-pressed:border-fg',
                 )}
               >
-                <ClockIcon />
-                Later
-                <Kbd>{keyFor(SHORTCUT_ACTIONS.FOCUS_LATER)}</Kbd>
+                {hasNote ? <FlagIcon /> : <ClockIcon />}
+                {hasNote ? 'Done' : 'Later'}
+                <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_LATER} />
                 <NextIcon className="size-3.5! text-faint" />
               </button>
               <button
@@ -155,7 +157,7 @@ export function DecisionDock({
               >
                 <CheckIcon />
                 Looks good
-                <Kbd>{keyFor(SHORTCUT_ACTIONS.FOCUS_LOOKS_GOOD)}</Kbd>
+                <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_LOOKS_GOOD} />
                 <NextIcon className="size-3.5!" />
               </button>
             </div>

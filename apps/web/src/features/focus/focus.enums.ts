@@ -2,6 +2,8 @@ import { em } from 'enumwaii';
 import type { InferEnumwaii } from 'enumwaii';
 
 import {
+  FINDING_KINDS,
+  findingKindsEnumwaii,
   REVIEW_PROGRESSIONS,
   reviewProgressionsEnumwaii,
   FILE_KINDS,
@@ -17,9 +19,10 @@ import {
   unitMarksEnumwaii,
   unitRevisionsEnumwaii,
 } from '@chaff/common/enums/review.enums';
+import type { UnitMark } from '@chaff/common/enums/review.enums';
 
 // Card views and queues are lowercase because they appear in the URL.
-export const cardViewsEnumwaii = em(['code', 'usages', 'diagram', 'tests']);
+export const cardViewsEnumwaii = em(['code', 'usages', 'diagram', 'tests', 'qa']);
 
 export const CARD_VIEWS = cardViewsEnumwaii.enum;
 export type CardView = InferEnumwaii<typeof cardViewsEnumwaii>;
@@ -30,6 +33,7 @@ export const CARD_VIEW_LABELS = cardViewsEnumwaii.derive(
   [CARD_VIEWS.usages, 'Usages'],
   [CARD_VIEWS.diagram, 'Diagram'],
   [CARD_VIEWS.tests, 'Tests'],
+  [CARD_VIEWS.qa, 'Q&A'],
 );
 
 /**
@@ -113,12 +117,23 @@ export const UNIT_MARK_LABELS = unitMarksEnumwaii.derive(
   [UNIT_MARKS.SKIPPED, 'Skipped'],
 );
 
-export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive(
+/** Where a card leaves to after the mark; a concern or question keeps the card up. */
+export const UNIT_MARK_EXITS = unitMarksEnumwaii.derive<CardExit | undefined>()(
   [UNIT_MARKS.LOOKS_GOOD, CARD_EXITS.RIGHT],
-  [UNIT_MARKS.CONCERN, CARD_EXITS.LEFT],
-  [UNIT_MARKS.QUESTION, CARD_EXITS.LEFT],
+  [UNIT_MARKS.CONCERN, undefined],
+  [UNIT_MARKS.QUESTION, undefined],
   [UNIT_MARKS.LATER, CARD_EXITS.DOWN],
   [UNIT_MARKS.SKIPPED, CARD_EXITS.DOWN],
+);
+
+/** A card finished after a concern or question leaves the way Later does. */
+export const DONE_EXIT = CARD_EXITS.DOWN;
+
+/** The mark a note on picked lines puts on the card's units under them; a plain note leaves them as they are. */
+export const LINE_NOTE_MARKS = findingKindsEnumwaii.derive<UnitMark | undefined>()(
+  [FINDING_KINDS.CONCERN, UNIT_MARKS.CONCERN],
+  [FINDING_KINDS.QUESTION, UNIT_MARKS.QUESTION],
+  [FINDING_KINDS.NOTE, undefined],
 );
 
 /** Progress segment color for each mark; Later is striped with the `bg-stripes` utility. */

@@ -6,6 +6,7 @@ import type { ReviewProgression } from '@chaff/common/enums/review.enums';
 
 import { EditIcon, RightIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
+import { Kbd } from '@~/components/ui/kbd';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { DigestOverview } from '@~/features/digests/components/digest-overview';
 import { DigestPreview } from '@~/features/digests/components/digest-preview';
@@ -14,7 +15,7 @@ import { readyContent } from '@~/features/digests/digests.utils';
 import type { iFinding } from '@~/features/findings/findings.types';
 import { cn } from '@~/lib/utils';
 
-import { cardMark } from '../focus-cards.utils';
+import { cardListMark } from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
 import { REVIEW_PROGRESSION_LABELS, UNIT_MARK_SEGMENT_CLASSES } from '../focus.enums';
 import { ContextFindings } from './context-findings';
@@ -57,11 +58,12 @@ export function FocusContextPanel({
     <div className="flex w-[340px] flex-col gap-[22px] px-[18px] pt-[18px] pb-7">
       <div className="flex items-center justify-between">
         <SectionLabel>Context</SectionLabel>
-        <Button variant="icon" size="icon" aria-label="Close context" onClick={onClose}>
+        <Button variant="ghost" size="sm" aria-label="Close context" onClick={onClose}>
+          <Kbd className="h-4 min-w-4 text-[10px]">Esc</Kbd>
           <RightIcon />
         </Button>
       </div>
-      {digest && content ? <DigestOverview runner={digest.runner} content={content} /> : null}
+      {digest && content ? <DigestOverview digest={digest} content={content} /> : null}
       {digest?.status === DIGEST_STATUSES.RUNNING ? <DigestPreview digest={digest} /> : null}
       <ContextFindings title="Notes on this card" findings={findings} empty="None yet." />
       <ContextFindings title="Notes on this branch" findings={branchFindings} />
@@ -78,7 +80,7 @@ export function FocusContextPanel({
         </div>
         <div className="flex flex-col">
           {cards.map((card, cardIndex) => {
-            const mark = cardMark(card);
+            const mark = cardListMark(card);
             return (
               <button
                 key={card.id}

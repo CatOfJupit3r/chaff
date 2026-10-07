@@ -2,7 +2,6 @@ import type { iSnapshotFile, iUnit } from '@~/features/reviews/reviews.types';
 import { cn } from '@~/lib/utils';
 
 import { UNIT_KIND_LABELS, UNIT_MARK_LABELS, UNIT_MARK_SEGMENT_CLASSES } from '../focus.enums';
-import { useUnitDetail } from '../hooks/use-unit-detail';
 import { useUnitUsages } from '../hooks/use-unit-usages';
 import { UnitCodeView } from './unit-code-view';
 import { UnitUsagesView } from './unit-usages-view';
@@ -33,12 +32,11 @@ function MemberTitle({ unit }: { unit: iUnit }) {
 
 /** A unit of a change, as code. */
 export function ChangeMemberCode({ snapshotId, unit, file, onOpenInEditor }: iChangeMemberProps) {
-  const { data: detail } = useUnitDetail(snapshotId, [unit.id]);
   if (!file) return null;
   return (
     <section aria-label={unit.title}>
       <MemberTitle unit={unit} />
-      <UnitCodeView snapshotId={snapshotId} unit={unit} file={file} detail={detail} onOpenInEditor={onOpenInEditor} />
+      <UnitCodeView snapshotId={snapshotId} unit={unit} file={file} onOpenInEditor={onOpenInEditor} />
     </section>
   );
 }

@@ -31,6 +31,7 @@ export const fileDisplaysEnumwaii = em([
   'LARGE',
   'TOO_LARGE',
   'BINARY',
+  'IMAGE',
   'RENAME_ONLY',
   'MODE_ONLY',
   'EMPTY',
@@ -38,6 +39,31 @@ export const fileDisplaysEnumwaii = em([
 
 export const FILE_DISPLAYS = fileDisplaysEnumwaii.enum;
 export type FileDisplay = InferEnumwaii<typeof fileDisplaysEnumwaii>;
+
+/** Whether a file that can be drawn shows its changed lines or the drawn result. */
+export const fileBodyViewsEnumwaii = em(['DIFF', 'PREVIEW']);
+
+export const FILE_BODY_VIEWS = fileBodyViewsEnumwaii.enum;
+export type FileBodyView = InferEnumwaii<typeof fileBodyViewsEnumwaii>;
+export const fileBodyViewValues = fileBodyViewsEnumwaii.values;
+
+export const FILE_BODY_VIEW_LABELS = fileBodyViewsEnumwaii.derive(
+  [FILE_BODY_VIEWS.DIFF, 'Diff'],
+  [FILE_BODY_VIEWS.PREVIEW, 'Preview'],
+);
+
+/** How the two versions of a changed image are put together. */
+export const imageComparisonsEnumwaii = em(['BOTH', 'SWIPE', 'FADE']);
+
+export const IMAGE_COMPARISONS = imageComparisonsEnumwaii.enum;
+export type ImageComparison = InferEnumwaii<typeof imageComparisonsEnumwaii>;
+export const imageComparisonValues = imageComparisonsEnumwaii.values;
+
+export const IMAGE_COMPARISON_LABELS = imageComparisonsEnumwaii.derive(
+  [IMAGE_COMPARISONS.BOTH, 'Both'],
+  [IMAGE_COMPARISONS.SWIPE, 'Swipe'],
+  [IMAGE_COMPARISONS.FADE, 'Fade'],
+);
 
 /** How far the reviewer got through a file's units. */
 export const fileDecisionsEnumwaii = em(['NONE', 'PARTIAL', 'LOOKS_GOOD', 'CONCERN']);

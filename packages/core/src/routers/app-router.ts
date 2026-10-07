@@ -1,6 +1,7 @@
 import { base } from '@~/lib/orpc';
 
 import { appInfoRouter } from './app.router';
+import { assistantRouter } from './assistant.router';
 import { changeUnitsRouter } from './change-units.router';
 import { codeHostsRouter } from './code-hosts.router';
 import { digestsRouter } from './digests.router';
@@ -11,10 +12,12 @@ import { hostRouter } from './host.router';
 import { preferencesRouter } from './preferences.router';
 import { reviewsRouter } from './reviews.router';
 import { settingsRouter } from './settings.router';
+import { stacksRouter } from './stacks.router';
 import { workspacesRouter } from './workspaces.router';
 
 export const appRouter = base.router({
   app: appInfoRouter,
+  assistant: assistantRouter,
   changeUnits: changeUnitsRouter,
   codeHosts: codeHostsRouter,
   digests: digestsRouter,
@@ -25,6 +28,7 @@ export const appRouter = base.router({
   preferences: preferencesRouter,
   reviews: reviewsRouter,
   settings: settingsRouter,
+  stacks: stacksRouter,
   workspaces: workspacesRouter,
 });
 

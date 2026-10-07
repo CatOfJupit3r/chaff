@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Stands in for `claude -p` in tests. With the read-only tool list it writes a digest; with the editing
-// tool list and acceptEdits it fixes the findings in its prompt; asked for a task, it restates the finding. FAKE_AGENT_MODE picks the behaviour:
+// tool list and acceptEdits it fixes the findings in its prompt; asked for a task, it restates the finding; asked
+// for one digest part, it rewrites that part; asked a question, it answers it. FAKE_AGENT_MODE picks the behaviour:
 // unset answers, `fail` exits with an error, `hang` never answers, `stream-hang` streams the start of a digest and
 // then never finishes. FAKE_AGENT_PROMPT_FILE, when set, receives the prompt; FAKE_AGENT_ARGS_FILE the arguments as JSON;
 // FAKE_AGENT_ADD_DIR_FILE the files it can read in its --add-dir folder, as JSON.
@@ -72,6 +73,13 @@ process.stdin.on('end', () => {
   const last = unitIds.at(-1);
   const hasCheckout = existsSync(path.join(process.cwd(), 'src/backoff.ts'));
 
+  const answerFields = Object.keys((schema && JSON.parse(schema).properties) || {});
+  const part = partAnswer(answerFields, first, hasCheckout);
+  if (part) {
+    respond(part, args, mode);
+    return;
+  }
+
   emit({
     type: 'assistant',
     message: {
@@ -124,6 +132,49 @@ process.stdin.on('end', () => {
   }
   emit({ type: 'result', is_error: false, structured_output: answer });
 });
+
+/** A rewritten digest part or the answer to a question, when the schema asks for one. */
+function partAnswer(fields, first, hasCheckout) {
+  if (fields.includes('groups')) return undefined;
+  if (fields.length === 1 && fields[0] === 'answer') {
+    const question = /The reviewer asks:\n([\s\S]*?)\n\nAnswer in Markdown/.exec(prompt)?.[1] ?? '?';
+    const earlier = prompt.split('\nReviewer: ').length - 1;
+    return {
+      answer: `  ${hasCheckout ? 'From the checkout' : 'No checkout'}: you asked "${question}" after ${earlier} earlier.  `,
+    };
+  }
+  if (fields.length === 1 && fields[0] === 'overview') return { overview: '  Rewritten overview.  ' };
+  if (fields.includes('mermaid')) {
+    return {
+      title: 'Retry, highlighted',
+      kind: 'SEQUENCE',
+      mermaid: `sequenceDiagram\n  ${first}->>c: retry`,
+      units: [first, 'u999'],
+      isSuggestion: false,
+    };
+  }
+  if (fields.includes('worthChecking')) {
+    return {
+      summary: 'Rewritten note.',
+      worthChecking: ['Check the cap.'],
+      tests: [{ path: path.join(process.cwd(), 'src/backoff.test.ts'), line: 2, tier: 'PASSED', note: 'Growth.' }],
+    };
+  }
+  return undefined;
+}
+
+/** Answers with `answer`, streamed first when the CLI was asked for partial messages. */
+function respond(answer, args, mode) {
+  if (args.includes('--include-partial-messages')) {
+    const json = JSON.stringify(answer);
+    streamAnswer(mode === 'stream-hang' ? json.slice(0, Math.ceil(json.length / 2)) : json);
+    if (mode === 'stream-hang') {
+      setInterval(() => undefined, 1000);
+      return;
+    }
+  }
+  emit({ type: 'result', is_error: false, structured_output: answer });
+}
 
 /** Streams the answer's JSON in small pieces, as Claude Code does with `--include-partial-messages`. */
 function streamAnswer(json) {

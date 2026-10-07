@@ -7,9 +7,7 @@ import { manualFindingStatuses } from '@chaff/common/helpers/finding-transitions
 
 import { showToast } from '@~/components/toast/toast-store';
 import { Button } from '@~/components/ui/button';
-import { Kbd } from '@~/components/ui/kbd';
-import { useShortcutBindings } from '@~/features/settings/hooks/use-shortcut-bindings';
-import { shortcutKeyLabel } from '@~/features/settings/shortcuts.utils';
+import { ShortcutKbd } from '@~/features/settings/components/shortcut-kbd';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
@@ -56,7 +54,6 @@ function AnswerForm({ isPending, onAnswer }: { isPending: boolean; onAnswer: (an
 /** The moves the reviewer can make on the finding now, with their keys; a question can be answered here. */
 export function FindingActions({ finding, isPending, onSetStatus }: iFindingActionsProps) {
   const queryClient = useQueryClient();
-  const keys = useShortcutBindings();
   const convert = useMutation(
     tanstackRPC.findings.convertToConcern.mutationOptions({
       onSuccess: async () => queryClient.invalidateQueries({ queryKey: tanstackRPC.findings.key() }),
@@ -75,7 +72,6 @@ export function FindingActions({ finding, isPending, onSetStatus }: iFindingActi
       <div className="flex flex-wrap items-center gap-2">
         {moves.map((status) => {
           const shortcut = FINDING_ACTION_SHORTCUTS.get(status);
-          const key = shortcut ? keys.get(shortcut) : undefined;
           return (
             <Button
               key={status}
@@ -84,7 +80,7 @@ export function FindingActions({ finding, isPending, onSetStatus }: iFindingActi
               onClick={() => onSetStatus(status)}
             >
               {findingActionLabel(finding.status, status)}
-              {key ? <Kbd className="h-4 min-w-4 text-[10px]">{shortcutKeyLabel(key)}</Kbd> : null}
+              {shortcut ? <ShortcutKbd action={shortcut} className="h-4 min-w-4 text-[10px]" /> : null}
             </Button>
           );
         })}

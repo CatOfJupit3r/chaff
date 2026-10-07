@@ -14,10 +14,6 @@ export const reviewsRouter = base.reviews.router({
 
   start: procedure.reviews.start.handler(async ({ input }) => container.resolve(ReviewsService).start(input)),
 
-  setParent: procedure.reviews.setParent.handler(async ({ input }) =>
-    container.resolve(ReviewsService).setParent(input),
-  ),
-
   refresh: procedure.reviews.refresh.handler(async ({ input }) =>
     container.resolve(ReviewsService).refresh(input.targetId),
   ),
@@ -49,10 +45,18 @@ export const reviewsRouter = base.reviews.router({
     container.resolve(ReviewsService).getFileContents(input.snapshotId, input.fileId),
   ),
 
+  fileImages: procedure.reviews.fileImages.handler(async ({ input }) =>
+    container.resolve(ReviewsService).getFileImages(input.snapshotId, input.fileId),
+  ),
+
+  snapshotImage: procedure.reviews.snapshotImage.handler(async ({ input }) =>
+    container.resolve(ReviewsService).getSnapshotImage(input.snapshotId, input.side, input.path),
+  ),
+
   units: procedure.reviews.units.handler(async ({ input }) => container.resolve(UnitsService).list(input.snapshotId)),
 
   unitDetail: procedure.reviews.unitDetail.handler(async ({ input }) =>
-    container.resolve(UnitsService).getDetail(input.snapshotId, input.unitIds),
+    container.resolve(UnitsService).getDetail(input.snapshotId, input.unitIds, input.isWholeFile),
   ),
 
   unitInterdiff: procedure.reviews.unitInterdiff.handler(async ({ input }) =>

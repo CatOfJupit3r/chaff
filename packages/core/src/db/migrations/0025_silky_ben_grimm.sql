@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `author_emails` text DEFAULT '[]' NOT NULL;

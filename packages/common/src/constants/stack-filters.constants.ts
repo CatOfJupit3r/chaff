@@ -10,11 +10,8 @@ interface iDefaultStackFilters {
 
 /** Filters a repository's stack list starts with. */
 export const DEFAULT_STACK_FILTERS: iDefaultStackFilters = {
-  activity: STACK_ACTIVITIES.MONTH,
+  activity: STACK_ACTIVITIES.ANY,
   review: STACK_REVIEW_FILTERS.ALL,
   source: STACK_SOURCES.ALL,
   isMineOnly: false,
 };
-
-/** Upper bound on the hidden stacks stored for one repository. */
-export const MAX_HIDDEN_STACKS = 2000;

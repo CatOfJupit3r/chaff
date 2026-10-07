@@ -8,7 +8,10 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
 import { settingsQueryOptions } from './use-settings';
 
-/** Applies a settings change immediately and rolls it back if the core rejects it; new agent paths are looked up again. */
+/**
+ * Applies a settings change immediately and rolls it back if the core rejects it; new agent paths are looked up
+ * again, and branches are read again when the user's emails change who wrote them.
+ */
 export function useUpdateSettings() {
   const queryClient = useQueryClient();
 
@@ -40,6 +43,8 @@ export function useUpdateSettings() {
           onboarding: current?.onboarding ?? settings.onboarding,
         }));
         if (changes.agentCommands) await queryClient.invalidateQueries({ queryKey: tanstackRPC.digests.runners.key() });
+        if (changes.authorEmails)
+          await queryClient.invalidateQueries({ queryKey: tanstackRPC.workspaces.branches.key() });
       },
     }),
   );

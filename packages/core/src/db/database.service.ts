@@ -36,7 +36,13 @@ export class DatabaseService {
     database.exec('PRAGMA busy_timeout = 5000');
 
     const { db, migrate } = drizzleNodeSqlite(database, { schema });
-    migrate(this.options.migrationsDir);
+    try {
+      migrate(this.options.migrationsDir);
+    } catch (error) {
+      // Released so the app can offer to clear the local data the migration failed on.
+      database.close();
+      throw error;
+    }
 
     this.connection = { database, db };
     return db;

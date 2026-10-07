@@ -58,11 +58,6 @@ export function anchorIn(anchor: iFindingAnchor, snapshotId: string) {
   return { fileId, unitId, startLine, endLine };
 }
 
-/** Whether any of the finding's anchors sits on the unit in that snapshot. */
-export function isOnUnit(finding: iFinding, snapshotId: string, unitId: string) {
-  return finding.anchors.some((anchor) => anchorIn(anchor, snapshotId)?.unitId === unitId);
-}
-
 /**
  * How the concerns of a review fared when they were looked for in this snapshot: the code under them
  * changed (a proposed fix), stayed the same, or could not be found.

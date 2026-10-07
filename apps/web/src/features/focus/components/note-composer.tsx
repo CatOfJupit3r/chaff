@@ -9,7 +9,7 @@ import { Kbd } from '@~/components/ui/kbd';
 import { Pill } from '@~/components/ui/pill';
 import { cn } from '@~/lib/utils';
 
-import { NOTE_SCOPE_FOOTERS, NOTE_SCOPES } from '../focus.enums';
+import { NOTE_SCOPE_FOOTERS } from '../focus.enums';
 import { CARD_NOTE } from '../hooks/use-focus-review';
 import type { iNoteOptions, NoteMark } from '../hooks/use-focus-review';
 import { NoteOptions } from './note-options';
@@ -45,7 +45,7 @@ const NOTE_STYLES = new Map<NoteMark | undefined, iNoteStyle>([
       prompt: 'What should change?',
       border: 'border-warn-line',
       footer: (headSha) => `Pinned to ${headSha.slice(0, 7)} with the quoted lines, so it survives rebases.`,
-      save: 'Save and next',
+      save: 'Save',
     },
   ],
   [
@@ -75,10 +75,10 @@ const QUESTION_STYLE: iNoteStyle = {
   prompt: 'What do you need to understand?',
   border: 'border-accent-line',
   footer: (headSha) => `Pinned to ${headSha.slice(0, 7)} with the quoted lines, so it survives rebases.`,
-  save: 'Save and next',
+  save: 'Save',
 };
 
-/** Floats above the decision dock: Enter saves and moves on, Shift+Enter adds a line, Escape cancels. */
+/** Floats above the decision dock: Enter saves, Shift+Enter adds a line, Escape cancels. */
 export function NoteComposer({ mark, headSha, isSaving, source, onCancel, onSave }: iNoteComposerProps) {
   const [body, setBody] = useState('');
   const [isEmptyWarning, setIsEmptyWarning] = useState(false);
@@ -87,10 +87,6 @@ export function NoteComposer({ mark, headSha, isSaving, source, onCancel, onSave
   const style = NOTE_STYLES.get(mark) ?? QUESTION_STYLE;
   const isSkip = mark === UNIT_MARKS.SKIPPED;
   const scopeFooter = isSkip ? undefined : NOTE_SCOPE_FOOTERS.get(options.scope);
-  const isCardCovered =
-    isSkip ||
-    options.scope === NOTE_SCOPES.CARD ||
-    (options.scope === NOTE_SCOPES.UNITS && source.cardUnitIds.every((unitId) => options.unitIds.includes(unitId)));
 
   useEffect(() => {
     if (mark) textArea.current?.focus();
@@ -167,7 +163,7 @@ export function NoteComposer({ mark, headSha, isSaving, source, onCancel, onSave
           disabled={isSaving}
           onClick={async () => save().catch(() => undefined)}
         >
-          {isCardCovered ? style.save : 'Save'} <Kbd className="border-current/30 bg-transparent text-inherit">↵</Kbd>
+          {style.save} <Kbd className="border-current/30 bg-transparent text-inherit">↵</Kbd>
         </Button>
       </div>
     </div>

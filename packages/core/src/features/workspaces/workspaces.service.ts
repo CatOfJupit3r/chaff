@@ -5,7 +5,7 @@ import { inject, singleton } from 'tsyringe';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
-import { REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { REVIEW_TARGET_REPOSITORY_TOKEN, STACK_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { BranchRefsService } from '@~/features/git/branch-refs.service';
 import { GitService } from '@~/features/git/git.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
@@ -13,6 +13,8 @@ import { localArchiveChanges } from '@~/features/reviews/review-targets/target-a
 import type { iArchiveChange } from '@~/features/reviews/review-targets/target-archive.utils';
 import { parseNumstat } from '@~/features/reviews/snapshots/numstat.utils';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
+import { SettingsService } from '@~/features/settings/settings.service';
+import type { iStackRepository } from '@~/features/stacks/stack.repository';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 import { isDirectory, pathExists } from '@~/lib/file-system';
 import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
@@ -22,7 +24,6 @@ import type { iWorkspaceRepository } from './workspace.repository';
 import type {
   iBranchResponse,
   iBranchStatInput,
-  iGitBranch,
   iStackViewInput,
   iWorkspaceRecord,
   iWorkspaceResponse,
@@ -40,6 +41,8 @@ export class WorkspacesService {
     private readonly branchRefsService: BranchRefsService,
     private readonly snapshotStoreService: SnapshotStoreService,
     @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
+    private readonly settingsService: SettingsService,
+    @inject(STACK_REPOSITORY_TOKEN) private readonly stackRepository: iStackRepository,
   ) {}
 
   public async list(): Promise<iWorkspaceResponse[]> {
@@ -78,57 +81,41 @@ export class WorkspacesService {
     return { workspaceId };
   }
 
-  /** Saves the stack list's filters and hidden stacks; fields left out keep their value. */
-  public async updateStackView({ workspaceId, ...view }: iStackViewInput): Promise<iWorkspaceResponse> {
-    const record = await this.workspaceRepository.updateStackView(workspaceId, view);
+  /** Saves the stack list's filters. */
+  public async updateStackView({ workspaceId, stackFilters }: iStackViewInput): Promise<iWorkspaceResponse> {
+    const record = await this.workspaceRepository.updateStackFilters(workspaceId, stackFilters);
     if (!record) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
     return this.toResponse(record);
   }
 
   /**
-   * Local branches, and the remote-only branches of their stacks, with the parent each is reviewed against and
-   * whether it has uncommitted work.
+   * Local branches, and the remote-only branches the default branch hasn't merged, with whether each has
+   * uncommitted work. Branches of stacks and reviews stay listed while they exist.
    */
   public async listBranches(workspaceId: string): Promise<iBranchResponse[]> {
     const record = await this.getRecord(workspaceId);
-    const targets = await this.reviewTargetRepository.list(workspaceId);
+    const [targets, { authorEmails }, stacks] = await Promise.all([
+      this.reviewTargetRepository.list(workspaceId),
+      this.settingsService.get(),
+      this.stackRepository.list(workspaceId),
+    ]);
     const localTargets = targets.filter((target) => target.kind !== REVIEW_TARGET_KINDS.CHANGE_REQUEST);
+    const keptNames = new Set([
+      ...localTargets.flatMap((target) => [target.branch, target.parentBranch]),
+      ...stacks.flatMap((stack) => [...stack.branches.map((member) => member.branch), stack.baseBranch ?? '']),
+    ]);
     const [branches, worktrees, branchNames] = await Promise.all([
-      this.branchesService.listBranches(
-        record.repoPath,
-        record.defaultBranch,
-        new Map(record.knownParents.map(({ branch, parent }) => [branch, parent])),
-        new Set(localTargets.flatMap((target) => [target.branch, target.parentBranch])),
-      ),
+      this.branchesService.listBranches(record.repoPath, record.defaultBranch, { keptNames, authorEmails }),
       this.snapshotStoreService.listWorktrees(record.repoPath),
       this.branchRefsService.names(record.repoPath),
     ]);
-    const confirmedParents = new Map(
-      targets
-        .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
-        .map((target) => [target.branch, target.parentBranch]),
-    );
-    await this.rememberParents(record, branches);
     await this.applyArchive(localArchiveChanges(targets, branchNames));
-    const tips = new Map(branches.map((branch) => [branch.name, branch.headSha]));
     return mapWithConcurrency(branches, STATUS_CONCURRENCY, async (branch) => {
-      const confirmedParent = confirmedParents.get(branch.name);
-      const parent = confirmedParent ?? branch.suggestedParent;
       const worktreePath = worktrees.get(branch.name);
       const hasWorkingChanges = worktreePath
         ? (await this.snapshotStoreService.workingFingerprint(worktreePath).catch(() => undefined)) !== undefined
         : false;
-      return {
-        ...branch,
-        parent,
-        isParentConfirmed: confirmedParent !== undefined,
-        isParentMoved:
-          parent !== undefined &&
-          parent !== record.defaultBranch &&
-          !(await this.contains(record.repoPath, branch, tips.get(parent))),
-        worktreePath,
-        hasWorkingChanges,
-      };
+      return { ...branch, worktreePath, hasWorkingChanges };
     });
   }
 
@@ -179,27 +166,8 @@ export class WorkspacesService {
     for (const { targetId, archive } of changes) await this.reviewTargetRepository.setArchive(targetId, archive);
   }
 
-  private async rememberParents(record: iWorkspaceRecord, branches: readonly iGitBranch[]) {
-    const knownParents = branches.flatMap((branch) =>
-      branch.suggestedParent ? [{ branch: branch.name, parent: branch.suggestedParent }] : [],
-    );
-    if (JSON.stringify(knownParents) === JSON.stringify(record.knownParents)) return;
-    await this.workspaceRepository.updateKnownParents(record.id, knownParents);
-  }
-
-  /** Whether the branch has every commit of its parent. A parent that is not listed counts as contained. */
-  private async contains(repoPath: string, branch: iGitBranch, parentSha: string | undefined) {
-    if (!parentSha) return true;
-    const { exitCode } = await this.gitService.run(
-      repoPath,
-      ['merge-base', '--is-ancestor', parentSha, branch.headSha],
-      { allowFailure: true },
-    );
-    return exitCode !== 1;
-  }
-
   private async toResponse(record: iWorkspaceRecord): Promise<iWorkspaceResponse> {
-    const { updatedAt: _updatedAt, knownParents: _knownParents, ...rest } = record;
+    const { updatedAt: _updatedAt, ...rest } = record;
     return { ...rest, isAvailable: await pathExists(path.join(record.repoPath, '.git')) };
   }
 

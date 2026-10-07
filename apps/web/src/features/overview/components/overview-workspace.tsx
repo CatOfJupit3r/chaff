@@ -1,13 +1,16 @@
 import { useState } from 'react';
 
-import { INBOX_FILTER_LABELS, inboxFilterValues } from '@chaff/common/enums/code-host.enums';
+import { CODE_HOST_LABELS } from '@chaff/common/enums/code-host.enums';
 import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 
 import { MarkdownTitle } from '@~/components/markdown/markdown-title';
 import { Button } from '@~/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogHeader } from '@~/components/ui/dialog';
-import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { SelectInput } from '@~/components/ui/text-input';
+import { ImportStackDialog } from '@~/features/stacks/components/import-stack-dialog';
+import { NewStackDialog } from '@~/features/stacks/components/new-stack-dialog';
+import { StackHostChanges } from '@~/features/stacks/components/stack-host-changes';
+import { useLinkedHost } from '@~/features/stacks/hooks/use-linked-host';
 import { StartReviewBox } from '@~/features/workspaces/components/start-review-box';
 import { useAddWorkspace } from '@~/features/workspaces/hooks/use-add-workspace';
 import type { iWorkspace } from '@~/features/workspaces/workspaces.types';
@@ -16,16 +19,18 @@ import { pluralize } from '@~/utils/pluralize';
 import { useOverview } from '../hooks/use-overview';
 import { BranchDetail } from './branch-detail';
 import { OverviewNotices } from './overview-notices';
-import { StackNeighborhood } from './stack-neighborhood';
 import { StackOutline } from './stack-outline';
-
-const INBOX_OPTIONS = inboxFilterValues.map((value) => ({ value, label: INBOX_FILTER_LABELS.get(value) }));
+import { StackTrain } from './stack-train';
 
 export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorkspace[] }) {
   const overview = useOverview(workspaces);
-  const { workspace, stack, branch, inbox } = overview;
+  const { workspace, stack, branch } = overview;
   const [isStartOpen, setIsStartOpen] = useState(false);
+  const [isNewStackOpen, setIsNewStackOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const { addFromPicker, isAdding } = useAddWorkspace();
+  const host = useLinkedHost(workspace);
+  const stackedBranches = new Set(overview.stacks.flatMap((candidate) => candidate.branches.map((item) => item.name)));
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[minmax(230px,280px)_minmax(0,1fr)] max-md:grid-cols-1 max-md:overflow-y-auto">
       <aside aria-label="Stack navigation" className="flex min-h-0 flex-col border-r border-line bg-canvas max-md:h-80">
@@ -51,6 +56,9 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
           branch={branch}
           selectStack={overview.selectStack}
           selectBranch={overview.selectBranch}
+          onNewStack={() => setIsNewStackOpen(true)}
+          onImportStack={host && workspace?.isAvailable ? () => setIsImportOpen(true) : undefined}
+          importLabel={host ? `Import from ${CODE_HOST_LABELS.get(host)}` : 'Import'}
         />
         <div className="shrink-0 border-t border-line p-3">
           <Button
@@ -73,40 +81,53 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
             </h1>
             {stack ? (
               <p className="mt-2 mb-0 text-sm text-muted">
-                {pluralize(stack.branches.length, 'branch', 'branches')} · Base{' '}
-                <span className="font-mono">{stack.base ?? 'not selected'}</span>
+                {pluralize(stack.branches.length, 'branch', 'branches')} ·{' '}
+                {stack.base ? (
+                  <>
+                    Base <span className="font-mono">{stack.base}</span>
+                  </>
+                ) : (
+                  'Base not chosen yet'
+                )}
               </p>
             ) : null}
           </div>
           <Button data-onboarding={ONBOARDING_ITEMS.START_REVIEW} onClick={() => setIsStartOpen(true)}>
             Start a review
           </Button>
-          {inbox.hasConnections ? (
-            <div className="flex w-full flex-wrap items-center gap-3 text-xs text-muted">
-              <span>Hosted requests</span>
-              <SegmentedControl
-                label="Show merge requests"
-                options={INBOX_OPTIONS}
-                value={inbox.filter}
-                onChange={inbox.setFilter}
-              />
-            </div>
-          ) : null}
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto max-md:overflow-visible">
           <OverviewNotices overview={overview} />
           {stack && branch ? (
             <div>
-              <StackNeighborhood stack={stack} branch={branch} onSelectBranch={overview.selectBranch} />
+              <div className="px-5 pt-5 empty:hidden lg:px-8">
+                <StackHostChanges stack={stack.stack} />
+              </div>
+              <StackTrain
+                stack={stack}
+                branch={branch}
+                onSelectBranch={overview.selectBranch}
+                branches={overview.branches}
+                stackedBranches={stackedBranches}
+              />
               <BranchDetail stack={stack} branch={branch} />
             </div>
           ) : null}
           {!stack && !overview.isLoading ? (
-            <div className="px-8 py-16 text-center">
-              <h2 className="text-lg font-medium">No branches to review</h2>
-              <p className="text-sm text-muted">
-                Choose another repository or hosted-request filter, or start a review from a link.
+            <div className="flex flex-col items-center gap-3 px-8 py-16 text-center">
+              <h2 className="m-0 text-lg font-medium">No stacks yet</h2>
+              <p className="m-0 max-w-md text-sm text-muted">
+                Start a stack from the branch you want to review, then add the branches it merges into and the ones
+                built on it.
               </p>
+              <div className="flex gap-2">
+                <Button variant="primary" disabled={!workspace?.isAvailable} onClick={() => setIsNewStackOpen(true)}>
+                  New stack
+                </Button>
+                {host && workspace?.isAvailable ? (
+                  <Button onClick={() => setIsImportOpen(true)}>Import from {CODE_HOST_LABELS.get(host)}</Button>
+                ) : null}
+              </div>
             </div>
           ) : null}
         </div>
@@ -119,6 +140,25 @@ export function OverviewWorkspace({ workspaces }: { workspaces: readonly iWorksp
           </DialogBody>
         </DialogContent>
       </Dialog>
+      {workspace ? (
+        <NewStackDialog
+          workspace={workspace}
+          branches={overview.branches}
+          stackedBranches={stackedBranches}
+          isOpen={isNewStackOpen}
+          onOpenChange={setIsNewStackOpen}
+          onCreated={overview.selectStackById}
+        />
+      ) : null}
+      {workspace && host ? (
+        <ImportStackDialog
+          workspace={workspace}
+          host={host}
+          isOpen={isImportOpen}
+          onOpenChange={setIsImportOpen}
+          onImported={overview.selectStackById}
+        />
+      ) : null}
     </main>
   );
 }

@@ -43,9 +43,3 @@ export const INBOX_FILTERS = inboxFiltersEnumwaii.enum;
 export type InboxFilter = InferEnumwaii<typeof inboxFiltersEnumwaii>;
 export const inboxFilterSchema = emToZodSchema(inboxFiltersEnumwaii);
 export const inboxFilterValues = inboxFiltersEnumwaii.values;
-
-export const INBOX_FILTER_LABELS = inboxFiltersEnumwaii.derive(
-  [INBOX_FILTERS.review, 'Waiting on me'],
-  [INBOX_FILTERS.authored, 'Mine'],
-  [INBOX_FILTERS.all, 'All open'],
-);

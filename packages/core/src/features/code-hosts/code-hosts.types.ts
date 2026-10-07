@@ -24,6 +24,8 @@ export interface iRemoteChange {
   authorUsername: string;
   sourceBranch: string;
   targetBranch: string;
+  /** The source branch lives in a fork, so a branch of that name in this repository is another one. */
+  isFromFork: boolean;
   headSha: string;
   webUrl: string;
   isDraft: boolean;

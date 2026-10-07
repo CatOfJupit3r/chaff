@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS = {
   digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
   agentCommands: [],
   digestModels: [],
+  authorEmails: [],
   shortcuts: [],
   onboarding: INITIAL_ONBOARDING,
 } satisfies iSettingsResponse;

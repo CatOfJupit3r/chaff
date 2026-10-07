@@ -23,7 +23,7 @@ interface iFocusKeyHandlers {
   onView: (view: CardView) => unknown;
 }
 
-/** 1 to 4 pick the card's views in tab order. */
+/** 1 to 5 pick the card's views in tab order. */
 const VIEW_KEYS = new Map(cardViewValues.map((view, index) => [String(index + 1), view]));
 
 /** Arrows always move, next to the keys picked in Settings. */
@@ -59,7 +59,7 @@ function actionFor(key: string, handlers: iFocusKeyHandlers, keys: ReadonlyMap<S
   return view ? () => handlers.onView(view) : undefined;
 }
 
-/** Focus review keys from Settings (G, C, Q, L, S decide; J/K move; U undoes; I opens context; E expands), arrows, 1-4 and Esc. */
+/** Focus review keys from Settings (G, C, Q, L, S decide; J/K move; U undoes; I opens context; E expands), arrows, 1-5 and Esc. */
 export function useFocusKeyboard(handlers: iFocusKeyHandlers) {
   const keys = useShortcutBindings();
   useShortcutKeys((key) => actionFor(key, handlers, keys));

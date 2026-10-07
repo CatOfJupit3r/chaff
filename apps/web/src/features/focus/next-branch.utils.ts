@@ -2,7 +2,7 @@ import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import { isReviewComplete } from '@~/features/reviews/review-progress.utils';
 import type { iReviewTarget, iSnapshot } from '@~/features/reviews/reviews.types';
-import type { iLocalStack } from '@~/features/workspaces/workspaces.types';
+import type { iStack } from '@~/features/stacks/stacks.types';
 
 export interface iNextBranch {
   branch: string;
@@ -19,12 +19,12 @@ function toNextBranch(branch: string, parentBranch: string, target: iReviewTarge
 }
 
 /**
- * The branch above the reviewed one: the next branch of its local stack, or the merge or pull request that
+ * The branch above the reviewed one: the next branch of its stack, or the merge or pull request that
  * targets its source branch. Undefined at the top of a stack and for other kinds of review.
  */
 export function findNextBranch(
   snapshot: Pick<iSnapshot, 'kind' | 'branch' | 'workspaceId'>,
-  stacks: readonly iLocalStack[],
+  stacks: readonly iStack[],
   targets: readonly iReviewTarget[],
 ): iNextBranch | undefined {
   const sameKind = targets.filter(
@@ -36,14 +36,14 @@ export function findNextBranch(
   }
   if (snapshot.kind !== REVIEW_TARGET_KINDS.BRANCH) return undefined;
 
-  for (const stack of stacks) {
-    const index = stack.branches.findIndex((branch) => branch.name === snapshot.branch);
+  for (const stack of stacks.filter((candidate) => candidate.workspaceId === snapshot.workspaceId)) {
+    const index = stack.branches.findIndex((member) => member.branch === snapshot.branch);
     const above = index === -1 ? undefined : stack.branches[index + 1];
     if (above) {
       return toNextBranch(
-        above.name,
+        above.branch,
         snapshot.branch,
-        sameKind.find((target) => target.branch === above.name),
+        sameKind.find((target) => target.branch === above.branch),
       );
     }
   }

@@ -16,6 +16,7 @@ import {
   REVIEW_TARGET_KINDS,
   findingStatusesEnumwaii,
 } from '@chaff/common/enums/review.enums';
+import { STACK_ENDS, STACK_HOST_CHANGE_KINDS, STACK_SUGGESTION_SOURCES } from '@chaff/common/enums/stack.enums';
 
 import { FakeCodeHost, GOOD_TOKEN, REVIEWER } from '../helpers/fake-code-host';
 import { cloneTestGitRepo, createTestGitRepo } from '../helpers/git-repo';
@@ -302,6 +303,123 @@ describe('code hosts', () => {
       expect(reopened?.archived).toBeUndefined();
     },
   );
+
+  it('suggests the chain of changes below a branch and the changes targeting the top one', async () => {
+    await connect();
+    const { workspace } = await addClone();
+    const backoff = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feature/backoff' });
+    const below = await call(appRouter.stacks.suggest, { stackId: backoff.id, end: STACK_ENDS.BOTTOM });
+
+    expect(below.slice(0, 2)).toMatchObject([
+      { branch: 'feature/retry', source: STACK_SUGGESTION_SOURCES.HOST, step: 0, linkChange: { number: 2 } },
+      { branch: 'main', source: STACK_SUGGESTION_SOURCES.HOST, step: 1, isBase: true, linkChange: { number: 1 } },
+    ]);
+    expect(below.filter((suggestion) => suggestion.branch === 'feature/retry')).toHaveLength(1);
+
+    await call(appRouter.stacks.remove, { stackId: backoff.id });
+    const retry = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feature/retry' });
+    expect(await call(appRouter.stacks.suggest, { stackId: retry.id, end: STACK_ENDS.TOP })).toMatchObject([
+      { branch: 'feature/backoff', source: STACK_SUGGESTION_SOURCES.HOST, step: 0, change: { number: 2 } },
+    ]);
+  });
+
+  it('imports a chain of open changes as a stack, nothing changing on the host', async () => {
+    await connect();
+    const { workspace } = await addClone();
+    const [chain] = await call(appRouter.stacks.importable, { workspaceId: workspace.id });
+    expect(chain).toMatchObject({
+      baseBranch: 'main',
+      branches: [
+        { branch: 'feature/retry', change: { number: 1 } },
+        { branch: 'feature/backoff', change: { number: 2 } },
+      ],
+      stackedBranches: [],
+    });
+
+    const stack = await call(appRouter.stacks.import, {
+      workspaceId: workspace.id,
+      branches: chain?.branches.map((link) => link.branch) ?? [],
+      baseBranch: 'main',
+    });
+
+    expect(stack.branches).toMatchObject([
+      { branch: 'feature/retry', parentBranch: 'main', change: { number: 1 } },
+      { branch: 'feature/backoff', parentBranch: 'feature/retry', change: { number: 2 } },
+    ]);
+    expect((await call(appRouter.stacks.importable, { workspaceId: workspace.id }))[0]?.stackedBranches).toHaveLength(
+      2,
+    );
+    expect(codeHost.posts).toEqual([]);
+  });
+
+  describe('a stack compared with the host', () => {
+    /** Connects again, which reads the project's open changes afresh instead of reusing the last answer. */
+    async function hostMovesOn() {
+      const [connection] = await call(appRouter.codeHosts.connections, undefined);
+      if (connection) await call(appRouter.codeHosts.disconnect, { connectionId: connection.id });
+      await connect();
+    }
+
+    async function importedStack() {
+      await connect();
+      const { clone, workspace } = await addClone();
+      const stack = await call(appRouter.stacks.import, {
+        workspaceId: workspace.id,
+        branches: ['feature/retry', 'feature/backoff'],
+        baseBranch: 'main',
+      });
+      return { clone, workspace, stack };
+    }
+
+    it('offers a new change on top, which the user adds or sets aside', async () => {
+      const { clone, stack } = await importedStack();
+      server.branch('feature/metrics', 'feature/backoff');
+      server.commitFiles('Count retries', { 'src/metrics.ts': 'export const count = 0;\n' });
+      server.switch('main');
+      codeHost.open({
+        number: 3,
+        title: 'Count retries',
+        author: 'agent',
+        sourceBranch: 'feature/metrics',
+        targetBranch: 'feature/backoff',
+      });
+      // origin is the fake host in this process, so the branch is fetched from its repository directly.
+      clone.git('fetch', '--quiet', server.path, '+refs/heads/*:refs/remotes/origin/*');
+      await hostMovesOn();
+
+      expect(await call(appRouter.stacks.hostChanges, { stackId: stack.id })).toMatchObject([
+        { kind: STACK_HOST_CHANGE_KINDS.ADDED_ON_TOP, branch: 'feature/metrics', change: { number: 3 } },
+      ]);
+      await call(appRouter.stacks.dismissChange, { stackId: stack.id, changeNumber: 3 });
+      expect(await call(appRouter.stacks.hostChanges, { stackId: stack.id })).toEqual([]);
+
+      const added = await call(appRouter.stacks.addBranch, {
+        stackId: stack.id,
+        branch: 'feature/metrics',
+        end: STACK_ENDS.TOP,
+      });
+      expect(added.branches.at(-1)).toMatchObject({ branch: 'feature/metrics', parentBranch: 'feature/backoff' });
+    });
+
+    it('reports a retargeted change, and follows it or keeps the stack as the user chooses', async () => {
+      const { stack } = await importedStack();
+      const backoff = codeHost.changes.find((change) => change.number === 2);
+      if (backoff) backoff.targetBranch = 'main';
+      await hostMovesOn();
+
+      expect(await call(appRouter.stacks.hostChanges, { stackId: stack.id })).toMatchObject([
+        { kind: STACK_HOST_CHANGE_KINDS.RETARGETED, branch: 'feature/backoff', stackParent: 'feature/retry' },
+      ]);
+      await call(appRouter.stacks.keepParent, { stackId: stack.id, branch: 'feature/backoff' });
+      expect(await call(appRouter.stacks.hostChanges, { stackId: stack.id })).toEqual([]);
+
+      const followed = await call(appRouter.stacks.followHostParent, { stackId: stack.id, branch: 'feature/backoff' });
+      expect(followed).toMatchObject({
+        baseBranch: 'main',
+        branches: [{ branch: 'feature/backoff', parentBranch: 'main' }],
+      });
+    });
+  });
 
   it("moves a local branch's review onto the change it was pushed as", async () => {
     await connect();

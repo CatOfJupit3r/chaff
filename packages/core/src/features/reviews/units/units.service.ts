@@ -50,8 +50,11 @@ export class UnitsService {
     return this.snapshotRepository.listUnits(snapshotId);
   }
 
-  /** The code of some units of one file with their changes, cut from the file, and the newest commit that touched it. */
-  public async getDetail(snapshotId: string, unitIds: readonly string[]) {
+  /**
+   * The code of some units of one file with their changes, cut from the file or the whole file around them,
+   * and the newest commit that touched it.
+   */
+  public async getDetail(snapshotId: string, unitIds: readonly string[], isWholeFile = false) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
     const units = await Promise.all(unitIds.map(async (unitId) => this.getUnit(snapshotId, unitId)));
     const fileId = units[0]?.fileId;
@@ -86,6 +89,7 @@ export class UnitsService {
       })),
       oldContents: contentsOf(file.oldBlobSha),
       newContents: contentsOf(file.newBlobSha),
+      isWholeFile,
     });
     return { patch: patch ?? null, lastCommit };
   }

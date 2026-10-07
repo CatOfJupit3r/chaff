@@ -8,7 +8,7 @@ export type iWorkspaceRecord = Omit<WorkspaceRow, 'defaultBranch'> & {
 
 export type iNewWorkspace = Pick<typeof workspaces.$inferInsert, 'name' | 'repoPath' | 'defaultBranch'>;
 
-export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt' | 'knownParents'> & {
+export type iWorkspaceResponse = Omit<iWorkspaceRecord, 'updatedAt'> & {
   isAvailable: boolean;
 };
 
@@ -22,23 +22,15 @@ export interface iBranchResponse {
   /** Remote the branch is read from when it has no local branch, such as `origin`. */
   remote?: string;
   isDefault: boolean;
-  suggestedParent?: string;
-  commitsAhead: number;
   isAuthoredByUser: boolean;
-  parent?: string;
-  isParentConfirmed: boolean;
-  isParentMoved: boolean;
   worktreePath?: string;
   hasWorkingChanges: boolean;
 }
 
-/** A branch as read from git, before Chaff adds its confirmed parent and working-changes state. */
-export type iGitBranch = Omit<
-  iBranchResponse,
-  'parent' | 'isParentConfirmed' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
->;
+/** A branch as read from git, before Chaff adds its worktree and working-changes state. */
+export type iGitBranch = Omit<iBranchResponse, 'worktreePath' | 'hasWorkingChanges'>;
 
-export type iStackViewInput = Partial<Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters'>> & {
+export type iStackViewInput = Pick<iWorkspaceRecord, 'stackFilters'> & {
   workspaceId: string;
 };
 
@@ -46,4 +38,24 @@ export interface iBranchStatInput {
   workspaceId: string;
   branch: string;
   parentBranch: string;
+}
+
+/** A branch and the branch it merges into, when that is known. */
+export interface iBranchLink {
+  branch: string;
+  parent?: string;
+}
+
+export interface iBranchLinkStatus {
+  branch: string;
+  commitsAhead: number;
+  isParentMoved: boolean;
+  isMissing: boolean;
+}
+
+/** A branch near another one in the history, and the commits between their tips. */
+export interface iNearbyBranch {
+  name: string;
+  remote?: string;
+  commitsApart: number;
 }

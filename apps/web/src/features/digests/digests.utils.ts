@@ -1,7 +1,7 @@
 import { DIGEST_RUNNER_LABELS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 
-import type { iDigest, iDigestContent, iDigestModels } from './digests.types';
+import type { iDigest, iDigestContent, iDigestModels, iDigestPartRef, iDigestRevision } from './digests.types';
 
 /** The digest's content once it is ready; a running, failed or stopped digest has none to show. */
 export function readyContent(digest: iDigest | null | undefined): iDigestContent | undefined {
@@ -51,4 +51,9 @@ export function findUnitGroup(content: iDigestContent | undefined, unitId: strin
 /** Splits text on backticks so `identifiers` can be shown as code. Odd parts are code. */
 export function splitInlineCode(text: string) {
   return text.split('`');
+}
+
+/** The versions written for one part, oldest first. */
+export function partRevisions(digest: iDigest, { part, partId }: iDigestPartRef): iDigestRevision[] {
+  return digest.revisions.filter((revision) => revision.part === part && revision.partId === partId);
 }

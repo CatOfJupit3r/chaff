@@ -12,3 +12,12 @@ export function DiffSkeleton({ lineCount = 6 }: { lineCount?: number }) {
     </div>
   );
 }
+
+/** A shimmering block shown while an image or a drawn preview loads. */
+export function PreviewSkeleton() {
+  return (
+    <div aria-label="Loading" className="p-4">
+      <i className="block h-40 animate-pulse rounded-md bg-raised" />
+    </div>
+  );
+}

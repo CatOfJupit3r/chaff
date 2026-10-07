@@ -1,20 +1,20 @@
-import { DIGEST_RUNNER_LABELS, INTENT_SOURCES } from '@chaff/common/enums/digest.enums';
-import type { DigestRunner } from '@chaff/common/enums/digest.enums';
+import { DIGEST_PARTS, DIGEST_RUNNER_LABELS, INTENT_SOURCES } from '@chaff/common/enums/digest.enums';
 
 import { SparkIcon } from '@~/components/icons/icons';
 
 import { INTENT_SOURCE_LABELS } from '../digests.enums';
-import type { iDigestGroup, iDigestUnitNote } from '../digests.types';
+import type { iDigest, iDigestGroup, iDigestUnitNote } from '../digests.types';
+import { DigestPartControls } from './digest-part-controls';
 import { InlineCodeText } from './inline-code-text';
 
 interface iUnitDigestNotesProps {
-  runner: DigestRunner;
+  digest: iDigest;
   note: iDigestUnitNote | undefined;
   group: iDigestGroup | undefined;
 }
 
 /** What the digest says about this unit and what it thinks is worth a look; suggestions, not verdicts. */
-export function UnitDigestNotes({ runner, note, group }: iUnitDigestNotesProps) {
+export function UnitDigestNotes({ digest, note, group }: iUnitDigestNotesProps) {
   const intent = group && !group.isUnexplained && group.intent ? group : undefined;
   if (!note && !intent) return null;
 
@@ -23,7 +23,7 @@ export function UnitDigestNotes({ runner, note, group }: iUnitDigestNotesProps) 
       <div>
         <div className="mb-1.5 inline-flex items-center gap-1.5 text-[11.5px] text-faint">
           <SparkIcon className="size-[13px]" />
-          Digest · {DIGEST_RUNNER_LABELS.get(runner)}, read-only
+          Digest · {DIGEST_RUNNER_LABELS.get(digest.runner)}, read-only
         </div>
         {note?.summary ? (
           <p className="m-0 max-w-[62ch] text-[13.5px] leading-[1.6] text-fg-soft">
@@ -43,6 +43,11 @@ export function UnitDigestNotes({ runner, note, group }: iUnitDigestNotesProps) 
               {INTENT_SOURCE_LABELS.get(intent.intentSource)}
             </span>
           </p>
+        ) : null}
+        {note ? (
+          <div className="mt-1.5">
+            <DigestPartControls digest={digest} partRef={{ part: DIGEST_PARTS.UNIT_NOTE, partId: note.unitId }} />
+          </div>
         ) : null}
       </div>
       {note && note.worthChecking.length > 0 ? (

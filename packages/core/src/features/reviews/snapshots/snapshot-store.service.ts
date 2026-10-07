@@ -414,8 +414,18 @@ export class SnapshotStoreService {
 
   /** Reads files of a commit by path, leaving out missing ones and any larger than `maxBytes`. */
   public async readFiles(workspaceId: string, sha: string, paths: readonly string[], maxBytes: number) {
-    const unique = [...new Set(paths)].filter((filePath) => !filePath.includes('\n'));
-    if (unique.length === 0) return new Map<string, string>();
+    const buffers = await this.readFileBuffers(workspaceId, sha, paths, maxBytes);
+    return new Map([...buffers].map(([filePath, blob]) => [filePath, blob.toString('utf8')]));
+  }
+
+  /** Reads files of a commit by path as bytes, leaving out missing ones and any larger than `maxBytes`. */
+  public async readFileBuffers(workspaceId: string, sha: string, paths: readonly string[], maxBytes: number) {
+    // git rejects the whole batch for a path with `.` or `..` parts, so such paths are left out as missing.
+    const unique = [...new Set(paths)].filter(
+      (filePath) =>
+        !filePath.includes('\n') && filePath.split('/').every((part) => part !== '' && part !== '.' && part !== '..'),
+    );
+    if (unique.length === 0) return new Map<string, Buffer>();
     const resolved = await this.gitService.output(this.storePath(workspaceId), ['cat-file', '--batch-check'], {
       input: `${unique.map((filePath) => `${sha}:${filePath}`).join('\n')}\n`,
     });
@@ -427,10 +437,10 @@ export class SnapshotStoreService {
       if (filePath && blobSha && type === 'blob') blobShas.set(filePath, blobSha);
     }
     const blobs = await this.readBlobs(workspaceId, [...blobShas.values()], maxBytes);
-    const files = new Map<string, string>();
+    const files = new Map<string, Buffer>();
     for (const [filePath, blobSha] of blobShas) {
       const blob = blobs.get(blobSha);
-      if (blob) files.set(filePath, blob.toString('utf8'));
+      if (blob) files.set(filePath, blob);
     }
     return files;
   }

@@ -28,6 +28,6 @@ export function useOverviewActions(stack: iOverviewStack, branch: iOverviewBranc
     linkReview,
     canLinkReview: hasLocalReview && !!branch.change,
     isPending: local.isPending || hosted.start.isPending || hosted.link.isPending,
-    canOpen: !!snapshot || (!stack.hasCycle && (!!branch.change || (!!branch.parent && stack.workspace.isAvailable))),
+    canOpen: !!snapshot || !!branch.change || (!!branch.parent && stack.workspace.isAvailable),
   };
 }

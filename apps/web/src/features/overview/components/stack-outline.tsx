@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { FilterIcon, SearchIcon } from '@~/components/icons/icons';
+import { FilterIcon, ImportIcon, PlusIcon, SearchIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { TextInput } from '@~/components/ui/text-input';
 
@@ -13,13 +13,37 @@ import { StackOutlineGroup } from './stack-outline-group';
 interface iStackOutlineProps extends Pick<
   ReturnType<typeof useOverview>,
   'stackList' | 'stack' | 'branch' | 'selectStack' | 'selectBranch'
-> {}
+> {
+  onNewStack: () => unknown;
+  /** Unset while the repository has no linked project to import from. */
+  onImportStack?: () => unknown;
+  importLabel: string;
+}
 
-export function StackOutline({ stackList: list, stack, branch, selectStack, selectBranch }: iStackOutlineProps) {
+export function StackOutline({
+  stackList: list,
+  stack,
+  branch,
+  selectStack,
+  selectBranch,
+  onNewStack,
+  onImportStack,
+  importLabel,
+}: iStackOutlineProps) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const filterCount = activeFilterCount(list.filters);
   return (
     <>
+      <div className="flex shrink-0 gap-2 px-4 pb-3">
+        <Button size="sm" variant="primary" className="flex-1" onClick={onNewStack}>
+          <PlusIcon /> New stack
+        </Button>
+        {onImportStack ? (
+          <Button size="sm" className="flex-1" onClick={onImportStack}>
+            <ImportIcon /> {importLabel}
+          </Button>
+        ) : null}
+      </div>
       <div className="flex shrink-0 gap-2 px-4 pb-4">
         <div className="relative min-w-0 flex-1">
           <SearchIcon className="pointer-events-none absolute top-2 left-2 size-4 text-muted" />
@@ -52,10 +76,9 @@ export function StackOutline({ stackList: list, stack, branch, selectStack, sele
       <div className="min-h-0 flex-1 overflow-y-auto" aria-label="Stacks">
         {list.listed.map((listed) => (
           <StackOutlineGroup
-            key={listed.stack.id}
-            stack={listed.stack}
-            isHidden={listed.isHidden}
-            isSelected={listed.stack.id === stack?.id}
+            key={listed.id}
+            stack={listed}
+            isSelected={listed.id === stack?.id}
             branch={branch}
             selectBranch={selectBranch}
             selectStack={selectStack}
@@ -63,7 +86,13 @@ export function StackOutline({ stackList: list, stack, branch, selectStack, sele
             onToggleHidden={list.toggleHidden}
           />
         ))}
-        {list.listed.length === 0 ? <p className="px-4 text-sm text-muted">No matching stacks or branches.</p> : null}
+        {list.listed.length === 0 ? (
+          <p className="px-4 text-sm text-muted">
+            {list.query
+              ? 'No matching stacks or branches.'
+              : 'No stacks yet. Start one from a branch you want to review.'}
+          </p>
+        ) : null}
       </div>
       <StackListFooter
         filteredCount={list.filteredCount}

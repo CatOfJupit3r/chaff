@@ -2,12 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { inject, singleton } from 'tsyringe';
 
 import { errorCodes } from '@chaff/common/enums/errors.enums';
+import type { ImageMimeType } from '@chaff/common/enums/file-preview.enums';
 import {
+  DIFF_SIDES,
   IS_ACTIVE_FINDING_STATUS,
   IS_INSPECTED_MARK,
   REVIEW_TARGET_KINDS,
   UNIT_MARKS,
 } from '@chaff/common/enums/review.enums';
+import type { DiffSide } from '@chaff/common/enums/review.enums';
+import { imageMimeTypeOf } from '@chaff/common/helpers/file-preview.helper';
 
 import {
   FINDING_REPOSITORY_TOKEN,
@@ -34,7 +38,6 @@ import type {
   iReviewTargetResponse,
   iSnapshotLiveStatus,
   iSnapshotResponse,
-  iSetParentInput,
   iSnapshotSummary,
   iStartReviewInput,
 } from './reviews.types';
@@ -47,6 +50,12 @@ import type { iSnapshotHeads, iSnapshotRecord } from './snapshots/snapshots.type
 
 /** Larger files are not sent to the renderer for context expansion. */
 const MAX_CONTENT_BYTES = 5_000_000;
+/** Larger images are not sent to the renderer to be drawn. */
+const MAX_IMAGE_BYTES = 10_000_000;
+
+function fileImage(blob: Buffer, mimeType: ImageMimeType) {
+  return { mimeType, data: blob.toString('base64'), byteSize: blob.length };
+}
 
 function changeInfo(target: iReviewTargetRecord): iChangeRequestInfo | undefined {
   const { codeHost, remoteProject, changeNumber, title, webUrl } = target;
@@ -161,46 +170,6 @@ export class ReviewsService {
 
       const snapshot = await this.capture(workspace, target);
       return { targetId: target.id, snapshotId: snapshot.id, isNew: true };
-    });
-  }
-
-  /**
-   * Confirms or changes the parent a branch is reviewed against. A review already started keeps its
-   * snapshots; the next update compares the branch with the new parent.
-   */
-  public async setParent(input: iSetParentInput) {
-    if (input.branch === input.parentBranch) throw ORPCBadRequestError(errorCodes.INVALID_PARENT_BRANCH);
-    const workspace = await this.workspacesService.getRecord(input.workspaceId);
-    for (const name of [input.branch, input.parentBranch]) {
-      if (!(await this.snapshotStoreService.resolveBranch(workspace.repoPath, name))) {
-        throw ORPCNotFoundError(errorCodes.BRANCH_NOT_FOUND, { branch: name });
-      }
-    }
-
-    const targets = await this.reviewTargetRepository.list(workspace.id);
-    const parents = new Map(
-      targets
-        .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
-        .map((target) => [target.branch, target.parentBranch]),
-    );
-    const visited = new Set<string>();
-    for (let current: string | undefined = input.parentBranch; current; current = parents.get(current)) {
-      if (current === input.branch) throw ORPCBadRequestError(errorCodes.PARENT_CYCLE);
-      if (visited.has(current)) break;
-      visited.add(current);
-    }
-
-    return this.captureMutex.run(this.captureKey(workspace.id, input.branch), async () => {
-      const existing = await this.reviewTargetRepository.findByBranch(
-        workspace.id,
-        input.branch,
-        REVIEW_TARGET_KINDS.BRANCH,
-      );
-      const target = existing
-        ? await this.reviewTargetRepository.updateParent(existing.id, input.parentBranch)
-        : await this.reviewTargetRepository.create({ ...input, kind: REVIEW_TARGET_KINDS.BRANCH });
-      if (!target) throw ORPCNotFoundError(errorCodes.REVIEW_TARGET_NOT_FOUND);
-      return { targetId: target.id, branch: target.branch, parentBranch: target.parentBranch };
     });
   }
 
@@ -327,6 +296,36 @@ export class ReviewsService {
     const blobs = await this.snapshotStoreService.readBlobs(target.workspaceId, shas, MAX_CONTENT_BYTES);
     const contentsOf = (sha: string | undefined) => (sha ? (blobs.get(sha)?.toString('utf8') ?? null) : null);
     return { oldContents: contentsOf(file.oldBlobSha), newContents: contentsOf(file.newBlobSha) };
+  }
+
+  public async getFileImages(snapshotId: string, fileId: string) {
+    const snapshot = await this.getSnapshotRecord(snapshotId);
+    const file = await this.snapshotRepository.findFile(snapshotId, fileId);
+    if (!file) throw ORPCNotFoundError(errorCodes.SNAPSHOT_FILE_NOT_FOUND);
+
+    const oldSide = { sha: file.oldBlobSha, mimeType: imageMimeTypeOf(file.oldPath ?? file.path) };
+    const newSide = { sha: file.newBlobSha, mimeType: imageMimeTypeOf(file.path) };
+    const shas = [oldSide, newSide].flatMap((side) => (side.sha && side.mimeType ? [side.sha] : []));
+    if (shas.length === 0) return { oldImage: null, newImage: null };
+
+    const target = await this.getTarget(snapshot.targetId);
+    const blobs = await this.snapshotStoreService.readBlobs(target.workspaceId, shas, MAX_IMAGE_BYTES);
+    const imageOf = ({ sha, mimeType }: typeof oldSide) => {
+      const blob = sha ? blobs.get(sha) : undefined;
+      return blob && mimeType ? fileImage(blob, mimeType) : null;
+    };
+    return { oldImage: imageOf(oldSide), newImage: imageOf(newSide) };
+  }
+
+  /** An image of the repository as it was on one side of the snapshot, such as one a Markdown file links to. */
+  public async getSnapshotImage(snapshotId: string, side: DiffSide, filePath: string) {
+    const { snapshot, target } = await this.getContext(snapshotId);
+    const mimeType = imageMimeTypeOf(filePath);
+    if (!mimeType) return null;
+    const sha = side === DIFF_SIDES.OLD ? snapshot.baseSha : snapshot.headSha;
+    const files = await this.snapshotStoreService.readFileBuffers(target.workspaceId, sha, [filePath], MAX_IMAGE_BYTES);
+    const blob = files.get(filePath);
+    return blob ? fileImage(blob, mimeType) : null;
   }
 
   private async capture(workspace: iWorkspaceRecord, target: iReviewTargetRecord) {

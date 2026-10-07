@@ -10,7 +10,7 @@ import { useSetFindingStatus } from '../hooks/use-set-finding-status';
 import { useVerifyKeyboard } from '../hooks/use-verify-keyboard';
 import { FindingDetail } from './finding-detail';
 import { FindingListItem } from './finding-list-item';
-import { VerifyHints } from './verify-hints';
+import { FindingsPager } from './findings-pager';
 import { VerifyProgress } from './verify-progress';
 
 /**
@@ -60,21 +60,24 @@ export function FindingsScreen() {
           {!isLoading && shown.length === 0 ? (
             <p className="m-0 rounded-lg border border-dashed border-line-strong px-6 py-10 text-center text-muted">
               {findings.length === 0
-                ? 'No findings yet. Press C or Q on a card in Focus, or the + beside a line in Full diff.'
+                ? 'No findings yet. Write a concern or question on a card in Focus, or on lines in Full diff.'
                 : 'No findings with this status.'}
             </p>
           ) : null}
           {shown.length > 0 ? (
             <div className="grid grid-cols-[minmax(260px,380px)_minmax(0,1fr)] items-start gap-5">
-              <div className="overflow-hidden rounded-lg border border-line bg-surface">
-                {shown.map((finding) => (
-                  <FindingListItem
-                    key={finding.id}
-                    finding={finding}
-                    isSelected={finding.id === selected?.id}
-                    onSelect={() => select(finding.id)}
-                  />
-                ))}
+              <div className="flex flex-col gap-2">
+                <FindingsPager index={selectedIndex} count={shown.length} onMove={move} />
+                <div className="overflow-hidden rounded-lg border border-line bg-surface">
+                  {shown.map((finding) => (
+                    <FindingListItem
+                      key={finding.id}
+                      finding={finding}
+                      isSelected={finding.id === selected?.id}
+                      onSelect={() => select(finding.id)}
+                    />
+                  ))}
+                </div>
               </div>
               {selected ? (
                 <FindingDetail
@@ -87,7 +90,6 @@ export function FindingsScreen() {
               ) : null}
             </div>
           ) : null}
-          {shown.length > 0 ? <VerifyHints /> : null}
         </div>
       </Screen>
     </>

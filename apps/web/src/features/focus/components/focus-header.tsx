@@ -1,11 +1,13 @@
 import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
 import { reviewProgressionValues } from '@chaff/common/enums/review.enums';
 import type { ReviewProgression } from '@chaff/common/enums/review.enums';
+import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
 
 import { LeftIcon, PanelIcon, RightIcon, UndoIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { Pill } from '@~/components/ui/pill';
 import { SegmentedControl } from '@~/components/ui/segmented-control';
+import { ShortcutKbd } from '@~/features/settings/components/shortcut-kbd';
 
 import type { iFocusCard } from '../focus-cards.utils';
 import { FOCUS_QUEUE_PILLS, REVIEW_PROGRESSION_LABELS } from '../focus.enums';
@@ -47,13 +49,21 @@ export function FocusHeader({
 
   return (
     <div className="mb-[18px] flex w-full max-w-[920px] flex-wrap items-center gap-3.5">
-      <Button variant="icon" size="icon" aria-label="Previous card" onClick={() => onMove(-1)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label="Previous card"
+        title="Previous card, also ←"
+        onClick={() => onMove(-1)}
+      >
         <LeftIcon />
+        <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_PREVIOUS} className="h-4 min-w-4 text-[10px]" />
       </Button>
       <span className="min-w-[72px] text-center font-mono text-[12.5px] whitespace-nowrap text-muted tabular-nums">
         {position} of {cards.length}
       </span>
-      <Button variant="icon" size="icon" aria-label="Next card" onClick={() => onMove(1)}>
+      <Button variant="ghost" size="sm" aria-label="Next card" title="Next card, also →" onClick={() => onMove(1)}>
+        <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_NEXT} className="h-4 min-w-4 text-[10px]" />
         <RightIcon />
       </Button>
       <UnitProgress cards={cards} index={index} onJump={onJump} />
@@ -73,6 +83,7 @@ export function FocusHeader({
       <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo}>
         <UndoIcon />
         Undo
+        <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_UNDO} className="h-4 min-w-4 text-[10px]" />
       </Button>
       <Button
         variant="ghost"
@@ -83,6 +94,7 @@ export function FocusHeader({
       >
         <PanelIcon />
         Context
+        <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_CONTEXT} className="h-4 min-w-4 text-[10px]" />
       </Button>
     </div>
   );

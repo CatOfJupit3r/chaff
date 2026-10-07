@@ -2,6 +2,7 @@ import { atomWithStorage } from 'jotai/utils';
 
 interface iLastStack {
   workspace: string;
+  stack: string;
   branch: string;
 }
 

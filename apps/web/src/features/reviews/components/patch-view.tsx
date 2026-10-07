@@ -13,9 +13,10 @@ import { useOptionalDiffReview } from '../diff-review.context';
 import { DIFF_THEME_NAME, UNIFIED_LINE_NUMBERS_CSS } from '../diff-theme';
 import { useDiffPreferences } from '../hooks/use-diff-preferences';
 import { useLoadDiffFiles } from '../hooks/use-load-diff-files';
+import { useOptionalLineNotes } from '../line-notes.context';
 import { buildDecisionGutterCss } from '../review-coverage.utils';
 import type { iSnapshotFile } from '../reviews.types';
-import { DiffFindingNote } from './diff-finding-note';
+import { DiffFindingNote, DiffFindingPointer } from './diff-finding-note';
 import { DiffNoteComposer } from './diff-note-composer';
 
 interface iPatchViewProps {
@@ -24,35 +25,27 @@ interface iPatchViewProps {
   patch: string;
   layout: DiffLayout;
   isWrapped: boolean;
-  /** Shows every unchanged line of the file, whatever the diff settings say. */
-  isExpanded?: boolean;
+  /** The patch leaves out some of the file's changes, so its hidden lines cannot be filled in from the file. */
+  isCut?: boolean;
   /** More CSS for the renderer, such as outlines around units. */
   extraCss?: string;
 }
 
 /**
  * A file's patch with syntax highlighting; hidden context can be expanded from the snapshot. In the Full
- * diff, lines show the decision on their unit, findings and merge request threads sit under the lines they
- * point at, and the + beside a line, or a picked range, opens a note.
+ * diff, lines show the decision on their unit. In the Full diff and on Focus cards, findings and merge request
+ * threads sit under the lines they point at, and the + beside a line, or a picked range, opens a note.
  */
-export function PatchView({
-  snapshotId,
-  file,
-  patch,
-  layout,
-  isWrapped,
-  isExpanded = false,
-  extraCss,
-}: iPatchViewProps) {
+export function PatchView({ snapshotId, file, patch, layout, isWrapped, isCut = false, extraCss }: iPatchViewProps) {
   const isDark = useIsDarkMode();
   const { viewerOptions } = useDiffPreferences();
   const loadDiffFiles = useLoadDiffFiles(snapshotId, file);
-  const review = useOptionalDiffReview();
-  const units = review?.unitsByFile.get(file.id);
-  const placements = review?.placementsByFile.get(file.id);
-  const discussions = review?.discussionsByFile.get(file.id);
-  const draft = review?.draft;
-  const startDraft = review?.startDraft;
+  const units = useOptionalDiffReview()?.unitsByFile.get(file.id);
+  const notes = useOptionalLineNotes();
+  const placements = notes?.placementsByFile.get(file.id);
+  const discussions = notes?.discussionsByFile.get(file.id);
+  const draft = notes?.draft;
+  const startDraft = notes?.startDraft;
   const gutterCss = useMemo(() => (units ? buildDecisionGutterCss(units) : undefined), [units]);
   const annotations = useMemo(
     () => buildNoteAnnotations(file.id, placements ?? [], draft, discussions),
@@ -67,16 +60,16 @@ export function PatchView({
       overflow: isWrapped ? ('wrap' as const) : ('scroll' as const),
       disableFileHeader: true,
       preferredHighlighter: 'shiki-js' as const,
-      loadDiffFiles,
+      loadDiffFiles: isCut ? undefined : loadDiffFiles,
       diffIndicators: 'classic' as const,
       lineDiffType: viewerOptions.lineDiffType,
-      expandUnchanged: isExpanded || viewerOptions.expandUnchanged,
+      expandUnchanged: !isCut && viewerOptions.expandUnchanged,
       unsafeCSS: [UNIFIED_LINE_NUMBERS_CSS, gutterCss, extraCss].filter(Boolean).join('\n'),
       enableLineSelection: startDraft !== undefined,
       enableGutterUtility: startDraft !== undefined,
       onGutterUtilityClick: (range: SelectedLineRange) => startDraft?.(draftFromSelection(file.id, range)),
     }),
-    [isDark, layout, isWrapped, isExpanded, loadDiffFiles, viewerOptions, gutterCss, extraCss, startDraft, file.id],
+    [isDark, layout, isWrapped, isCut, loadDiffFiles, viewerOptions, gutterCss, extraCss, startDraft, file.id],
   );
 
   return (
@@ -84,7 +77,8 @@ export function PatchView({
       patch={patch}
       lineAnnotations={annotations}
       renderAnnotation={({ metadata }) => {
-        if (metadata.finding) return <DiffFindingNote finding={metadata.finding} />;
+        if (metadata.placement?.isPrimary) return <DiffFindingNote finding={metadata.placement.finding} />;
+        if (metadata.placement) return <DiffFindingPointer placement={metadata.placement} fileId={file.id} />;
         if (metadata.discussion) {
           return <DiscussionThread discussion={metadata.discussion} className="mx-4 my-2 max-w-[640px]" />;
         }

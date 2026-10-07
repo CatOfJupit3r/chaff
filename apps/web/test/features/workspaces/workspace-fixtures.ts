@@ -8,7 +8,6 @@ export const workspace: iWorkspace = {
   repoPath: '/home/me/chaff',
   defaultBranch: 'main',
   isAvailable: true,
-  hiddenStacks: [],
   stackFilters: DEFAULT_STACK_FILTERS,
   createdAt: new Date('2026-09-01T10:00:00Z'),
 };
@@ -21,11 +20,7 @@ export function branch(name: string, overrides: Partial<iBranch> = {}): iBranch 
     authorName: 'Roman',
     committedAt: new Date('2026-09-20T10:00:00Z'),
     isDefault: false,
-    parent: 'main',
-    commitsAhead: 1,
     isAuthoredByUser: true,
-    isParentConfirmed: false,
-    isParentMoved: false,
     hasWorkingChanges: false,
     ...overrides,
   };

@@ -3,12 +3,14 @@ import type { ReactNode } from 'react';
 
 import { DIFF_LAYOUTS } from '@chaff/common/enums/diff.enums';
 import { ONBOARDING_ITEMS } from '@chaff/common/enums/onboarding.enums';
+import { SHORTCUT_ACTIONS } from '@chaff/common/enums/shortcuts.enums';
 
 import { ExternalIcon, FileIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
 import { DiffStat } from '@~/features/reviews/components/diff-stat';
 import { DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import type { iSnapshotFile } from '@~/features/reviews/reviews.types';
+import { ShortcutKbd } from '@~/features/settings/components/shortcut-kbd';
 
 import type { useCodeExpansion } from '../hooks/use-code-expansion';
 
@@ -43,6 +45,7 @@ export function CodeFileBar({ snapshotId, file, line, onOpenInEditor, expansion,
           onClick={expansion.toggle}
         >
           Whole file
+          <ShortcutKbd action={SHORTCUT_ACTIONS.FOCUS_EXPAND} className="h-4 min-w-4 text-[10px]" />
         </Button>
       ) : null}
       <Button variant="ghost" size="sm" onClick={() => onOpenInEditor(file.path, line)}>

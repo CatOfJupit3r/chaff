@@ -1,10 +1,14 @@
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 
+import type { iAssistantExchangeRepository } from '@~/features/assistant/assistant-exchange.repository';
+import { DrizzleAssistantExchangeRepository } from '@~/features/assistant/drizzle-assistant-exchange.repository';
 import type { iConnectionRepository } from '@~/features/code-hosts/connection.repository';
 import { DrizzleConnectionRepository } from '@~/features/code-hosts/drizzle-connection.repository';
 import type { iDigestRepository } from '@~/features/digests/digest.repository';
 import { DrizzleDigestRepository } from '@~/features/digests/drizzle-digest.repository';
+import type { iDigestRevisionRepository } from '@~/features/digests/revisions/digest-revision.repository';
+import { DrizzleDigestRevisionRepository } from '@~/features/digests/revisions/drizzle-digest-revision.repository';
 import { DrizzleFindingRepository } from '@~/features/findings/drizzle-finding.repository';
 import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import { DrizzleFixRepository } from '@~/features/fixes/drizzle-fix.repository';
@@ -21,19 +25,24 @@ import { DrizzleSnapshotRepository } from '@~/features/reviews/snapshots/drizzle
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import { DrizzleSettingsRepository } from '@~/features/settings/drizzle-settings.repository';
 import type { iSettingsRepository } from '@~/features/settings/settings.repository';
+import { DrizzleStackRepository } from '@~/features/stacks/drizzle-stack.repository';
+import type { iStackRepository } from '@~/features/stacks/stack.repository';
 import { DrizzleWorkspaceRepository } from '@~/features/workspaces/drizzle-workspace.repository';
 import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repository';
 
 import {
   CHANGE_UNIT_REPOSITORY_TOKEN,
   CONNECTION_REPOSITORY_TOKEN,
+  ASSISTANT_EXCHANGE_REPOSITORY_TOKEN,
   DIGEST_REPOSITORY_TOKEN,
+  DIGEST_REVISION_REPOSITORY_TOKEN,
   FIX_REPOSITORY_TOKEN,
   PREFERENCE_REPOSITORY_TOKEN,
   FINDING_REPOSITORY_TOKEN,
   REVIEW_TARGET_REPOSITORY_TOKEN,
   SETTINGS_REPOSITORY_TOKEN,
   SNAPSHOT_REPOSITORY_TOKEN,
+  STACK_REPOSITORY_TOKEN,
   UNIT_MARK_REPOSITORY_TOKEN,
   WORKSPACE_REPOSITORY_TOKEN,
 } from './tokens';
@@ -41,6 +50,7 @@ import {
 /** Binds interface tokens to their implementations. `@singleton()` classes resolve by type. */
 export function registerServices() {
   container.registerSingleton<iWorkspaceRepository>(WORKSPACE_REPOSITORY_TOKEN, DrizzleWorkspaceRepository);
+  container.registerSingleton<iStackRepository>(STACK_REPOSITORY_TOKEN, DrizzleStackRepository);
   container.registerSingleton<iSettingsRepository>(SETTINGS_REPOSITORY_TOKEN, DrizzleSettingsRepository);
   container.registerSingleton<iReviewTargetRepository>(REVIEW_TARGET_REPOSITORY_TOKEN, DrizzleReviewTargetRepository);
   container.registerSingleton<iSnapshotRepository>(SNAPSHOT_REPOSITORY_TOKEN, DrizzleSnapshotRepository);
@@ -48,6 +58,14 @@ export function registerServices() {
   container.registerSingleton<iChangeUnitRepository>(CHANGE_UNIT_REPOSITORY_TOKEN, DrizzleChangeUnitRepository);
   container.registerSingleton<iFindingRepository>(FINDING_REPOSITORY_TOKEN, DrizzleFindingRepository);
   container.registerSingleton<iDigestRepository>(DIGEST_REPOSITORY_TOKEN, DrizzleDigestRepository);
+  container.registerSingleton<iDigestRevisionRepository>(
+    DIGEST_REVISION_REPOSITORY_TOKEN,
+    DrizzleDigestRevisionRepository,
+  );
+  container.registerSingleton<iAssistantExchangeRepository>(
+    ASSISTANT_EXCHANGE_REPOSITORY_TOKEN,
+    DrizzleAssistantExchangeRepository,
+  );
   container.registerSingleton<iFixRepository>(FIX_REPOSITORY_TOKEN, DrizzleFixRepository);
   container.registerSingleton<iPreferenceRepository>(PREFERENCE_REPOSITORY_TOKEN, DrizzlePreferenceRepository);
   container.registerSingleton<iConnectionRepository>(CONNECTION_REPOSITORY_TOKEN, DrizzleConnectionRepository);

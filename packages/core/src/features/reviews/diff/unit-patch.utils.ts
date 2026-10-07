@@ -20,6 +20,8 @@ export interface iUnitPatchInput {
   /** Full text of each side; context between hunks is read from here. */
   oldContents?: string;
   newContents?: string;
+  /** Keep every line of the file in one hunk, with all of its changes, instead of cutting it to the units. */
+  isWholeFile?: boolean;
 }
 
 interface iAlignedLine extends Omit<iDiffLine, 'hunkIndex'> {
@@ -118,8 +120,9 @@ function withWholeChanges(lines: readonly iAlignedLine[], selected: readonly boo
 
 /**
  * Cuts a file patch down to some of its units: every line they span on either side, unchanged lines included,
- * so each reads whole with its changes marked. Units next to each other share a hunk. Returns undefined when
- * none of the units has a line range.
+ * so each reads whole with its changes marked. Units next to each other share a hunk. A cut leaves out the
+ * file's other changes, so its hunks cannot be widened from the file's contents; `isWholeFile` keeps the
+ * whole file instead. Returns undefined when none of the units has a line range.
  */
 export function buildUnitPatch(input: iUnitPatchInput): string | undefined {
   if (!input.units.some((unit) => (unit.oldRange ?? unit.newRange) !== undefined)) return undefined;
@@ -129,8 +132,10 @@ export function buildUnitPatch(input: iUnitPatchInput): string | undefined {
   const aligned = alignFile(input);
   const selected = withWholeChanges(
     aligned,
-    aligned.map((line) =>
-      input.units.some((unit) => isInRange(line.newLine, unit.newRange) || isInRange(line.oldLine, unit.oldRange)),
+    aligned.map(
+      (line) =>
+        input.isWholeFile === true ||
+        input.units.some((unit) => isInRange(line.newLine, unit.newRange) || isInRange(line.oldLine, unit.oldRange)),
     ),
   );
   const hunks: iAlignedLine[][] = [];

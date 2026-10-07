@@ -1,4 +1,6 @@
 import { Pill } from '@~/components/ui/pill';
+import { CardQuestions } from '@~/features/assistant/components/card-questions';
+import { useAssistantThread } from '@~/features/assistant/hooks/use-assistant-thread';
 import { UnitDiscussions } from '@~/features/code-hosts/components/unit-discussions';
 import { UnitDiagramView } from '@~/features/digests/components/unit-diagram-view';
 import { UnitDigestNotes } from '@~/features/digests/components/unit-digest-notes';
@@ -57,7 +59,8 @@ export function UnitCard({
   const tests = note?.tests ?? [];
   const found = useFoundTests(snapshot.id, [unit.id]);
   const testCount = tests.length > 0 ? tests.length : found.length;
-  const counts = new Map<CardView, number>();
+  const questions = useAssistantThread({ snapshotId: snapshot.id, cardId: unit.id });
+  const counts = new Map<CardView, number>([[CARD_VIEWS.qa, questions.length]]);
   if (usages?.symbol) counts.set(CARD_VIEWS.usages, usages.usages.length);
   if (content) counts.set(CARD_VIEWS.diagram, diagrams.length);
   if (content || testCount > 0) counts.set(CARD_VIEWS.tests, testCount);
@@ -66,7 +69,7 @@ export function UnitCard({
     <FocusCardShell label={unit.title} exit={exit} onSwipe={onSwipe}>
       <UnitCardTop unit={unit} file={file} lastCommit={detail?.lastCommit} />
       {digest && content ? (
-        <UnitDigestNotes runner={digest.runner} note={note} group={findUnitGroup(content, unit.id)} />
+        <UnitDigestNotes digest={digest} note={note} group={findUnitGroup(content, unit.id)} />
       ) : null}
       <UnitRevisionNote unit={unit} version={snapshot.version} />
       {unit.mark ? (
@@ -86,13 +89,7 @@ export function UnitCard({
       <UnitDiscussions snapshot={snapshot} unit={unit} path={file?.path} />
       <UnitViewTabs view={view} counts={counts} onChange={onViewChange} />
       {view === CARD_VIEWS.code && file ? (
-        <UnitCodeView
-          snapshotId={snapshot.id}
-          unit={unit}
-          file={file}
-          detail={detail}
-          onOpenInEditor={onOpenInEditor}
-        />
+        <UnitCodeView snapshotId={snapshot.id} unit={unit} file={file} onOpenInEditor={onOpenInEditor} />
       ) : null}
       {view === CARD_VIEWS.usages ? (
         <div className="border-t border-line">
@@ -104,7 +101,7 @@ export function UnitCard({
           <UnitDiagramView
             snapshotId={snapshot.id}
             diagrams={diagrams}
-            hasDigest={content !== undefined}
+            digest={digest}
             currentUnitIds={new Set([unit.id])}
             onOpenUnit={onOpenUnit}
           />
@@ -118,6 +115,9 @@ export function UnitCard({
           hasDigest={content !== undefined}
           onOpenInEditor={onOpenInEditor}
         />
+      ) : null}
+      {view === CARD_VIEWS.qa ? (
+        <CardQuestions card={{ snapshotId: snapshot.id, cardId: unit.id, cardTitle: unit.title, unitIds: [unit.id] }} />
       ) : null}
     </FocusCardShell>
   );

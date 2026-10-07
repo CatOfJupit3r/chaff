@@ -1,6 +1,6 @@
 import { cn } from '@~/lib/utils';
 
-import { cardMark } from '../focus-cards.utils';
+import { cardListMark } from '../focus-cards.utils';
 import type { iFocusCard } from '../focus-cards.utils';
 import { UNIT_MARK_LABELS, UNIT_MARK_SEGMENT_CLASSES } from '../focus.enums';
 
@@ -31,7 +31,7 @@ export function UnitProgress({ cards, index, onJump }: iUnitProgressProps) {
     >
       {cards.map((card, cardIndex) => {
         const isCurrent = cardIndex === index;
-        const mark = cardMark(card);
+        const mark = cardListMark(card);
         const label = `${cardIndex + 1}: ${card.title}${mark ? `, ${UNIT_MARK_LABELS.get(mark)}` : ''}`;
         return (
           <button
