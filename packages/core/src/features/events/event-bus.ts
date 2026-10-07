@@ -1,4 +1,4 @@
-import { EventEmitter } from 'node:events';
+import { EventEmitter, on } from 'node:events';
 import { singleton } from 'tsyringe';
 
 import type { Listener } from './listener.class';
@@ -45,6 +45,15 @@ export class EventBus {
         }
       }),
     );
+  }
+
+  /** Every payload emitted for the listener until the signal aborts. */
+  public async *stream<T>(listener: Listener<T>, signal: AbortSignal) {
+    try {
+      for await (const [payload] of on(this.emitter, listener.name, { signal })) yield payload as T;
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
   }
 
   public once<T>(listener: Listener<T>, handler: Handler<T>) {

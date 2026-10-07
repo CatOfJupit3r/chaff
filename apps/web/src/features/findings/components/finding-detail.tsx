@@ -18,9 +18,9 @@ import { findingTitle, formatAnchorLocation } from '../findings.utils';
 import { useFindingComparison } from '../hooks/use-finding-comparison';
 import { useSetFindingSeverity } from '../hooks/use-set-finding-severity';
 import { FindingActions } from './finding-actions';
-import { FindingAgentNote } from './finding-agent-note';
 import { FindingAnchorChange } from './finding-anchor-change';
 import { FindingBadges } from './finding-badges';
+import { FindingDiscussion } from './finding-discussion';
 import { FindingLifecycle } from './finding-lifecycle';
 import { FindingQuote } from './finding-quote';
 import { FindingReplies } from './finding-replies';
@@ -150,7 +150,7 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
         ) : null}
       </section>
       <FindingTaskSection key={finding.id} finding={finding} />
-      <FindingAgentNote finding={finding} />
+      <FindingDiscussion finding={finding} className="border-t border-line px-5 py-4" />
       <FindingReplies finding={finding} isPending={isPending} onSetStatus={onSetStatus} />
       <FindingActions finding={finding} isPending={isPending} onSetStatus={onSetStatus} />
     </article>

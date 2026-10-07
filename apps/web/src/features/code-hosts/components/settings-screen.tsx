@@ -4,6 +4,7 @@ import { List } from '@~/components/ui/list';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { ReplayOnboarding } from '@~/features/onboarding/components/replay-onboarding';
 import { PreferencesSection } from '@~/features/preferences/components/preferences-section';
+import { AgentAccessSection } from '@~/features/settings/components/agent-access-section';
 import { AgentsSection } from '@~/features/settings/components/agents-section';
 import { AuthorEmailsSection } from '@~/features/settings/components/author-emails-section';
 import { DiffLayoutSection } from '@~/features/settings/components/diff-layout-section';
@@ -36,6 +37,7 @@ export function SettingsScreen() {
             <h1 className="m-0 text-[20px] font-semibold tracking-[-0.015em]">Settings</h1>
             <p className="m-0 mt-1 text-muted">Saved on this computer. Tokens stay in your system keychain.</p>
           </div>
+          <AgentAccessSection />
           <ConnectionsSection />
           <RepositoriesGroup workspaces={workspaces} onAdd={addFromPicker} isAdding={isAdding} />
           {workspaces.length > 0 ? (

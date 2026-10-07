@@ -3,6 +3,7 @@ import type { FindingSeverity, FindingStatus } from '@chaff/common/enums/review.
 import type {
   iAnchorLocationRecord,
   iFindingTaskChange,
+  iNewFindingMessage,
   iNewFindingReply,
   iFindingRecord,
   iListFindingsInput,
@@ -36,6 +37,11 @@ export interface iFindingRepository {
   remove: (findingId: string) => Promise<void>;
   /** Remembers which thread on the host each posted finding became. */
   linkDiscussions: (links: readonly { findingId: string; discussionId: string }[]) => Promise<void>;
+  /** Adds a message to the finding's discussion, moving it to a status in the same step when one is given. */
+  addMessage: (
+    message: iNewFindingMessage,
+    statusChange?: { status: FindingStatus; change?: iStatusChange },
+  ) => Promise<iFindingRecord | undefined>;
   /** Adds replies from the host; ones already stored are skipped. */
   addReplies: (replies: readonly iNewFindingReply[]) => Promise<void>;
   /** Stores the finding's suggested task, replacing the one it had. */

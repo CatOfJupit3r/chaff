@@ -185,6 +185,16 @@ export const FINDING_EVENT_SOURCES = findingEventSourcesEnumwaii.enum;
 export type FindingEventSource = InferEnumwaii<typeof findingEventSourcesEnumwaii>;
 export const findingEventSourceSchema = emToZodSchema(findingEventSourcesEnumwaii);
 
+/** Who writes in a finding's discussion: the reviewer or a coding agent. */
+export const findingAuthorsEnumwaii = findingEventSourcesEnumwaii.pick([
+  FINDING_EVENT_SOURCES.REVIEWER,
+  FINDING_EVENT_SOURCES.AGENT,
+]);
+
+export const FINDING_AUTHORS = findingAuthorsEnumwaii.enum;
+export type FindingAuthor = InferEnumwaii<typeof findingAuthorsEnumwaii>;
+export const findingAuthorSchema = emToZodSchema(findingAuthorsEnumwaii);
+
 /**
  * How a unit compares with the same unit in the previous snapshot of its review. Possibly affected units
  * did not change but use a declaration that did; their marks are kept and they are flagged for a recheck.

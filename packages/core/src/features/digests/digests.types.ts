@@ -7,6 +7,7 @@ import type {
   digestStartOptionsSchema,
 } from '@chaff/server-contract/contract/digests.contract';
 
+import type { iAgentBridge } from '@~/core.types';
 import type { digests } from '@~/db/schema/digests.schema';
 
 import type { iOutlinedFile } from './digest-patch.utils';
@@ -99,6 +100,8 @@ export interface iDigestRunInput {
   model?: string;
   /** JSON schema the answer must follow. */
   schema: Record<string, unknown>;
+  /** The Chaff MCP server pinned to the review, while agent access is on; the agent may only read findings. */
+  chaffServer?: iAgentBridge;
   signal: AbortSignal;
   onProgress: (progress: string) => void;
   /** The answer so far, for an agent that streams it. */

@@ -11,7 +11,7 @@ import { FIX_STATUSES } from '@chaff/common/enums/fix.enums';
 import { FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 import type { FindingKind, FindingStatus } from '@chaff/common/enums/review.enums';
 
-import type { iCoreOptions } from '@~/core.types';
+import type { iAgentBridge, iCoreOptions } from '@~/core.types';
 import {
   CORE_OPTIONS_TOKEN,
   FINDING_REPOSITORY_TOKEN,
@@ -25,6 +25,7 @@ import { AgentReportService } from '@~/features/findings/agent-report.service';
 import { parseAgentReport, reportedNumber } from '@~/features/findings/agent-report.utils';
 import type { iFindingRepository } from '@~/features/findings/finding.repository';
 import { LoggerFactory } from '@~/features/logger/logger.factory';
+import { AgentRunServerService } from '@~/features/mcp/agent-run-server.service';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
@@ -52,6 +53,7 @@ interface iFixJob {
   workspaceId: string;
   command: string;
   prompt: string;
+  chaffServer?: iAgentBridge;
   folder: string;
   numbers: number[];
 }
@@ -89,6 +91,7 @@ export class FixesService {
     private readonly agentCommandsService: AgentCommandsService,
     private readonly claudeCodeFixAdapter: ClaudeCodeFixAdapter,
     private readonly codexFixAdapter: CodexFixAdapter,
+    private readonly agentRunServerService: AgentRunServerService,
     loggerFactory: LoggerFactory,
   ) {
     this.logger = loggerFactory.create('fixes');
@@ -129,9 +132,11 @@ export class FixesService {
       shouldListUnreviewed: false,
       findingIds: findings.map((finding) => finding.id),
     });
+    const chaffServer = await this.agentRunServerService.forReview(target.id);
     const prompt = buildFixPrompt({
       branch: target.branch,
       headSha: snapshot.headSha,
+      hasChaffTools: chaffServer !== undefined,
       agentPrompt: agentPrompt(packet, packetMarkdown(packet, { shouldQuoteCode: true })),
     });
 
@@ -151,6 +156,7 @@ export class FixesService {
       workspaceId: target.workspaceId,
       command,
       prompt,
+      chaffServer,
       folder: path.join(this.options.dataDir, FIXES_DIRECTORY, fix.id),
       numbers: findings.map((finding) => finding.number),
     });
@@ -221,7 +227,7 @@ export class FixesService {
     return runner === DIGEST_RUNNERS.CODEX ? this.codexFixAdapter : this.claudeCodeFixAdapter;
   }
 
-  private async run({ fix, workspaceId, command, prompt, folder, numbers }: iFixJob, signal: AbortSignal) {
+  private async run({ fix, workspaceId, command, prompt, chaffServer, folder, numbers }: iFixJob, signal: AbortSignal) {
     const checkout = path.join(folder, 'checkout');
     const scratchDir = path.join(folder, 'scratch');
     let lastProgressAt = 0;
@@ -242,6 +248,7 @@ export class FixesService {
         cwd: checkout,
         scratchDir,
         prompt,
+        chaffServer,
         signal,
         onProgress,
       });

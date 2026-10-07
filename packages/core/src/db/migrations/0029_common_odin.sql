@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `is_agent_access_enabled` integer DEFAULT false NOT NULL;

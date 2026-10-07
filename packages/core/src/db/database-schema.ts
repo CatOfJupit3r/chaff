@@ -2,7 +2,7 @@ import { assistantExchanges } from './schema/assistant-exchanges.schema';
 import { connections } from './schema/connections.schema';
 import { digestRevisions } from './schema/digest-revisions.schema';
 import { digests } from './schema/digests.schema';
-import { findingAnchors, findingEvents, findings } from './schema/findings.schema';
+import { findingAnchors, findingEvents, findingMessages, findings } from './schema/findings.schema';
 import { reviewTargets } from './schema/review-targets.schema';
 import { settings } from './schema/settings.schema';
 import { regions, snapshotFiles, snapshots, units } from './schema/snapshots.schema';
@@ -25,6 +25,7 @@ export const schema = {
   findings,
   findingAnchors,
   findingEvents,
+  findingMessages,
   digests,
   digestRevisions,
   assistantExchanges,

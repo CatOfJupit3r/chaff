@@ -2,8 +2,12 @@ import { em } from 'enumwaii';
 import type { InferEnumwaii } from 'enumwaii';
 
 import {
+  FINDING_AUTHORS,
+  FINDING_EVENT_SOURCES,
   FINDING_SEVERITIES,
   FINDING_STATUSES,
+  findingAuthorsEnumwaii,
+  findingEventSourcesEnumwaii,
   findingSeveritiesEnumwaii,
   findingStatusesEnumwaii,
 } from '@chaff/common/enums/review.enums';
@@ -104,4 +108,17 @@ export const FINDING_ACTION_SHORTCUTS = findingStatusesEnumwaii.derive<ShortcutA
   [FINDING_STATUSES.CLOSED, SHORTCUT_ACTIONS.VERIFY_CLOSE],
   [FINDING_STATUSES.WITHDRAWN, SHORTCUT_ACTIONS.VERIFY_WITHDRAW],
   [FINDING_STATUSES.UNMATCHED, undefined],
+);
+
+/** Who wrote a message in a finding's discussion. */
+export const FINDING_AUTHOR_LABELS = findingAuthorsEnumwaii.derive(
+  [FINDING_AUTHORS.REVIEWER, 'You'],
+  [FINDING_AUTHORS.AGENT, 'Agent'],
+);
+
+/** Who moved a finding, as it reads after the status: "Reopened by you". */
+export const FINDING_EVENT_SOURCE_LABELS = findingEventSourcesEnumwaii.derive(
+  [FINDING_EVENT_SOURCES.REVIEWER, 'you'],
+  [FINDING_EVENT_SOURCES.CHAFF, 'Chaff'],
+  [FINDING_EVENT_SOURCES.AGENT, 'the agent'],
 );

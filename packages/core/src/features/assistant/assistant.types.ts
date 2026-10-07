@@ -57,4 +57,6 @@ export interface iAssistantPromptInput {
   /** The questions answered on the card before this one, oldest first. */
   earlier: Pick<iAssistantExchangeRecord, 'question' | 'answer'>[];
   question: string;
+  /** The agent can read the review's findings through the Chaff MCP server. */
+  hasChaffTools: boolean;
 }

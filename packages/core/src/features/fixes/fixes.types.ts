@@ -4,6 +4,7 @@ import type { DigestRunner } from '@chaff/common/enums/digest.enums';
 import type { FixStatus } from '@chaff/common/enums/fix.enums';
 import type { reportResultSchema } from '@chaff/server-contract/contract/findings.contract';
 
+import type { iAgentBridge } from '@~/core.types';
 import type { fixes } from '@~/db/schema/fixes.schema';
 
 type FixRow = typeof fixes.$inferSelect;
@@ -49,6 +50,8 @@ export interface iFixRunInput {
   /** Scratch folder outside the checkout for files the CLI writes. */
   scratchDir: string;
   prompt: string;
+  /** The Chaff MCP server pinned to the review, while agent access is on. */
+  chaffServer?: iAgentBridge;
   signal: AbortSignal;
   onProgress: (progress: string) => void;
 }

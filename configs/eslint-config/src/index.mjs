@@ -263,7 +263,15 @@ export const createBackendConfig = (options = {}) => {
       'import-x/no-unresolved': [
         'error',
         {
-          ignore: ['^@~/', '^node:sqlite$', createWorkspaceIgnorePattern('chaff'), createWorkspaceIgnorePattern('shared')],
+          ignore: [
+            '^@~/',
+            '^node:sqlite$',
+            // The MCP SDK's wildcard exports map types to `<path>.js.d.ts`, which this resolver cannot
+            // follow; TypeScript resolves and checks these imports.
+            '^@modelcontextprotocol/sdk/',
+            createWorkspaceIgnorePattern('chaff'),
+            createWorkspaceIgnorePattern('shared'),
+          ],
         },
       ],
     },

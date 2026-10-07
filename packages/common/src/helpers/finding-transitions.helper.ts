@@ -46,3 +46,36 @@ export function manualFindingStatuses(kind: FindingKind, status: FindingStatus):
 export function canSetFindingStatus(kind: FindingKind, from: FindingStatus, to: FindingStatus) {
   return manualFindingStatuses(kind, from).includes(to);
 }
+
+const AGENT_CONCERN_TRANSITIONS: TransitionTable = new Map<FindingStatus, readonly FindingStatus[]>([
+  [OPEN, [FIX_PROPOSED]],
+  [REOPENED, [FIX_PROPOSED]],
+  [UNMATCHED, [FIX_PROPOSED]],
+  [FIX_PROPOSED, [REOPENED]],
+  [VERIFIED, [REOPENED]],
+]);
+
+const AGENT_QUESTION_TRANSITIONS: TransitionTable = new Map<FindingStatus, readonly FindingStatus[]>([
+  [OPEN, [ANSWERED]],
+  [REOPENED, [ANSWERED]],
+  [UNMATCHED, [ANSWERED]],
+  [ANSWERED, [REOPENED]],
+  [CLOSED, [REOPENED]],
+]);
+
+const AGENT_TRANSITIONS = new Map<FindingKind, TransitionTable>([
+  [FINDING_KINDS.CONCERN, AGENT_CONCERN_TRANSITIONS],
+  [FINDING_KINDS.QUESTION, AGENT_QUESTION_TRANSITIONS],
+]);
+
+/**
+ * The statuses a coding agent can move a finding to: propose a fix for a concern, answer a question, or
+ * reopen what it finds still wrong. Verifying, closing and withdrawing stay with the reviewer.
+ */
+export function agentFindingStatuses(kind: FindingKind, status: FindingStatus): readonly FindingStatus[] {
+  return AGENT_TRANSITIONS.get(kind)?.get(status) ?? [];
+}
+
+export function canAgentSetFindingStatus(kind: FindingKind, from: FindingStatus, to: FindingStatus) {
+  return agentFindingStatuses(kind, from).includes(to);
+}

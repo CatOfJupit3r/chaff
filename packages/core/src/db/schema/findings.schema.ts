@@ -6,6 +6,7 @@ import { FINDING_EVENT_SOURCES, FINDING_SCOPES } from '@chaff/common/enums/revie
 import type {
   AnchorMatch,
   DiffSide,
+  FindingAuthor,
   FindingEventSource,
   FindingKind,
   FindingScope,
@@ -169,6 +170,27 @@ export const findingTasks = sqliteTable('finding_tasks', {
   error: text('error'),
   ...timestamps(),
 });
+
+/** The finding's discussion in Chaff: messages from the reviewer and from coding agents, oldest first. */
+export const findingMessages = sqliteTable(
+  'finding_messages',
+  {
+    id: idPrimaryKey(),
+    findingId: text('finding_id')
+      .notNull()
+      .references(() => findings.id, { onDelete: 'cascade' }),
+    /** The snapshot that was the review's newest when the message was written. */
+    snapshotId: text('snapshot_id')
+      .notNull()
+      .references(() => snapshots.id, { onDelete: 'cascade' }),
+    author: text('author').$type<FindingAuthor>().notNull(),
+    body: text('body').notNull(),
+    createdAt: timestampColumn('created_at')
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index('finding_messages_finding_idx').on(table.findingId)],
+);
 
 /** Answers on the host to a posted finding: the notes after the reviewer's own in its thread. */
 export const findingReplies = sqliteTable(

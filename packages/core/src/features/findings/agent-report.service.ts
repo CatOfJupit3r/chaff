@@ -6,6 +6,8 @@ import { FINDING_EVENT_SOURCES, FINDING_STATUSES } from '@chaff/common/enums/rev
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { FINDING_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { EventBus } from '@~/features/events/event-bus';
+import { FINDINGS_CHANGED } from '@~/features/events/finding-events';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
@@ -31,6 +33,7 @@ export class AgentReportService {
     @inject(FINDING_REPOSITORY_TOKEN) private readonly findingRepository: iFindingRepository,
     @inject(SNAPSHOT_REPOSITORY_TOKEN) private readonly snapshotRepository: iSnapshotRepository,
     private readonly workspacesService: WorkspacesService,
+    private readonly eventBus: EventBus,
   ) {}
 
   public async import(workspaceId: string, report: string) {
@@ -77,6 +80,9 @@ export class AgentReportService {
       );
       if (updated) findings.set(updated.number, updated);
       applied.push({ ...reported, status: outcome.status });
+    }
+    if (applied.length > 0) {
+      await this.eventBus.emit(FINDINGS_CHANGED, { findingIds: applied.map((item) => item.findingId) });
     }
     return { applied, skipped, unknown };
   }

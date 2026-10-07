@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { singleton } from 'tsyringe';
 
+import { codexMcpArgs } from '@~/features/agents/agent-mcp.utils';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 
 import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
@@ -23,7 +24,10 @@ function describeItem(event: iCodexEvent) {
 /** `codex exec` in its read-only sandbox, with the answer's schema and the final message written to files. */
 @singleton()
 export class CodexAdapter implements iDigestRunnerAdapter {
-  public async run(command: string, { cwd, scratchDir, prompt, model, schema, signal, onProgress }: iDigestRunInput) {
+  public async run(
+    command: string,
+    { cwd, scratchDir, prompt, model, schema, chaffServer, signal, onProgress }: iDigestRunInput,
+  ) {
     const schemaPath = path.join(scratchDir, 'answer.schema.json');
     const answerPath = path.join(scratchDir, 'answer.json');
     await writeFile(schemaPath, JSON.stringify(schema));
@@ -36,6 +40,7 @@ export class CodexAdapter implements iDigestRunnerAdapter {
       input: prompt,
       args: [
         'exec',
+        ...(chaffServer ? codexMcpArgs(chaffServer) : []),
         '--sandbox',
         'read-only',
         '--skip-git-repo-check',

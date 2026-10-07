@@ -49,6 +49,8 @@ export const settings = sqliteTable('settings', {
     .$type<ReviewProgression>()
     .notNull()
     .default(REVIEW_PROGRESSIONS.changes),
+  /** Coding agents may read and answer findings through Chaff's MCP server. */
+  isAgentAccessEnabled: integer('is_agent_access_enabled', { mode: 'boolean' }).notNull().default(false),
   /** Coding agent that writes digests. */
   digestRunner: text('digest_runner').$type<DigestRunner>().notNull().default(DIGEST_RUNNERS.CLAUDE_CODE),
   /** Commands or paths the user set for coding agents, by runner. */

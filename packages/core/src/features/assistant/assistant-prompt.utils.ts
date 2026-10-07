@@ -57,7 +57,7 @@ ${input.units.map(describeUnit).join('\n')}
 
 ${describeDiffFiles(input.diffDirectory)}
 ${diff}${describeDigest(input.digest, input.units)}${describeEarlier(input.earlier)}
-The reviewer asks:
+${input.hasChaffTools ? "The chaff_findings tool lists the review's findings and their discussions, should the question touch them.\n" : ''}The reviewer asks:
 ${input.question}
 
 Answer in Markdown in the answer field. Answer what was asked and stop: lead with the direct answer, then the evidence, naming files and lines (\`path:line\`). When you explain a change, say what it did before, what it does now and what that affects. When the code cannot settle the question, say so and say what would. A Mermaid diagram in a \`\`\`mermaid block is welcome where it explains more than words. Do not judge whether the change should be accepted: the reviewer decides.

@@ -80,6 +80,8 @@ export const settingsSchema = z.object({
   isContextPanelPinned: z.boolean(),
   /** Progression Focus starts in. */
   defaultProgression: reviewProgressionSchema,
+  /** Coding agents may read and answer findings through Chaff's MCP server. */
+  isAgentAccessEnabled: z.boolean(),
   /** Coding agent that writes digests. */
   digestRunner: digestRunnerSchema,
   /** Where to find each coding agent when it is not the usual command on PATH. */

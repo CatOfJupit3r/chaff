@@ -1,11 +1,13 @@
 import { singleton } from 'tsyringe';
 
+import { claudeMcpArgs } from '@~/features/agents/agent-mcp.utils';
 import { AgentProcessError, runAgentProcess } from '@~/features/agents/agent-process';
 import {
   createStructuredOutputStream,
   describeClaudeProgress,
   parseClaudeStreamEvent,
 } from '@~/features/agents/claude-code-events.utils';
+import { CHAFF_TOOLS } from '@~/features/mcp/mcp.enums';
 import { parsePartialJson } from '@~/lib/partial-json';
 
 import type { iDigestRunInput, iDigestRunnerAdapter } from './digests.types';
@@ -22,7 +24,7 @@ const DENIED_TOOLS = 'Bash,Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch'
 export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
   public async run(
     command: string,
-    { cwd, diffDirectory, prompt, model, schema, signal, onProgress, onPartialAnswer }: iDigestRunInput,
+    { cwd, diffDirectory, prompt, model, schema, chaffServer, signal, onProgress, onPartialAnswer }: iDigestRunInput,
   ) {
     let answer: unknown;
     let failure: string | undefined;
@@ -50,6 +52,7 @@ export class ClaudeCodeAdapter implements iDigestRunnerAdapter {
         '--setting-sources',
         'user',
         '--strict-mcp-config',
+        ...(chaffServer ? claudeMcpArgs(chaffServer, [CHAFF_TOOLS.chaff_findings]) : []),
         '--disable-slash-commands',
         '--no-session-persistence',
         ...(diffDirectory ? ['--add-dir', diffDirectory] : []),

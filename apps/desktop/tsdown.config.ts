@@ -66,4 +66,10 @@ export default defineConfig([
     format: 'cjs',
     clean: false,
   },
+  {
+    ...shared,
+    entry: { 'mcp-bridge': 'src/bridge/mcp-bridge.ts' },
+    format: 'cjs',
+    clean: false,
+  },
 ]);
