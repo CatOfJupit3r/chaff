@@ -6,6 +6,7 @@ import type { ReviewProgression } from '@chaff/common/enums/review.enums';
 
 import { EditIcon, RightIcon } from '@~/components/icons/icons';
 import { Button } from '@~/components/ui/button';
+import { Kbd } from '@~/components/ui/kbd';
 import { SectionLabel } from '@~/components/ui/section-label';
 import { DigestOverview } from '@~/features/digests/components/digest-overview';
 import { DigestPreview } from '@~/features/digests/components/digest-preview';
@@ -57,7 +58,8 @@ export function FocusContextPanel({
     <div className="flex w-[340px] flex-col gap-[22px] px-[18px] pt-[18px] pb-7">
       <div className="flex items-center justify-between">
         <SectionLabel>Context</SectionLabel>
-        <Button variant="icon" size="icon" aria-label="Close context" onClick={onClose}>
+        <Button variant="ghost" size="sm" aria-label="Close context" onClick={onClose}>
+          <Kbd className="h-4 min-w-4 text-[10px]">Esc</Kbd>
           <RightIcon />
         </Button>
       </div>

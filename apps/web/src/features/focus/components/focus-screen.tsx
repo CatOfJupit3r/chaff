@@ -22,7 +22,6 @@ import { DecisionDock } from './decision-dock';
 import { FocusContextPanel } from './focus-context-panel';
 import { FocusEndCard } from './focus-end-card';
 import { FocusHeader } from './focus-header';
-import { FocusHints } from './focus-hints';
 import { FocusLineNotes } from './focus-line-notes';
 import { SecondPassBanner } from './second-pass-banner';
 import { StackFindingsBanner } from './stack-findings-banner';
@@ -160,7 +159,6 @@ export function FocusScreen({ snapshotId }: { snapshotId: string }) {
                 />
               )}
             </div>
-            <FocusHints />
           </div>
           {card ? (
             <DecisionDock
