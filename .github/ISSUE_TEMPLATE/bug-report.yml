@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in Chaff behaves wrong.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Search existing issues first, and don't post security vulnerabilities here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - Stacks or the Reviews screen
+        - Focus review
+        - Full diff
+        - Findings, second pass or Verify
+        - GitLab or GitHub merge requests
+        - AI digest or Fix with agent
+        - Export or agent access
+        - Settings or appearance
+        - Install, update or startup
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: Run `git rev-parse --short HEAD` in your clone.
+      placeholder: 77f1157
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, and whether you run the installed app or `pnpm run dev`. Add the git, Node.js or agent version when it matters.
+      placeholder: macOS 15, installed app, git 2.47
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, step by step. A small demo repository helps a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Include the error, a screenshot or a short clip when you have one.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: This report does not disclose a security vulnerability.
+          required: true

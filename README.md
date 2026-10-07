@@ -549,4 +549,4 @@ Chaff keeps its database and snapshot store in the OS app data folder: `%APPDATA
 
 ## Contributing
 
-[docs/development.md](docs/development.md) covers the repository layout, workspace commands, commit hooks and conventions. Agents (Claude Code and other `AGENTS.md`-aware tools) start from [AGENTS.md](AGENTS.md) and the skills in `.agents/skills/`.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). [docs/development.md](docs/development.md) covers the workspace commands, commit hooks and conventions in more detail. Questions go through [SUPPORT.md](SUPPORT.md), vulnerabilities through [SECURITY.md](SECURITY.md). Agents (Claude Code and other `AGENTS.md`-aware tools) start from [AGENTS.md](AGENTS.md) and the skills in `.agents/skills/`.
