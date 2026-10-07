@@ -16,8 +16,8 @@ import { SegmentedControl } from '@~/components/ui/segmented-control';
 import { TextInput } from '@~/components/ui/text-input';
 import { getErrorMessage } from '@~/utils/rpc-errors';
 
-import { TOKEN_SCOPE_HINTS } from '../code-hosts.enums';
 import { useConnectionMutations } from '../hooks/use-connections';
+import { TokenInstructions } from './token-instructions';
 
 interface iConnectDialogProps {
   isOpen: boolean;
@@ -67,7 +67,8 @@ export function ConnectDialog({ isOpen, onOpenChange }: iConnectDialogProps) {
                 spellCheck={false}
               />
             </Field>
-            <Field label="Token" hint={TOKEN_SCOPE_HINTS.get(host)}>
+            <TokenInstructions host={host} address={baseUrl} />
+            <Field label="Token">
               <TextInput
                 type="password"
                 value={token}
