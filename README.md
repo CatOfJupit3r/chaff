@@ -5,8 +5,8 @@
 <h1 align="center">Chaff</h1>
 
 <p align="center">
-  A stack-aware review workspace for AI-written changes.<br />
-  Understand what changed. Inspect how it was implemented. Capture what bothers you. Verify what gets fixed.
+  A desktop app for reviewing what Claude Code and Codex wrote, one stack of branches at a time.<br />
+  <a href="https://catofjupit3r.github.io/chaff/">Project page</a> · <a href="#install">Install</a>
 </p>
 
 <picture>
@@ -14,29 +14,30 @@
   <img src="docs/screenshots/full-diff-split-light.png" alt="Chaff reviewing one branch of a local stack in the split Full diff view" />
 </picture>
 
-Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
+Agents write code faster than anyone can read it, and it usually arrives as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). Chaff reads those branches straight from the repository on your computer, freezes the one you're reviewing so a new push can't move the code under you, and shows each branch's own changes against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences, swipe on touch screens, rebindable keys and agent settings work too. See [What works today](#what-works-today).
+> **Status:** early. Most of it works and gets used for real reviews, but things still move around, sometimes a lot. The full list is in [What works today](#what-works-today).
 
-## Why Chaff
+## Why
 
-Agents produce a lot of code, and reviewing it is where the time goes. Three things make it harder than reviewing a colleague's work:
+I review a lot of code from Claude Code and Codex, and doing it in GitLab and GitHub was miserable:
 
-- **Stacks are long.** A feature often arrives as ten small branches. Forge UIs show each one in isolation, so you lose track of which branch introduced what.
-- **Objections get lost.** You notice something odd in branch 3, and by branch 7 you have forgotten it, or you can't tell whether the agent's next push fixed it.
-- **The code keeps moving.** The agent pushes while you read. Diffs regenerate, your place is gone, and you start over.
+- **Stacks are shown one MR at a time.** A feature arrives as ten small branches, each on its own page. By MR 6 I'm opening tabs to find out which one added that helper.
+- **The MR viewers are slow.** Big diff: "Load diff". Bigger diff: "This diff is too large to display". Click a file, wait, scroll, it collapses again.
+- **The code moves while I read.** The agent pushes, the page reloads, and my place and the "viewed" checkboxes are gone.
+- **"Fixed" is a claim, not a fact.** I leave a comment, the agent says it's done, and I get to dig through force-pushes to check.
 
-Chaff keeps the reviewer in charge: it never decides what you see or what is resolved. Its job is to let you read at the level that's useful (a whole change, one function, or specific lines), capture a concern in a keystroke, remember what you inspected at which revision, and bring you back only to what needs another look after the agent pushes fixes.
+Chaff doesn't review anything for you, and it never decides what's resolved. It lets you read at the level that helps (a whole change, one function, or a few lines), write down a concern in one keystroke, remembers what you looked at and at which commit, and after the agent pushes, brings you back only to what changed.
 
 ## How it works
 
 1. **Add a repository.** Pick a folder on disk. Chaff reads it with your own `git` and never writes to it: no checkouts, no new refs, no stash.
-2. **Chaff finds the stacks.** Each local branch gets a suggested parent (the other branch it has the fewest commits on top of), so `feature/async-input <- feature/job-options <- feature/consent` shows up as one stack. Chaff remembers each parent, so a new commit on a lower branch keeps the stack together and marks the branches above it **parent moved** until they are rebased.
-3. **Start a review and Chaff freezes a snapshot.** The branch, its parent and their merge base are fetched into Chaff's own bare repository and pinned, so rebasing, amending or deleting the branch does not break the review.
-4. **Chaff breaks the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing is dropped.
+2. **Build the stack.** Start a stack from the branch you want to review, then add the branch it merges into and the ones built on top of it. Chaff suggests them from history (the branches with the fewest commits in between), so `feature/async-input <- feature/job-options <- feature/consent` takes a few clicks. With GitLab or GitHub connected, merge request chains come in as suggestions too. Chaff remembers each parent, so a new commit on a lower branch keeps the stack together and marks the branches above it **parent moved** until they are rebased.
+3. **Start a review, and Chaff freezes a snapshot.** The branch, its parent and their merge base are fetched into Chaff's own bare repository and pinned, so rebasing, amending or deleting the branch does not break the review.
+4. **Chaff splits the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing falls through.
 5. **You read the diff in reading order.** Types and contracts come first, tests sit next to the code they test, and config, docs and generated files come last.
-6. **When the branch moves, Chaff tells you.** New commits, a rewritten branch or a moved parent show up next to the snapshot, and **Update** freezes a new snapshot when you choose to.
-7. **The second pass brings you back only where needed.** Decisions on unchanged units carry over, edited units show what changed since you decided, and every finding is looked for again in the new code so you can verify the fix.
+6. **When the branch moves, Chaff tells you and leaves your code alone.** New commits, a rewritten branch or a moved parent show up next to the snapshot, and **Update** freezes a new one when you are ready.
+7. **The second pass only shows what changed.** Decisions on unchanged units carry over, edited units show what changed since you decided, and every finding is looked for again in the new code so you can verify the fix.
 
 [docs/how-it-works.md](docs/how-it-works.md) goes deeper: the architecture, the snapshot store, regions and units, and where Chaff keeps its data.
 
@@ -44,7 +45,7 @@ Chaff keeps the reviewer in charge: it never decides what you see or what is res
 
 ### Reviews
 
-Every repository you add, with its local branch stacks. Paste a merge request link, `!412`, or a branch name into the box at the top to start a review, click a branch in the chain to review it against its parent, or **Continue** where you left off.
+Your repositories and their stacks. Paste a merge request link, `!412`, or a branch name into the box at the top to start a review, click a branch in the chain to review it against its parent, or **Continue** where you left off.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/reviews-dark.png" />
@@ -121,7 +122,7 @@ On a touch screen or with a pen, swipe the card: right is **Looks good**, left s
 
 ### AI digest
 
-Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits and merge request or inferred), the tests that cover the unit, and a diagram where one helps; a box in the diagram that stands for a unit opens that unit's card. With Claude Code the overview and groups show in the context panel while the agent is still writing. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
+Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. In Focus, every card then gets a summary and a short "Worth checking" list, why the change was made (marked as taken from the commits and merge request or inferred), the tests that cover the unit, and a diagram where one helps; a box in the diagram that stands for a unit opens that unit's card. With Claude Code the overview and groups show in the context panel while the agent is still writing. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-digest-dark.png" />
@@ -160,7 +161,7 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
   <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
 </picture>
 
-**AI digest** in the top bar starts one and says which company receives the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
+**AI digest** in the top bar starts one and tells you which company gets the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
@@ -343,7 +344,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 ### Agents and keys
 
-**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
+**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, and picks the default for digests and fixes. A notice tells you where the code goes: to Anthropic or OpenAI, through your own account.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-agents-dark.png" />
@@ -406,6 +407,11 @@ The width you drag the Full diff's file list to is kept.
 
 ## What works today
 
+Everything below works in the current build.
+
+<details>
+<summary>The full list</summary>
+
 | Area | Status |
 | --- | --- |
 | Electron desktop app, unsigned installers for Windows, macOS and Linux | Works |
@@ -455,6 +461,8 @@ The width you drag the Full diff's file list to is kept.
 | Syntax colors in finding quotes and Usages | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 
+</details>
+
 ## Stack
 
 - **Desktop:** Electron 44 with a sandboxed renderer, a strict CSP and typed oRPC calls over a `MessagePort`. Packaged with electron-builder.
@@ -462,36 +470,57 @@ The width you drag the Full diff's file list to is kept.
 - **Renderer (`apps/web`):** React 19 single-page app with Vite, TanStack Router and Query, Base UI, Tailwind CSS theme tokens, and [`@pierre/diffs`](https://www.npmjs.com/package/@pierre/diffs) for diff rendering.
 - **Shared:** `@chaff/server-contract` (API contracts), `@chaff/common` (shared helpers and enums), `enumwaii` and `eslint-plugin-enumwaii` from npm (typed closed string sets and their ESLint rules).
 
-## Getting started
+## Install
 
 You need Git 2.40 or newer on your PATH, Node.js 24 and pnpm 11.5.0 (`corepack enable` picks it up from `package.json`).
+
+There are no downloads. Builds are unsigned (I will not be paying for a license for a side project), so you build Chaff from source. It takes a few minutes.
+
+### macOS
 
 ```bash
 git clone https://github.com/CatOfJupit3r/chaff.git
 cd chaff
 pnpm install
-pnpm run dev
+pnpm run install-app
 ```
 
-`pnpm run dev` opens Chaff in an Electron window with live reload. Click **Add repository** and pick any folder inside a git repository; its local branch stacks appear on the Reviews screen.
+`install-app` builds Chaff from your checkout and installs it as `/Applications/Chaff.app`, quitting a running Chaff first and opening it again afterwards. Closing the window keeps Chaff running; click the Dock icon to bring it back, and quit with Cmd+Q.
 
-### Install as an app
-
-To use Chaff like any other installed app, build an installer for your OS:
+### Windows and Linux
 
 ```bash
+git clone https://github.com/CatOfJupit3r/chaff.git
+cd chaff
+pnpm install
 pnpm run package
 ```
 
-This writes a DMG (macOS), an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. Builds are unsigned and do not update themselves.
+This writes an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. On Windows, SmartScreen will warn about the unsigned build: choose **More info**, then **Run anyway**. On Linux, make the AppImage executable (`chmod +x`) and run it.
 
-On macOS, `pnpm run install-app` does all of this in one step: it builds Chaff from your checkout and installs it as `/Applications/Chaff.app`, quitting a running Chaff first and opening it again afterwards. It also keeps the installed app current with the repository: after each `git pull` (merge or rebase) on `main`, a git hook runs `install-app` in the background and shows a notification when the new build is installed. The build log is in `~/Library/Logs/Chaff/install-app.log`. To turn this off for your checkout:
+### Updating
+
+There is no updater. There is `git pull`.
+
+On macOS, `install-app` also sets up a git hook: after each `git pull` (merge or rebase) on `main`, it rebuilds Chaff in the background, swaps it into `/Applications`, reopens it if it was running and shows a notification when the new build is in. The build log is in `~/Library/Logs/Chaff/install-app.log`. To turn it off for your checkout:
 
 ```bash
 git config chaff.autoInstall false
 ```
 
-To install from the DMG by hand instead:
+On Windows and Linux, pull and package again, then run the new installer:
+
+```bash
+git pull
+pnpm install
+pnpm run package
+```
+
+Your reviews survive updates; they live in the app data folder, not in the app.
+
+### Installing the DMG by hand
+
+`pnpm run package` on macOS writes a DMG instead of installing anything.
 
 1. Open `apps/desktop/release/Chaff-<version>-<arch>.dmg` and drag **Chaff** into **Applications**.
 2. The first time, right-click Chaff in Applications and choose **Open**. If macOS still refuses to open it, clear the quarantine flag:
@@ -502,9 +531,15 @@ To install from the DMG by hand instead:
 
 3. While it runs, right-click its Dock icon and choose **Options > Keep in Dock**. Spotlight and Launchpad find it too.
 
-Closing the window keeps Chaff running; click the Dock icon to bring it back, and quit with Cmd+Q.
+### Running from source
 
-On Windows, run the installer; in the SmartScreen prompt choose **More info**, then **Run anyway**. On Linux, make the AppImage executable (`chmod +x`) and run it.
+```bash
+pnpm run dev
+```
+
+opens Chaff in an Electron window with live reload. Click **Add repository** and pick any folder inside a git repository, then start a stack from one of its branches.
+
+### Where your data lives
 
 Chaff keeps its database and snapshot store in the OS app data folder: `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS, `~/.config/Chaff` on Linux. `pnpm run dev` uses a separate `Chaff Dev` folder next to it.
 

@@ -1,6 +1,6 @@
 # Developing Chaff
 
-Setup and first run are in the [README](../README.md#getting-started). This page covers the repository and the day-to-day workflow. Coding standards live in [AGENTS.md](../AGENTS.md) and the skills under `.agents/skills/`.
+Setup and first run are in the [README](../README.md#install). This page covers the repository and the day-to-day workflow. Coding standards live in [AGENTS.md](../AGENTS.md) and the skills under `.agents/skills/`.
 
 ## Repository structure
 
