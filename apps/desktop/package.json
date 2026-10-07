@@ -10,6 +10,7 @@
     "dev": "tsx scripts/dev.ts",
     "build": "tsdown",
     "start": "electron .",
+    "data:clear": "tsx scripts/clear-data.ts",
     "package": "electron-builder --config electron-builder.config.mjs",
     "check-types": "tsgo --noEmit",
     "lint": "eslint . --fix",

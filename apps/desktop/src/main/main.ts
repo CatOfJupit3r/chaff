@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 
 import { createChaffCore } from '@~/core';
@@ -7,9 +7,11 @@ import type { iChaffCore } from '@~/core.types';
 import { APP_PATHS } from './app-paths';
 import { APP_ORIGIN, registerAppScheme, serveRenderer } from './app-protocol';
 import { ElectronCoreHost } from './electron-core-host';
+import { DEVELOPMENT_USER_DATA_FOLDER, SECRETS_FILE } from './local-data.constants';
 import { LoginShellPath } from './login-shell-path';
 import { createMainWindow } from './main-window';
 import { serveCoreOverIpc } from './rpc-bridge';
+import { StartupFailure } from './startup-failure';
 import { createTrustedUrlCheck } from './trusted-origin';
 import { applyDevelopmentCsp, hardenWebContents } from './web-security';
 
@@ -47,7 +49,7 @@ async function start() {
     treeSitterDir: APP_PATHS.treeSitter,
     logFilePath: path.join(app.getPath('logs'), 'chaff.log'),
     appVersion: app.getVersion(),
-    host: new ElectronCoreHost(() => mainWindow, path.join(app.getPath('userData'), 'secrets.json')),
+    host: new ElectronCoreHost(() => mainWindow, path.join(app.getPath('userData'), SECRETS_FILE)),
   });
   serveCoreOverIpc(core.router, isTrustedUrl);
 
@@ -61,7 +63,7 @@ async function start() {
 }
 
 registerAppScheme();
-if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'Chaff Dev'));
+if (!app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), DEVELOPMENT_USER_DATA_FOLDER));
 
 if (app.requestSingleInstanceLock()) {
   app.on('second-instance', showMainWindow);
@@ -70,12 +72,10 @@ if (app.requestSingleInstanceLock()) {
   });
   app.on('will-quit', () => core?.close());
 
-  start().catch((error: unknown) => {
-    dialog.showErrorBox(
-      'Chaff could not start',
-      error instanceof Error ? (error.stack ?? error.message) : String(error),
-    );
-    app.exit(1);
+  start().catch(async (error: unknown) => {
+    core?.close();
+    core = null;
+    return new StartupFailure(app.getPath('userData')).handle(error);
   });
 } else {
   app.quit();

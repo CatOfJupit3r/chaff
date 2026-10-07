@@ -26,28 +26,33 @@ export async function createChaffCore(options: iCoreOptions): Promise<iChaffCore
   registerServices();
 
   const databaseService = container.resolve(DatabaseService);
-  await databaseService.open();
-  await container.resolve(SettingsService).applyStoredTheme();
-  const digestsService = container.resolve(DigestsService);
-  await digestsService.failInterrupted();
-  const fixesService = container.resolve(FixesService);
-  await fixesService.failInterrupted();
-  const findingTasksService = container.resolve(FindingTasksService);
-  await findingTasksService.failInterrupted();
-  const digestRevisionsService = container.resolve(DigestRevisionsService);
-  await digestRevisionsService.failInterrupted();
-  const assistantService = container.resolve(AssistantService);
-  await assistantService.failInterrupted();
+  try {
+    await databaseService.open();
+    await container.resolve(SettingsService).applyStoredTheme();
+    const digestsService = container.resolve(DigestsService);
+    await digestsService.failInterrupted();
+    const fixesService = container.resolve(FixesService);
+    await fixesService.failInterrupted();
+    const findingTasksService = container.resolve(FindingTasksService);
+    await findingTasksService.failInterrupted();
+    const digestRevisionsService = container.resolve(DigestRevisionsService);
+    await digestRevisionsService.failInterrupted();
+    const assistantService = container.resolve(AssistantService);
+    await assistantService.failInterrupted();
 
-  return {
-    router: appRouter,
-    close: () => {
-      digestsService.stopAll();
-      fixesService.stopAll();
-      findingTasksService.stopAll();
-      digestRevisionsService.stopAll();
-      assistantService.stopAll();
-      databaseService.close();
-    },
-  };
+    return {
+      router: appRouter,
+      close: () => {
+        digestsService.stopAll();
+        fixesService.stopAll();
+        findingTasksService.stopAll();
+        digestRevisionsService.stopAll();
+        assistantService.stopAll();
+        databaseService.close();
+      },
+    };
+  } catch (error) {
+    databaseService.close();
+    throw error;
+  }
 }
