@@ -5,7 +5,6 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
 import { GitService } from '@~/features/git/git.service';
 import type { iWorkspaceRepository } from '@~/features/workspaces/workspace.repository';
-import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
 import type { iWorkspaceRecord } from '@~/features/workspaces/workspaces.types';
 import { ORPCBadRequestError, ORPCNotFoundError } from '@~/lib/orpc-error-wrapper';
 
@@ -27,7 +26,6 @@ function hostnameOf(baseUrl: string) {
 export class RemoteProjectsService {
   constructor(
     @inject(WORKSPACE_REPOSITORY_TOKEN) private readonly workspaceRepository: iWorkspaceRepository,
-    private readonly workspacesService: WorkspacesService,
     private readonly connectionsService: ConnectionsService,
     private readonly gitService: GitService,
   ) {}
@@ -50,7 +48,7 @@ export class RemoteProjectsService {
   }
 
   public async describe(workspaceId: string) {
-    const remote = await this.resolve(await this.workspacesService.getRecord(workspaceId));
+    const remote = await this.resolve(await this.workspaceRecord(workspaceId));
     return remote
       ? { connectionId: remote.connection.id, project: remote.project, isDetected: remote.isDetected }
       : null;
@@ -58,7 +56,7 @@ export class RemoteProjectsService {
 
   /** Links the repository to a project by hand, or clears the link so it is detected again. */
   public async set(workspaceId: string, link: { connectionId: string; project: string } | null) {
-    await this.workspacesService.getRecord(workspaceId);
+    await this.workspaceRecord(workspaceId);
     if (link) {
       await this.connectionsService.getRecord(link.connectionId);
       if (!REMOTE_PROJECT_PATTERN.test(link.project)) throw ORPCBadRequestError(errorCodes.REMOTE_PROJECT_NOT_FOUND);
@@ -69,6 +67,12 @@ export class RemoteProjectsService {
     });
     if (!updated) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
     return this.describe(workspaceId);
+  }
+
+  private async workspaceRecord(workspaceId: string) {
+    const record = await this.workspaceRepository.findById(workspaceId);
+    if (!record) throw ORPCNotFoundError(errorCodes.WORKSPACE_NOT_FOUND);
+    return record;
   }
 
   private async remoteUrls(repoPath: string) {

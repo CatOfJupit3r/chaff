@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
+
 import { BranchIcon } from '@~/components/icons/icons';
 import { Pill } from '@~/components/ui/pill';
 import type { iFinding } from '@~/features/findings/findings.types';
@@ -86,7 +88,9 @@ function StackChainItem({ workspaceId, link, findings, fromStack, isSelected, on
           <span className="font-mono text-[13px] font-medium break-all text-fg">{link.branch.name}</span>
           <RemoteBranchPill branch={link.branch} />
           {link.branch.hasWorkingChanges ? <Pill variant="open">uncommitted</Pill> : null}
-          {link.branch.isParentConfirmed ? null : <Pill variant="out">parent suggested</Pill>}
+          {link.branch.parentSource === BRANCH_PARENT_SOURCES.SUGGESTED ? (
+            <Pill variant="out">parent suggested</Pill>
+          ) : null}
           {link.branch.isParentMoved ? (
             <Pill
               variant="open"

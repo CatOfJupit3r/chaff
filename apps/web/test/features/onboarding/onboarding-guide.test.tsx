@@ -92,6 +92,7 @@ function settingsWith(onboarding: iOnboardingState) {
     digestRunner: DIGEST_RUNNERS.CLAUDE_CODE,
     agentCommands: [],
     digestModels: [],
+    authorEmails: [],
     shortcuts: [],
     onboarding,
   };

@@ -1,6 +1,7 @@
 import { oc } from '@orpc/contract';
 import z from 'zod';
 
+import { MAX_AUTHOR_EMAILS } from '@chaff/common/constants/author-emails.constants';
 import { NAVIGATOR_WIDTH } from '@chaff/common/constants/layout.constants';
 import { MAX_ONBOARDING_ENTRIES } from '@chaff/common/constants/onboarding.constants';
 import {
@@ -46,6 +47,11 @@ export const agentCommandsSchema = z.array(
 /** The model each runner writes digests with, when the user picked one. */
 export const digestModelsSchema = z.array(z.object({ runner: digestRunnerSchema, model: digestModelSchema }));
 
+/** Emails, besides each repository's git user, whose commits count as the user's own; read trimmed, in lower case. */
+export const authorEmailsSchema = z
+  .array(z.string().trim().toLowerCase().pipe(z.email().max(254)))
+  .max(MAX_AUTHOR_EMAILS);
+
 export const settingsSchema = z.object({
   /** Editor that file and line links open in. */
   editor: editorSchema,
@@ -79,6 +85,7 @@ export const settingsSchema = z.object({
   /** Where to find each coding agent when it is not the usual command on PATH. */
   agentCommands: agentCommandsSchema,
   digestModels: digestModelsSchema,
+  authorEmails: authorEmailsSchema,
   shortcuts: shortcutBindingsSchema,
   onboarding: onboardingSchema,
 });
@@ -96,7 +103,7 @@ export const settingsContract = oc.router({
     .route({
       summary: 'Change app settings',
       description:
-        'Updates the given preferences and returns the full settings. A theme change also restyles the window. Agent commands and shortcuts replace the stored maps whole; two actions on one screen cannot share a key.',
+        'Updates the given preferences and returns the full settings. A theme change also restyles the window. Agent commands, author emails and shortcuts replace the stored lists whole; emails are kept once each, in lower case, and two actions on one screen cannot share a key.',
     })
     .input(settingsSchema.omit({ onboarding: true }).partial())
     .output(settingsSchema),

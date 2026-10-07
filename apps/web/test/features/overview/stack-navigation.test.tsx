@@ -56,6 +56,8 @@ function NavigationExample() {
     setIsShowingHidden: vi.fn(),
     filters: INCLUSIVE_STACK_FILTERS,
     setFilters: vi.fn(),
+    shouldIncludeRemoteBranches: false,
+    setShouldIncludeRemoteBranches: vi.fn(),
     toggleHidden: vi.fn(),
     ...listStacks({
       stacks: [longStack, otherStack],

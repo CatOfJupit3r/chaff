@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
 import { CODE_HOSTS, INBOX_FILTERS } from '@chaff/common/enums/code-host.enums';
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import { DIGEST_RUNNERS, DIGEST_STATUSES } from '@chaff/common/enums/digest.enums';
@@ -302,6 +303,36 @@ describe('code hosts', () => {
       expect(reopened?.archived).toBeUndefined();
     },
   );
+
+  it("stacks a branch on its change's target, past an empty branch left where the target used to end", async () => {
+    server.switch('feature/retry');
+    server.commitFiles('Retry with jitter', { 'src/jitter.ts': 'export const jitter = 0.1;\n' });
+    server.switch('main');
+    const { clone, workspace } = await addClone();
+    clone.git('branch', 'feature/backoff', 'origin/feature/backoff');
+    clone.git('branch', 'codex/lint', 'origin/feature/backoff~1');
+    const backoff = async () =>
+      (await call(appRouter.workspaces.branches, { workspaceId: workspace.id })).find(
+        (branch) => branch.name === 'feature/backoff',
+      );
+
+    expect(await backoff()).toMatchObject({ parent: 'codex/lint', parentSource: BRANCH_PARENT_SOURCES.SUGGESTED });
+    const { targetId } = await call(appRouter.reviews.start, {
+      workspaceId: workspace.id,
+      branch: 'feature/backoff',
+      parentBranch: 'codex/lint',
+    });
+
+    await connect();
+
+    expect(await backoff()).toMatchObject({
+      parent: 'feature/retry',
+      parentSource: BRANCH_PARENT_SOURCES.CHANGE_REQUEST,
+      commitsAhead: 1,
+    });
+    const targets = await call(appRouter.reviews.list, { workspaceId: workspace.id });
+    expect(targets.find((target) => target.id === targetId)).toMatchObject({ parentBranch: 'feature/retry' });
+  });
 
   it("moves a local branch's review onto the change it was pushed as", async () => {
     await connect();

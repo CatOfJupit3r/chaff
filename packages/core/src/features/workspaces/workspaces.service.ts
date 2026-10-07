@@ -2,17 +2,21 @@ import { realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { inject, singleton } from 'tsyringe';
 
+import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
 import { REVIEW_TARGET_REPOSITORY_TOKEN, WORKSPACE_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { ChangeParentsService } from '@~/features/code-hosts/change-parents.service';
 import { BranchRefsService } from '@~/features/git/branch-refs.service';
 import { GitService } from '@~/features/git/git.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
+import type { iReviewTargetRecord } from '@~/features/reviews/review-targets/review-targets.types';
 import { localArchiveChanges } from '@~/features/reviews/review-targets/target-archive.utils';
 import type { iArchiveChange } from '@~/features/reviews/review-targets/target-archive.utils';
 import { parseNumstat } from '@~/features/reviews/snapshots/numstat.utils';
 import { SnapshotStoreService } from '@~/features/reviews/snapshots/snapshot-store.service';
+import { SettingsService } from '@~/features/settings/settings.service';
 import { mapWithConcurrency } from '@~/lib/concurrency';
 import { isDirectory, pathExists } from '@~/lib/file-system';
 import { ORPCBadRequestError, ORPCNotFoundError, ORPCUnprocessableContentError } from '@~/lib/orpc-error-wrapper';
@@ -40,6 +44,8 @@ export class WorkspacesService {
     private readonly branchRefsService: BranchRefsService,
     private readonly snapshotStoreService: SnapshotStoreService,
     @inject(REVIEW_TARGET_REPOSITORY_TOKEN) private readonly reviewTargetRepository: iReviewTargetRepository,
+    private readonly settingsService: SettingsService,
+    private readonly changeParentsService: ChangeParentsService,
   ) {}
 
   public async list(): Promise<iWorkspaceResponse[]> {
@@ -86,34 +92,40 @@ export class WorkspacesService {
   }
 
   /**
-   * Local branches, and the remote-only branches of their stacks, with the parent each is reviewed against and
-   * whether it has uncommitted work.
+   * Local branches, and the remote-only branches of their stacks (or every unmerged one when the repository
+   * includes remote branches), with the parent each is reviewed against and whether it has uncommitted work.
+   * A branch with an open merge or pull request is reviewed against the change's target branch, and its
+   * review follows when the change is retargeted.
    */
   public async listBranches(workspaceId: string): Promise<iBranchResponse[]> {
     const record = await this.getRecord(workspaceId);
-    const targets = await this.reviewTargetRepository.list(workspaceId);
+    const [targets, { authorEmails }, changeParents] = await Promise.all([
+      this.reviewTargetRepository.list(workspaceId),
+      this.settingsService.get(),
+      this.changeParentsService.forWorkspace(record),
+    ]);
     const localTargets = targets.filter((target) => target.kind !== REVIEW_TARGET_KINDS.CHANGE_REQUEST);
     const [branches, worktrees, branchNames] = await Promise.all([
-      this.branchesService.listBranches(
-        record.repoPath,
-        record.defaultBranch,
-        new Map(record.knownParents.map(({ branch, parent }) => [branch, parent])),
-        new Set(localTargets.flatMap((target) => [target.branch, target.parentBranch])),
-      ),
+      this.branchesService.listBranches(record.repoPath, record.defaultBranch, {
+        knownParents: new Map(record.knownParents.map(({ branch, parent }) => [branch, parent])),
+        reviewedNames: new Set(localTargets.flatMap((target) => [target.branch, target.parentBranch])),
+        shouldIncludeRemoteBranches: record.shouldIncludeRemoteBranches,
+        authorEmails,
+        changeParents,
+      }),
       this.snapshotStoreService.listWorktrees(record.repoPath),
       this.branchRefsService.names(record.repoPath),
     ]);
-    const confirmedParents = new Map(
-      targets
-        .filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH)
-        .map((target) => [target.branch, target.parentBranch]),
+    const branchTargets = await this.followChangeParents(
+      targets.filter((target) => target.kind === REVIEW_TARGET_KINDS.BRANCH),
+      changeParents,
     );
+    const confirmedParents = new Map(branchTargets.map((target) => [target.branch, target.parentBranch]));
     await this.rememberParents(record, branches);
     await this.applyArchive(localArchiveChanges(targets, branchNames));
     const tips = new Map(branches.map((branch) => [branch.name, branch.headSha]));
     return mapWithConcurrency(branches, STATUS_CONCURRENCY, async (branch) => {
-      const confirmedParent = confirmedParents.get(branch.name);
-      const parent = confirmedParent ?? branch.suggestedParent;
+      const { parent, parentSource } = this.parentOf(branch, changeParents, confirmedParents);
       const worktreePath = worktrees.get(branch.name);
       const hasWorkingChanges = worktreePath
         ? (await this.snapshotStoreService.workingFingerprint(worktreePath).catch(() => undefined)) !== undefined
@@ -121,7 +133,7 @@ export class WorkspacesService {
       return {
         ...branch,
         parent,
-        isParentConfirmed: confirmedParent !== undefined,
+        parentSource,
         isParentMoved:
           parent !== undefined &&
           parent !== record.defaultBranch &&
@@ -177,6 +189,36 @@ export class WorkspacesService {
 
   private async applyArchive(changes: readonly iArchiveChange[]) {
     for (const { targetId, archive } of changes) await this.reviewTargetRepository.setArchive(targetId, archive);
+  }
+
+  /** The change's target branch, else the parent the user confirmed, else the suggestion. */
+  private parentOf(
+    branch: iGitBranch,
+    changeParents: ReadonlyMap<string, string>,
+    confirmedParents: ReadonlyMap<string, string>,
+  ) {
+    const changeParent = branch.isDefault ? undefined : changeParents.get(branch.name);
+    if (changeParent !== undefined) return { parent: changeParent, parentSource: BRANCH_PARENT_SOURCES.CHANGE_REQUEST };
+    const confirmedParent = confirmedParents.get(branch.name);
+    if (confirmedParent !== undefined)
+      return { parent: confirmedParent, parentSource: BRANCH_PARENT_SOURCES.CONFIRMED };
+    return { parent: branch.suggestedParent, parentSource: BRANCH_PARENT_SOURCES.SUGGESTED };
+  }
+
+  /** Moves each branch review onto its change's target branch when the change was opened or retargeted elsewhere. */
+  private async followChangeParents(
+    branchTargets: readonly iReviewTargetRecord[],
+    changeParents: ReadonlyMap<string, string>,
+  ) {
+    const followed: iReviewTargetRecord[] = [];
+    for (const target of branchTargets) {
+      const changeParent = changeParents.get(target.branch);
+      const isFollowing = changeParent === undefined || changeParent === target.parentBranch;
+      followed.push(
+        isFollowing ? target : ((await this.reviewTargetRepository.updateParent(target.id, changeParent)) ?? target),
+      );
+    }
+    return followed;
   }
 
   private async rememberParents(record: iWorkspaceRecord, branches: readonly iGitBranch[]) {

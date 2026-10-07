@@ -2,6 +2,8 @@ import { call } from '@orpc/server';
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
+import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
+
 import { createTempDirectory, createTestGitRepo, TestGitRepo } from '../helpers/git-repo';
 import { appRouter } from '../helpers/instance';
 import { addWorkspace } from '../helpers/review-repo';
@@ -124,7 +126,7 @@ describe('stacks with remote-tracking branches', () => {
 
     expect((await listBranches(workspace.id)).find((branch) => branch.name === 'stack/5')).toMatchObject({
       parent: 'stack/2',
-      isParentConfirmed: true,
+      parentSource: BRANCH_PARENT_SOURCES.CONFIRMED,
     });
   });
 
@@ -178,6 +180,35 @@ describe('stacks with remote-tracking branches', () => {
 
     expect(names).toEqual(['main', ...STACK.slice(0, 2), 'stack/2-alt', ...STACK.slice(2), 'stack/6']);
   }, 30_000);
+
+  it('lists every unmerged remote branch once the repository includes remote branches', async () => {
+    const upstream = createUpstreamStack();
+    upstream.branch('landed', 'main~1');
+    upstream.branch('other', 'main');
+    upstream.commit('other work', 'other.txt');
+    upstream.switch('main');
+    const clone = new TestGitRepo(createTempDirectory('chaff-clone-'));
+    execFileSync('git', ['clone', '--quiet', upstream.path, clone.path]);
+    const workspace = await addWorkspace(clone);
+
+    expect(parentsOf(await listBranches(workspace.id))).toEqual({ main: [undefined, undefined] });
+
+    const saved = await call(appRouter.workspaces.updateStackView, {
+      workspaceId: workspace.id,
+      shouldIncludeRemoteBranches: true,
+    });
+
+    expect(saved.shouldIncludeRemoteBranches).toBe(true);
+    expect(parentsOf(await listBranches(workspace.id))).toEqual({
+      main: [undefined, undefined],
+      other: ['main', 'origin'],
+      'stack/1': ['main', 'origin'],
+      'stack/2': ['stack/1', 'origin'],
+      'stack/3': ['stack/2', 'origin'],
+      'stack/4': ['stack/3', 'origin'],
+      'stack/5': ['stack/4', 'origin'],
+    });
+  });
 
   it('pushes an event when a fetch moves a remote-tracking branch', async () => {
     const upstream = createUpstreamStack();

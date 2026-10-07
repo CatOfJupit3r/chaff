@@ -13,16 +13,20 @@ interface iStackListOptions {
   stacks: readonly iOverviewStack[];
 }
 
-/** Search, saved filters and hidden stacks of one repository's stack list. */
+/** Search, saved filters, hidden stacks and remote branch listing of one repository's stack list. */
 export function useStackList({ workspace, stacks }: iStackListOptions) {
   const [query, setQuery] = useState('');
   const [isShowingHidden, setIsShowingHidden] = useState(false);
   const { mutate: updateStackView } = useUpdateStackView();
   const filters = workspace?.stackFilters ?? DEFAULT_STACK_FILTERS;
   const hiddenStacks = workspace?.hiddenStacks ?? [];
+  const shouldIncludeRemoteBranches = workspace?.shouldIncludeRemoteBranches ?? false;
 
   const setFilters = (changes: Partial<iStackFilters>) => {
     if (workspace) updateStackView({ workspaceId: workspace.id, stackFilters: { ...filters, ...changes } });
+  };
+  const setShouldIncludeRemoteBranches = (isIncluded: boolean) => {
+    if (workspace) updateStackView({ workspaceId: workspace.id, shouldIncludeRemoteBranches: isIncluded });
   };
   const toggleHidden = (stack: iOverviewStack) => {
     if (!workspace) return;
@@ -40,6 +44,8 @@ export function useStackList({ workspace, stacks }: iStackListOptions) {
     setIsShowingHidden,
     filters,
     setFilters,
+    shouldIncludeRemoteBranches,
+    setShouldIncludeRemoteBranches,
     toggleHidden,
     ...listStacks({ stacks, filters, hiddenStacks, query, isShowingHidden }),
   };

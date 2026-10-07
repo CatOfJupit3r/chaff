@@ -6,7 +6,7 @@ import { workspaces } from '@~/db/schema/workspaces.schema';
 
 import type { iWorkspaceRepository } from './workspace.repository';
 import { WorkspaceResolver } from './workspace.resolver';
-import type { iNewWorkspace, iWorkspaceRecord } from './workspaces.types';
+import type { iNewWorkspace, iStackView, iWorkspaceRecord } from './workspaces.types';
 
 @singleton()
 export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
@@ -49,10 +49,7 @@ export class DrizzleWorkspaceRepository implements iWorkspaceRepository {
     return row ? this.workspaceResolver.toWorkspaceRecord(row) : undefined;
   }
 
-  public async updateStackView(
-    workspaceId: string,
-    view: Partial<Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters'>>,
-  ) {
+  public async updateStackView(workspaceId: string, view: iStackView) {
     const row = this.databaseService
       .getDb()
       .update(workspaces)

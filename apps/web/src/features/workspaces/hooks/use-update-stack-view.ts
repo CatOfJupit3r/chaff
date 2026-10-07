@@ -9,9 +9,14 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 import type { iWorkspace } from '../workspaces.types';
 import { workspacesQueryOptions } from './use-workspaces';
 
-const stackViewSchema = workspaceSchema.pick({ hiddenStacks: true, stackFilters: true }).partial();
+const stackViewSchema = workspaceSchema
+  .pick({ hiddenStacks: true, stackFilters: true, shouldIncludeRemoteBranches: true })
+  .partial();
 
-/** Saves a repository's stack filters or hidden stacks, applying them at once and rolling back on failure. */
+/**
+ * Saves a repository's stack filters, hidden stacks or remote branch listing, applying them at once and rolling
+ * back on failure. Its branches are read again when the remote branch listing changes.
+ */
 export function useUpdateStackView() {
   const queryClient = useQueryClient();
   const replaceWorkspace = (workspaceId: string, change: (workspace: iWorkspace) => iWorkspace) =>
@@ -31,7 +36,13 @@ export function useUpdateStackView() {
         if (context?.previous) queryClient.setQueryData(workspacesQueryOptions.queryKey, context.previous);
         showToast(getErrorMessage(error));
       },
-      onSuccess: (saved) => replaceWorkspace(saved.id, () => saved),
+      onSuccess: async (saved, view) => {
+        replaceWorkspace(saved.id, () => saved);
+        if (view.shouldIncludeRemoteBranches === undefined) return;
+        await queryClient.invalidateQueries({
+          queryKey: tanstackRPC.workspaces.branches.key({ input: { workspaceId: saved.id } }),
+        });
+      },
     }),
   );
 }

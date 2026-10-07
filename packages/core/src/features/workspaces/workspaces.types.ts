@@ -1,3 +1,5 @@
+import type { BranchParentSource } from '@chaff/common/enums/branch-parent.enums';
+
 import type { workspaces } from '@~/db/schema/workspaces.schema';
 
 type WorkspaceRow = typeof workspaces.$inferSelect;
@@ -26,7 +28,7 @@ export interface iBranchResponse {
   commitsAhead: number;
   isAuthoredByUser: boolean;
   parent?: string;
-  isParentConfirmed: boolean;
+  parentSource: BranchParentSource;
   isParentMoved: boolean;
   worktreePath?: string;
   hasWorkingChanges: boolean;
@@ -35,10 +37,15 @@ export interface iBranchResponse {
 /** A branch as read from git, before Chaff adds its confirmed parent and working-changes state. */
 export type iGitBranch = Omit<
   iBranchResponse,
-  'parent' | 'isParentConfirmed' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
+  'parent' | 'parentSource' | 'isParentMoved' | 'worktreePath' | 'hasWorkingChanges'
 >;
 
-export type iStackViewInput = Partial<Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters'>> & {
+/** How a repository's stack list is shown: hidden stacks, filters and whether remote branches are listed. */
+export type iStackView = Partial<
+  Pick<iWorkspaceRecord, 'hiddenStacks' | 'stackFilters' | 'shouldIncludeRemoteBranches'>
+>;
+
+export type iStackViewInput = iStackView & {
   workspaceId: string;
 };
 

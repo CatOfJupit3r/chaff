@@ -1,4 +1,4 @@
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type z from 'zod';
 
 import { DEFAULT_STACK_FILTERS } from '@chaff/common/constants/stack-filters.constants';
@@ -25,5 +25,7 @@ export const workspaces = sqliteTable('workspaces', {
     .$type<z.infer<typeof stackFiltersSchema>>()
     .notNull()
     .default(DEFAULT_STACK_FILTERS),
+  /** Every remote-tracking branch the default branch hasn't merged is listed, not only those of local stacks. */
+  shouldIncludeRemoteBranches: integer('should_include_remote_branches', { mode: 'boolean' }).notNull().default(false),
   ...timestamps(),
 });

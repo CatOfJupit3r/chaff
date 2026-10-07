@@ -309,12 +309,36 @@ describe('branch authorship', () => {
 
     expect(authored).toEqual({ main: false, 'feature/mine': true, 'feature/theirs': false });
   });
+
+  it('counts commits by an email the user listed as their own, whatever its case', async () => {
+    const repo = createTestGitRepo();
+    repo.git('config', 'user.email', 'work@example.com');
+    repo.branch('feature/home');
+    repo.commit('home work', 'home.txt');
+    repo.git('commit', '--quiet', '--amend', '--no-edit', '--author=Me At Home <Me@Home.example>');
+    const workspace = await addWorkspace(repo);
+    const isAuthored = async () =>
+      (await call(appRouter.workspaces.branches, { workspaceId: workspace.id })).find(
+        (branch) => branch.name === 'feature/home',
+      )?.isAuthoredByUser;
+
+    expect(await isAuthored()).toBe(false);
+
+    const saved = await call(appRouter.settings.update, { authorEmails: [' ME@home.example ', 'me@home.example'] });
+
+    expect(saved.authorEmails).toEqual(['me@home.example']);
+    expect(await isAuthored()).toBe(true);
+  });
 });
 
 describe('stack view', () => {
   it('starts with the default filters and keeps what the user saves', async () => {
     const workspace = await addWorkspace(createTestGitRepo());
-    expect(workspace).toMatchObject({ hiddenStacks: [], stackFilters: DEFAULT_STACK_FILTERS });
+    expect(workspace).toMatchObject({
+      hiddenStacks: [],
+      stackFilters: DEFAULT_STACK_FILTERS,
+      shouldIncludeRemoteBranches: false,
+    });
 
     await call(appRouter.workspaces.updateStackView, { workspaceId: workspace.id, hiddenStacks: ['feature/old'] });
     const stackFilters = { ...DEFAULT_STACK_FILTERS, activity: STACK_ACTIVITIES.ANY, isMineOnly: true };

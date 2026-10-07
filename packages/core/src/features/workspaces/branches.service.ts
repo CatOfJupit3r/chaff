@@ -17,7 +17,7 @@ const BRANCH_FIELDS = [
 ];
 /** How far back the history is searched for other branches' tips. */
 const PARENT_SEARCH_DEPTH = 2000;
-/** Commits of the local stacks, beyond the default branch, searched for remote-only branches' tips. */
+/** Commits of the stacks, beyond the default branch, searched for remote-only branches' tips. */
 const STACK_SEARCH_DEPTH = 20000;
 /** Branch tips found nearest in the history that are compared as possible parents. */
 const MAX_PARENT_CANDIDATES = 8;
@@ -33,6 +33,25 @@ interface iRawBranch {
   committedAt: Date;
   authorName: string;
   subject: string;
+}
+
+interface iListBranchesOptions {
+  /** The parent suggested last time for each branch. */
+  knownParents?: ReadonlyMap<string, string>;
+  /** Branches listed whenever they exist, such as the ones under review and their parents. */
+  reviewedNames?: ReadonlySet<string>;
+  /** Lists every remote-only branch the default branch hasn't merged, not only those of the local stacks. */
+  shouldIncludeRemoteBranches?: boolean;
+  /** Emails, besides the repository's git user, whose commits count as the user's own. */
+  authorEmails?: readonly string[];
+  /** Target branch of each branch's open merge or pull request, which is that branch's parent. */
+  changeParents?: ReadonlyMap<string, string>;
+}
+
+interface iStackMemberOptions extends Pick<iListBranchesOptions, 'shouldIncludeRemoteBranches'> {
+  defaultBranch: string | undefined;
+  reviewedNames: ReadonlySet<string>;
+  changeParents: ReadonlyMap<string, string>;
 }
 
 interface iParentSuggestion {
@@ -74,9 +93,11 @@ function isRemoteRef(refs: ReadonlyMap<string, string>, name: string) {
 }
 
 /**
- * Reads branches straight from the user's repository and suggests a parent for each. Local branches are
- * all listed; a remote-tracking branch with no local branch of its name is listed when it belongs to a local
- * branch's stack.
+ * Reads branches straight from the user's repository and suggests a parent for each: the target branch of its
+ * open merge or pull request when it has one, else the nearest branch below it in the history. Local branches
+ * are all listed; a remote-tracking branch with no local branch of its name is listed when it belongs to a
+ * local branch's stack or is a listed branch's change target, or, when remote branches are included, whenever
+ * the default branch hasn't merged it.
  */
 @singleton()
 export class BranchesService {
@@ -85,18 +106,24 @@ export class BranchesService {
     private readonly branchRefsService: BranchRefsService,
   ) {}
 
-  /**
-   * `knownParents` holds the parent suggested last time for each branch; `reviewedNames` are branches listed
-   * whenever they exist, such as the ones under review and their parents.
-   */
   public async listBranches(
     repoPath: string,
     defaultBranch: string | undefined,
-    knownParents: ReadonlyMap<string, string> = new Map(),
-    reviewedNames: ReadonlySet<string> = new Set(),
+    {
+      knownParents = new Map(),
+      reviewedNames = new Set(),
+      shouldIncludeRemoteBranches,
+      authorEmails = [],
+      changeParents = new Map(),
+    }: iListBranchesOptions = {},
   ): Promise<iGitBranch[]> {
     const all = (await this.branchRefsService.list(repoPath, BRANCH_FIELDS)).map(toRawBranch);
-    const branches = await this.stackMembers(repoPath, all, defaultBranch, reviewedNames);
+    const branches = await this.stackMembers(repoPath, all, {
+      defaultBranch,
+      reviewedNames,
+      shouldIncludeRemoteBranches,
+      changeParents,
+    });
 
     const tips = new Map<string, string[]>();
     for (const branch of branches) {
@@ -109,18 +136,17 @@ export class BranchesService {
     );
     const [mergedTips, authorPatterns] = await Promise.all([
       this.mergedTips(repoPath, integrationRefs),
-      this.authorPatterns(repoPath),
+      this.authorPatterns(repoPath, authorEmails),
     ]);
 
     const suggestions = await mapWithConcurrency(branches, GIT_CONCURRENCY, async (branch) => {
       if (branch.name === defaultBranch) return { commitsAhead: 0, isAuthoredByUser: false };
-      const suggestion = await this.suggestParent(repoPath, branch, {
-        tips,
-        mergedTips,
-        refs,
-        defaultBranch,
-        knownParent: knownParents.get(branch.name),
-      });
+      const context = { tips, mergedTips, refs, defaultBranch, knownParent: knownParents.get(branch.name) };
+      const changeParent = changeParents.get(branch.name);
+      const suggestion =
+        changeParent === undefined
+          ? await this.suggestParent(repoPath, branch, context)
+          : await this.changeParentSuggestion(repoPath, branch, changeParent, context);
       const isAuthoredByUser =
         suggestion.commitsAhead > 0 && (await this.hasUserCommits(repoPath, branch, authorPatterns, integrationRefs));
       return { ...suggestion, isAuthoredByUser };
@@ -141,39 +167,39 @@ export class BranchesService {
   }
 
   /**
-   * Every local branch, plus the remote-only branches of the local stacks: those whose tip is in a local
-   * branch's history but not on the default branch (the branches below it), and those that build on a local
-   * branch or on one of those (the branches above it). Remote branches merged into the default branch, or
-   * unrelated to any local branch, are left out, so a repository with many of them stays quick to read. The
-   * default branch and the reviewed branches are kept even when they only exist on a remote.
+   * Every local branch, plus the remote-only branches of the stacks: those whose tip is in a stack branch's
+   * history but not on the default branch (the branches below it), and those that build on a stack branch or
+   * on one of those (the branches above it). Stacks start from the local branches, and also from every
+   * remote-only branch when remote branches are included. Remote branches merged into the default branch, or
+   * unrelated to any stack, are left out, so a repository with many of them stays quick to read. The default
+   * branch, the reviewed branches and the members' change targets are kept even when they only exist on a remote.
    */
   private async stackMembers(
     repoPath: string,
     all: readonly iRawBranch[],
-    defaultBranch: string | undefined,
-    reviewedNames: ReadonlySet<string>,
+    { defaultBranch, reviewedNames, shouldIncludeRemoteBranches, changeParents }: iStackMemberOptions,
   ) {
     const isKept = (branch: iRawBranch) =>
       branch.remote === undefined || branch.name === defaultBranch || reviewedNames.has(branch.name);
     const kept = all.filter(isKept);
-    const locals = all.filter((branch) => branch.remote === undefined);
     const remoteOnly = all.filter((branch) => !isKept(branch));
     const defaultRef = all.find((branch) => branch.name === defaultBranch);
-    const localTips = [
-      ...new Set(locals.filter((branch) => branch.name !== defaultBranch).map((branch) => branch.headSha)),
-    ];
-    if (remoteOnly.length === 0 || localTips.length === 0) return kept;
+    const stackStarts = all.filter(
+      (branch) => branch.name !== defaultBranch && (branch.remote === undefined || shouldIncludeRemoteBranches),
+    );
+    const startTips = [...new Set(stackStarts.map((branch) => branch.headSha))];
+    if (remoteOnly.length === 0 || startTips.length === 0) return this.withChangeTargets(kept, all, changeParents);
 
     const history = await this.gitService.output(repoPath, [
       'rev-list',
       `--max-count=${STACK_SEARCH_DEPTH}`,
-      ...localTips,
+      ...startTips,
       ...(defaultRef ? [`^${defaultRef.ref}`] : []),
       '--',
     ]);
     const stackCommits = new Set(history.split('\n').filter(Boolean));
     const below = remoteOnly.filter((branch) => stackCommits.has(branch.headSha));
-    const memberTips = [...new Set([...localTips, ...below.map((branch) => branch.headSha)])].filter((sha) =>
+    const memberTips = [...new Set([...startTips, ...below.map((branch) => branch.headSha)])].filter((sha) =>
       stackCommits.has(sha),
     );
     const above =
@@ -189,7 +215,47 @@ export class BranchesService {
               ])
             ).split('\n'),
           );
-    return [...kept, ...remoteOnly.filter((branch) => stackCommits.has(branch.headSha) || above.has(branch.ref))];
+    return this.withChangeTargets(
+      [...kept, ...remoteOnly.filter((branch) => stackCommits.has(branch.headSha) || above.has(branch.ref))],
+      all,
+      changeParents,
+    );
+  }
+
+  /** The members, plus the target branch of each one's open change, and of theirs, when it is in the repository. */
+  private withChangeTargets(
+    members: readonly iRawBranch[],
+    all: readonly iRawBranch[],
+    changeParents: ReadonlyMap<string, string>,
+  ) {
+    const byName = new Map(all.map((branch) => [branch.name, branch]));
+    const listed = new Map(members.map((branch) => [branch.name, branch]));
+    let pending = [...listed.keys()];
+    while (pending.length > 0) {
+      const added = pending.flatMap((name) => {
+        const target = byName.get(changeParents.get(name) ?? '');
+        if (!target || listed.has(target.name)) return [];
+        listed.set(target.name, target);
+        return [target.name];
+      });
+      pending = added;
+    }
+    return [...listed.values()];
+  }
+
+  /**
+   * A branch with an open change stacks on the change's target branch. Its commits are counted from that
+   * branch, or, when the repository doesn't have it, the way the history suggests.
+   */
+  private async changeParentSuggestion(
+    repoPath: string,
+    branch: iRawBranch,
+    parent: string,
+    context: iSuggestionContext,
+  ): Promise<iParentSuggestion> {
+    const parentRef = context.refs.get(parent);
+    if (parentRef) return { parent, commitsAhead: await this.countCommits(repoPath, parentRef, branch.headSha) };
+    return { ...(await this.suggestParent(repoPath, branch, context)), parent };
   }
 
   /**
@@ -309,17 +375,20 @@ export class BranchesService {
     return new Set(output.split('\n').filter(Boolean));
   }
 
-  /** The repository's configured author email and name, matched against commit authors. */
-  private async authorPatterns(repoPath: string) {
+  /** The repository's configured author email and name, and the user's own emails, matched against commit authors. */
+  private async authorPatterns(repoPath: string, authorEmails: readonly string[]) {
     const results = await Promise.all(
       ['user.email', 'user.name'].map(async (key) =>
         this.gitService.run(repoPath, ['config', '--get', key], { allowFailure: true }),
       ),
     );
-    return results.flatMap(({ stdout, exitCode }) => (exitCode === 0 && stdout.trim() ? [stdout.trim()] : []));
+    const configured = results.flatMap(({ stdout, exitCode }) =>
+      exitCode === 0 && stdout.trim() ? [stdout.trim()] : [],
+    );
+    return [...new Set([...configured, ...authorEmails])];
   }
 
-  /** Whether the configured user wrote any of the branch's commits that the integration refs don't have yet. */
+  /** Whether the user wrote any of the branch's commits that the integration refs don't have yet; case is ignored. */
   private async hasUserCommits(
     repoPath: string,
     branch: iRawBranch,
@@ -331,6 +400,7 @@ export class BranchesService {
       'rev-list',
       '--max-count=1',
       '--fixed-strings',
+      '--regexp-ignore-case',
       ...authorPatterns.map((pattern) => `--author=${pattern}`),
       branch.headSha,
       ...integrationRefs.map((ref) => `^${ref}`),

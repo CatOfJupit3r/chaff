@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import z from 'zod';
 
 import { MAX_HIDDEN_STACKS } from '@chaff/common/constants/stack-filters.constants';
+import { branchParentSourceSchema } from '@chaff/common/enums/branch-parent.enums';
 import {
   stackActivitySchema,
   stackReviewFilterSchema,
@@ -29,6 +30,8 @@ export const workspaceSchema = z.object({
   /** Tip branches of the stacks the user hid from the stack list. */
   hiddenStacks: z.array(z.string()),
   stackFilters: stackFiltersSchema,
+  /** Every remote-tracking branch the default branch hasn't merged is listed, not only those of local stacks. */
+  shouldIncludeRemoteBranches: z.boolean(),
   createdAt: z.date(),
 });
 
@@ -47,15 +50,18 @@ export const branchSchema = z.object({
   remote: z.string().optional(),
   isDefault: z.boolean(),
   /**
-   * Nearest branch whose tip, or a commit it had when this branch left it, is in this branch's history; the
-   * default branch when none is.
+   * Target branch of the branch's open merge or pull request; otherwise the nearest branch whose tip, or a commit
+   * it had when this branch left it, is in this branch's history, or the default branch when none is.
    */
   suggestedParent: z.string().optional(),
   /** Commits between where this branch left the suggested parent and this branch's tip. */
   commitsAhead: z.number().int().nonnegative(),
-  /** The parent the branch is reviewed against: the confirmed one, else the suggestion. */
+  /**
+   * The parent the branch is reviewed against: the target branch of its open merge or pull request, else the
+   * confirmed one, else the suggestion.
+   */
   parent: z.string().optional(),
-  isParentConfirmed: z.boolean(),
+  parentSource: branchParentSourceSchema,
   /** The parent, other than the default branch, has commits this branch doesn't contain yet. */
   isParentMoved: z.boolean(),
   /** The repository's configured git user wrote at least one of the commits the default branch doesn't have yet. */
@@ -97,12 +103,13 @@ export const workspacesContract = oc.router({
     .route({
       summary: "Change a repository's stack list",
       description:
-        'Saves the filters of the stack list and the stacks hidden from it, by tip branch. Fields left out keep their value.',
+        'Saves the filters of the stack list, the stacks hidden from it by tip branch, and whether every remote branch the default branch has not merged is listed. Fields left out keep their value.',
     })
     .input(
       workspaceIdInput.extend({
         hiddenStacks: z.array(branchNameSchema).max(MAX_HIDDEN_STACKS).optional(),
         stackFilters: stackFiltersSchema.optional(),
+        shouldIncludeRemoteBranches: z.boolean().optional(),
       }),
     )
     .output(workspaceSchema),
@@ -111,7 +118,7 @@ export const workspacesContract = oc.router({
     .route({
       summary: 'List branches',
       description:
-        'Reads every local branch of the repository from disk, plus the remote-tracking branches of their stacks that have no local branch, newest commit first, with a suggested parent for each.',
+        "Reads every local branch of the repository from disk, plus the remote-tracking branches that have no local branch and belong to a local branch's stack or are a listed branch's change target (or, when the repository includes remote branches, every one the default branch has not merged), newest commit first, with a parent for each. A branch with an open merge or pull request on the linked project takes the change's target branch as its parent, and its review follows that branch.",
     })
     .input(workspaceIdInput)
     .output(z.array(branchSchema)),

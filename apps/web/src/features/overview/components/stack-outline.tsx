@@ -48,7 +48,14 @@ export function StackOutline({ stackList: list, stack, branch, selectStack, sele
           ) : null}
         </Button>
       </div>
-      {isFiltersOpen ? <StackFiltersPanel filters={list.filters} setFilters={list.setFilters} /> : null}
+      {isFiltersOpen ? (
+        <StackFiltersPanel
+          filters={list.filters}
+          setFilters={list.setFilters}
+          shouldIncludeRemoteBranches={list.shouldIncludeRemoteBranches}
+          setShouldIncludeRemoteBranches={list.setShouldIncludeRemoteBranches}
+        />
+      ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto" aria-label="Stacks">
         {list.listed.map((listed) => (
           <StackOutlineGroup

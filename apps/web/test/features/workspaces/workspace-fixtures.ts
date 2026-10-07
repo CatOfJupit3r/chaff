@@ -1,4 +1,5 @@
 import { DEFAULT_STACK_FILTERS } from '@chaff/common/constants/stack-filters.constants';
+import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
 
 import type { iBranch, iWorkspace } from '@~/features/workspaces/workspaces.types';
 
@@ -10,6 +11,7 @@ export const workspace: iWorkspace = {
   isAvailable: true,
   hiddenStacks: [],
   stackFilters: DEFAULT_STACK_FILTERS,
+  shouldIncludeRemoteBranches: false,
   createdAt: new Date('2026-09-01T10:00:00Z'),
 };
 
@@ -24,7 +26,7 @@ export function branch(name: string, overrides: Partial<iBranch> = {}): iBranch 
     parent: 'main',
     commitsAhead: 1,
     isAuthoredByUser: true,
-    isParentConfirmed: false,
+    parentSource: BRANCH_PARENT_SOURCES.SUGGESTED,
     isParentMoved: false,
     hasWorkingChanges: false,
     ...overrides,

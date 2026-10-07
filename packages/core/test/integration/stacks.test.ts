@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { BRANCH_PARENT_SOURCES } from '@chaff/common/enums/branch-parent.enums';
 import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 
@@ -30,7 +31,7 @@ describe('stack parents', () => {
     const workspace = await addWorkspace(createStackRepo());
     expect(await branchNamed(workspace.id, 'feature-ui')).toMatchObject({
       parent: 'feature',
-      isParentConfirmed: false,
+      parentSource: BRANCH_PARENT_SOURCES.SUGGESTED,
     });
 
     await call(appRouter.reviews.setParent, { workspaceId: workspace.id, branch: 'feature-ui', parentBranch: 'main' });
@@ -38,7 +39,7 @@ describe('stack parents', () => {
     expect(await branchNamed(workspace.id, 'feature-ui')).toMatchObject({
       parent: 'main',
       suggestedParent: 'feature',
-      isParentConfirmed: true,
+      parentSource: BRANCH_PARENT_SOURCES.CONFIRMED,
     });
   });
 

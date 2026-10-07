@@ -61,6 +61,8 @@ export const settings = sqliteTable('settings', {
     .$type<{ runner: DigestRunner; model: string }[]>()
     .notNull()
     .default([]),
+  /** Emails, besides each repository's git user, whose commits count as the user's own. */
+  authorEmails: text('author_emails', { mode: 'json' }).$type<string[]>().notNull().default([]),
   /** Keys the user rebound; other actions keep their default key. */
   shortcuts: text('shortcuts', { mode: 'json' }).$type<iShortcutBinding[]>().notNull().default([]),
   onboarding: text('onboarding', { mode: 'json' })
