@@ -1,10 +1,6 @@
 node_modules
 .turbo
-.alchemy
 .env
-# Legacy local MongoDB volume from the pre-migration template; do not commit it.
-mongo/data
-.github/skills/react-best-practices/
 .pnpm-store
 
 # macOS Finder metadata

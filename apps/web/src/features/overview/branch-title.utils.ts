@@ -10,7 +10,7 @@ function toTitleWords(text: string) {
 
 /**
  * Readable title for a branch: the words of each `/` segment capitalized, led by the ticket key when the name
- * has one (`AB-10313-assemble-the-workbench` becomes `AB-10313 | Assemble The Workbench`).
+ * has one (`PROJ-482-add-the-retry-queue` becomes `PROJ-482 | Add The Retry Queue`).
  */
 export function formatBranchTitle(name: string) {
   let ticket: string | undefined;

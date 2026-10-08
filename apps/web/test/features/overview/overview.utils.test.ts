@@ -49,12 +49,12 @@ describe('overview stacks', () => {
   it('titles branches without a merge request by their name, ticket first', () => {
     const stacks = buildOverviewStacks({
       workspace,
-      stacks: [builtStack(['AB-10326-integrate-extraction']), builtStack(['cleanup-tests'])],
+      stacks: [builtStack(['PROJ-604-webhook-signing']), builtStack(['cleanup-tests'])],
       branches: [],
       targets: [],
     });
 
-    expect(stacks.map((stack) => stack.title)).toEqual(['AB-10326 | Integrate Extraction', 'Cleanup Tests']);
+    expect(stacks.map((stack) => stack.title)).toEqual(['PROJ-604 | Webhook Signing', 'Cleanup Tests']);
   });
 
   it('uses the matching hosted review regardless of response order, without losing a separate local review', () => {

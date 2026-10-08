@@ -5,8 +5,8 @@
 <h1 align="center">Chaff</h1>
 
 <p align="center">
-  A stack-aware review workspace for AI-written changes.<br />
-  Understand what changed. Inspect how it was implemented. Capture what bothers you. Verify what gets fixed.
+  A desktop app for reviewing what Claude Code and Codex wrote, one stack of branches at a time.<br />
+  <a href="https://catofjupit3r.github.io/chaff/">Project page</a> · <a href="#install">Install</a>
 </p>
 
 <picture>
@@ -14,41 +14,42 @@
   <img src="docs/screenshots/full-diff-split-light.png" alt="Chaff reviewing one branch of a local stack in the split Full diff view" />
 </picture>
 
-Chaff is a desktop app for reviewing the code that agents like Claude Code and Codex write, usually as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). It reads those branches straight from the repository on your computer, freezes what you are reviewing so a new push can't move code under you, and shows each branch's own contribution against its parent.
+Agents write code faster than anyone can read it, and it usually arrives as a stack of branches or merge requests that build on each other (`main <- A <- B <- C`). Chaff reads those branches straight from the repository on your computer, freezes the one you're reviewing so a new push can't move the code under you, and shows each branch's own changes against its parent.
 
-> **Status:** early. Local branch stacks with the Stack overview, working changes, GitLab merge requests and GitHub pull requests, frozen snapshots, Focus review with the AI digest, the Full diff, findings, the second pass after the agent pushes, export to a coding agent, posting findings as host drafts and handing findings to an agent that fixes them in its own checkout work today. Project preferences, swipe on touch screens, rebindable keys and agent settings work too. See [What works today](#what-works-today).
+> **Status:** early. Most of it works and gets used for real reviews, but things still move around, sometimes a lot. The full list is in [What works today](#what-works-today).
 
-## Why Chaff
+## Why
 
-Agents produce a lot of code, and reviewing it is where the time goes. Three things make it harder than reviewing a colleague's work:
+I review a lot of code from Claude Code and Codex, and doing it in GitLab and GitHub was miserable:
 
-- **Stacks are long.** A feature often arrives as ten small branches. Forge UIs show each one in isolation, so you lose track of which branch introduced what.
-- **Objections get lost.** You notice something odd in branch 3, and by branch 7 you have forgotten it, or you can't tell whether the agent's next push fixed it.
-- **The code keeps moving.** The agent pushes while you read. Diffs regenerate, your place is gone, and you start over.
+- **Stacks are shown one MR at a time.** A feature arrives as ten small branches, each on its own page. By MR 6 I'm opening tabs to find out which one added that helper.
+- **The MR viewers are slow.** Big diff: "Load diff". Bigger diff: "This diff is too large to display". Click a file, wait, scroll, it collapses again.
+- **The code moves while I read.** The agent pushes, the page reloads, and my place and the "viewed" checkboxes are gone.
+- **"Fixed" is a claim, not a fact.** I leave a comment, the agent says it's done, and I get to dig through force-pushes to check.
 
-Chaff keeps the reviewer in charge: it never decides what you see or what is resolved. Its job is to let you read at the level that's useful (a whole change, one function, or specific lines), capture a concern in a keystroke, remember what you inspected at which revision, and bring you back only to what needs another look after the agent pushes fixes.
+Chaff doesn't review anything for you, and it never decides what's resolved. It lets you read at the level that helps (a whole change, one function, or a few lines), write down a concern in one keystroke, remembers what you looked at and at which commit, and after the agent pushes, brings you back only to what changed.
 
 ## How it works
 
 1. **Add a repository.** Pick a folder on disk. Chaff reads it with your own `git` and never writes to it: no checkouts, no new refs, no stash.
-2. **Chaff finds the stacks.** Each local branch gets a suggested parent (the other branch it has the fewest commits on top of), so `feature/async-input <- feature/job-options <- feature/consent` shows up as one stack. Chaff remembers each parent, so a new commit on a lower branch keeps the stack together and marks the branches above it **parent moved** until they are rebased.
-3. **Start a review and Chaff freezes a snapshot.** The branch, its parent and their merge base are fetched into Chaff's own bare repository and pinned, so rebasing, amending or deleting the branch does not break the review.
-4. **Chaff breaks the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing is dropped.
+2. **Build the stack.** Start a stack from the branch you want to review, then add the branch it merges into and the ones built on top of it. Chaff suggests them from history (the branches with the fewest commits in between), so `feature/async-input <- feature/job-options <- feature/consent` takes a few clicks. With GitLab or GitHub connected, merge request chains come in as suggestions too. Chaff remembers each parent, so a new commit on a lower branch keeps the stack together and marks the branches above it **parent moved** until they are rebased.
+3. **Start a review, and Chaff freezes a snapshot.** The branch, its parent and their merge base are fetched into Chaff's own bare repository and pinned, so rebasing, amending or deleting the branch does not break the review.
+4. **Chaff splits the change into regions and units.** Every changed range is a region with a stable id. Tree-sitter maps regions to the functions, methods and classes that own them (Function units); everything else (imports, config, deleted or generated files) becomes a Section unit, so nothing falls through.
 5. **You read the diff in reading order.** Types and contracts come first, tests sit next to the code they test, and config, docs and generated files come last.
-6. **When the branch moves, Chaff tells you.** New commits, a rewritten branch or a moved parent show up next to the snapshot, and **Update** freezes a new snapshot when you choose to.
-7. **The second pass brings you back only where needed.** Decisions on unchanged units carry over, edited units show what changed since you decided, and every finding is looked for again in the new code so you can verify the fix.
+6. **When the branch moves, Chaff tells you and leaves your code alone.** New commits, a rewritten branch or a moved parent show up next to the snapshot, and **Update** freezes a new one when you are ready.
+7. **The second pass only shows what changed.** Decisions on unchanged units carry over, edited units show what changed since you decided, and every finding is looked for again in the new code so you can verify the fix.
 
 [docs/how-it-works.md](docs/how-it-works.md) goes deeper: the architecture, the snapshot store, regions and units, and where Chaff keeps its data.
 
 ## Tour
 
-### Reviews
+### Overview
 
-Every repository you add, with its local branch stacks. Paste a merge request link, `!412`, or a branch name into the box at the top to start a review, click a branch in the chain to review it against its parent, or **Continue** where you left off.
+Your repositories and their stacks. Click a branch in the chain to see its parent and progress and review it against its parent, or **Continue** where you left off. **Start a review** takes a pasted merge request link, `!412`, or a branch name.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/reviews-dark.png" />
-  <img src="docs/screenshots/reviews-light.png" alt="Reviews screen listing a three-branch local stack and a single-branch stack" />
+  <img src="docs/screenshots/reviews-light.png" alt="Overview with a three-branch stack, its middle branch selected and ready to review" />
 </picture>
 
 ### Stack overview
@@ -57,7 +58,7 @@ The whole stack top to bottom, each branch with its decisions so far, and the se
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stack-overview-dark.png" />
-  <img src="docs/screenshots/stack-overview-light.png" alt="Stack overview with a two-branch stack on the left and the selected branch's parent, dependents and units on the right" />
+  <img src="docs/screenshots/stack-overview-light.png" alt="Stack screen with the three branches on the left and the selected branch's parent, the branch built on it and its review buttons on the right" />
 </picture>
 
 ### Working changes
@@ -80,7 +81,7 @@ One unit at a time: a function, a type or a section of a file, shown whole with 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-dark.png" />
-  <img src="docs/screenshots/focus-light.png" alt="Focus review showing one function with its code, usages tab and the decision dock" />
+  <img src="docs/screenshots/focus-light.png" alt="Focus review showing the deliver function with its Usages tab and the decision dock" />
 </picture>
 
 <picture>
@@ -92,24 +93,24 @@ Cards come in three progressions, picked above the card. **Changes** shows each 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-change-dark.png" />
-  <img src="docs/screenshots/focus-change-light.png" alt="A Change card with the digest's before and after, a mixed decision, and the code of its first unit" />
+  <img src="docs/screenshots/focus-change-light.png" alt="A Change card with the digest's before and after and the code of its units" />
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/change-editor-dark.png" />
-  <img src="docs/screenshots/change-editor-light.png" alt="Edit changes dialog listing three Change units with their units, reorder and ungroup buttons, and a box to name a new change" />
+  <img src="docs/screenshots/change-editor-light.png" alt="Edit changes dialog listing the Change units with their units, reorder and ungroup buttons, and a box to name a new change" />
 </picture>
 
-A unit that doesn't need reading (an import shuffle, a lockfile) can be skipped with **S** and a short reason, such as "imports only". Skipping counts as accounted for, and the reason goes into the export, so the agent knows what nobody read. In the Full diff, **Skip…** next to a file does the same for every undecided unit in it. A review is complete once every region is in a unit you decided on or skipped; the Reviews and Stack screens count progress in regions, and the last card says so.
+A unit that doesn't need reading (an import shuffle, a lockfile) can be skipped with **S** and a short reason, such as "imports only". Skipping counts as accounted for, and the reason goes into the export, so the agent knows what nobody read. In the Full diff, **Skip…** next to a file does the same for every undecided unit in it. A review is complete once every region is in a unit you decided on or skipped; the Overview and Stack screens count progress in regions, and the last card says so.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-skip-dark.png" />
-  <img src="docs/screenshots/focus-skip-light.png" alt="Skipping a unit in Focus with the reason imports only, reordered by the formatter" />
+  <img src="docs/screenshots/focus-skip-light.png" alt="Skipping the lockfile in Focus with a short reason" />
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-complete-dark.png" />
-  <img src="docs/screenshots/focus-complete-light.png" alt="The last Focus card reading Review of feat/base-cli complete, with one unit looking good and one skipped" />
+  <img src="docs/screenshots/focus-complete-light.png" alt="The last Focus card reading Review of feat/retry-backoff complete, with the tally of looks good, concerns, questions and skips" />
 </picture>
 
 On a touch screen or with a pen, swipe the card: right is **Looks good**, left starts a **Concern**. The border turns green or amber once letting go will decide; a short drag slides back. A mouse keeps selecting code.
@@ -121,7 +122,7 @@ On a touch screen or with a pen, swipe the card: right is **Looks good**, left s
 
 ### AI digest
 
-Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. The digest then rides along in Focus: a summary and a short "Worth checking" list on each card, why the change was made (marked as taken from the commits and merge request or inferred), the tests that cover the unit, and a diagram where one helps; a box in the diagram that stands for a unit opens that unit's card. With Claude Code the overview and groups show in the context panel while the agent is still writing. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
+Chaff can ask the coding agent already on your computer (Claude Code or Codex) to read the branch first. The agent works in a throwaway, read-only copy of the snapshot, with read and search tools only, and Chaff checks its answer before keeping it. In Focus, every card then gets a summary and a short "Worth checking" list, why the change was made (marked as taken from the commits and merge request or inferred), the tests that cover the unit, and a diagram where one helps; a box in the diagram that stands for a unit opens that unit's card. With Claude Code the overview and groups show in the context panel while the agent is still writing. Its groups become the Change units you review in the Changes progression, and the cards follow the digest's reading order. Nothing in the digest decides anything for you: every unit still waits for your call, and units the digest could not explain land in a visible "Other changes" group.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-digest-dark.png" />
@@ -135,7 +136,7 @@ Chaff can ask the coding agent already on your computer (Claude Code or Codex) t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-diagram-dark.png" />
-  <img src="docs/screenshots/focus-diagram-light.png" alt="Diagram tab with a state diagram the digest drew for the unit" />
+  <img src="docs/screenshots/focus-diagram-light.png" alt="Diagram tab with a flow diagram the digest drew for deliver" />
 </picture>
 
 <picture>
@@ -152,19 +153,19 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-dark.png" />
-  <img src="docs/screenshots/focus-tests-light.png" alt="Tests tab listing the test the digest tied to the unit, with Exists, Agent read it and Passed columns" />
+  <img src="docs/screenshots/focus-tests-light.png" alt="Tests tab listing the tests the digest tied to backoffDelay, with Exists, Agent read it and Passed columns" />
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-found-dark.png" />
-  <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
+  <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing the test file that mentions backoffDelay" />
 </picture>
 
-**AI digest** in the top bar starts one and says which company receives the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
+**AI digest** in the top bar starts one and tells you which company gets the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
-  <img src="docs/screenshots/digest-dialog-light.png" alt="Write an AI digest dialog with Claude Code found and Codex not installed, and a notice about what the agent sends" />
+  <img src="docs/screenshots/digest-dialog-light.png" alt="Write an AI digest dialog with Codex picked, extra instructions asking for a diagram, and a notice about what the agent sends" />
 </picture>
 
 ### Full diff
@@ -173,7 +174,7 @@ One branch against its parent, with a resizable file tree (or flat list) and a f
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/full-diff-dark.png" />
-  <img src="docs/screenshots/full-diff-light.png" alt="Full diff of a new file, one file at a time, unified view" />
+  <img src="docs/screenshots/full-diff-light.png" alt="Full diff of one file at a time, unified view" />
 </picture>
 
 <picture>
@@ -183,14 +184,14 @@ One branch against its parent, with a resizable file tree (or flat list) and a f
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/diff-search-dark.png" />
-  <img src="docs/screenshots/diff-search-light.png" alt="The file filter matching the word anchor in the added lines of several files" />
+  <img src="docs/screenshots/diff-search-light.png" alt="The file filter matching attempt in the changed lines of three files" />
 </picture>
 
 The bar beside each changed line shows the decision on its unit, and the file list shows how far each file got. Click the **+** beside a line (or pick a range first) to write a concern, question or note on exactly those lines.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/diff-notes-dark.png" />
-  <img src="docs/screenshots/diff-notes-light.png" alt="Full diff with decision bars and two findings under the lines they point at" />
+  <img src="docs/screenshots/diff-notes-light.png" alt="Full diff with decision bars and a concern under the lines it points at" />
 </picture>
 
 ### Findings
@@ -206,7 +207,7 @@ A concern can carry a severity (Minor, Major or Blocking), picked while you writ
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-note-severity-dark.png" />
-  <img src="docs/screenshots/focus-note-severity-light.png" alt="Writing a concern in Focus with the This card, Pick units, Whole branch and Whole stack choices and the severity set to Blocking" />
+  <img src="docs/screenshots/focus-note-severity-light.png" alt="Writing a concern in Focus with the This card, Pick units, Whole branch and Whole stack choices and the severity set to Major" />
 </picture>
 
 <picture>
@@ -225,7 +226,7 @@ A finding stays on the branch where you wrote it, and the branches above it hear
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-stack-finding-dark.png" />
-  <img src="docs/screenshots/focus-stack-finding-light.png" alt="Focus review of feat/flags with a banner: a Major concern on the whole stack, from feat/base-cli" />
+  <img src="docs/screenshots/focus-stack-finding-light.png" alt="Focus review of feat/dead-letter with a banner about findings from the rest of the stack, and the Major whole-stack concern in the context panel" />
 </picture>
 
 ### New changes while you review
@@ -243,7 +244,7 @@ After **Update**, a banner sums up the new version: units edited or added since 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/second-pass-dark.png" />
-  <img src="docs/screenshots/second-pass-light.png" alt="Focus with the version 2 banner and an edited function card" />
+  <img src="docs/screenshots/second-pass-light.png" alt="Focus with the version 2 banner and an edited Change card whose concern has a fix proposed" />
 </picture>
 
 <picture>
@@ -257,7 +258,7 @@ Every finding is looked for again in the new version: the same lines, the code b
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/verify-fix-dark.png" />
-  <img src="docs/screenshots/verify-fix-light.png" alt="Findings screen with a concern marked Fix proposed, the flagged code and the agent's change below it" />
+  <img src="docs/screenshots/verify-fix-light.png" alt="Findings screen with the flagged code and the proposed fix below it" />
 </picture>
 
 ### Merge requests and pull requests
@@ -269,7 +270,7 @@ Connect GitLab (gitlab.com or self-managed) or GitHub in **Settings** with a tok
   <img src="docs/screenshots/settings-light.png" alt="Settings with a GitLab connection and the project detected for each repository" />
 </picture>
 
-Open merge requests appear on the Reviews screen, stacked when one targets another's branch. **Start** copies the merge request into Chaff's store and opens it in Focus like any branch. A local branch you already reviewed can be **linked** to the merge request it was pushed as, keeping its decisions and findings.
+Open merge requests appear on the Overview, stacked when one targets another's branch. **Start** copies the merge request into Chaff's store and opens it in Focus like any branch. A local branch you already reviewed can be **linked** to the merge request it was pushed as, keeping its decisions and findings.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/inbox-dark.png" />
@@ -324,7 +325,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/fix-dialog-dark.png" />
-  <img src="docs/screenshots/fix-dialog-light.png" alt="Fix with agent dialog with the agent picked and the write access confirmation" />
+  <img src="docs/screenshots/fix-dialog-light.png" alt="Fix with agent dialog with Codex picked and the write access confirmation" />
 </picture>
 
 <picture>
@@ -338,16 +339,16 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-preferences-dark.png" />
-  <img src="docs/screenshots/settings-preferences-light.png" alt="Preferences in Settings, one promoted from finding F-2" />
+  <img src="docs/screenshots/settings-preferences-light.png" alt="Preferences in Settings, one promoted from finding F-1" />
 </picture>
 
 ### Agents and keys
 
-**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, and picks the default for digests and fixes. A notice says plainly where the code goes: to Anthropic or OpenAI, through your own account.
+**Settings** shows where Chaff found Claude Code and Codex, takes a command or full path for one that lives elsewhere, and picks the default for digests and fixes. A notice tells you where the code goes: to Anthropic or OpenAI, through your own account.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-agents-dark.png" />
-  <img src="docs/screenshots/settings-agents-light.png" alt="Coding agents in Settings with Claude Code found on PATH and Codex not found" />
+  <img src="docs/screenshots/settings-agents-light.png" alt="Coding agents in Settings with Claude Code and Codex found on PATH and Codex as the default" />
 </picture>
 
 Every Focus and Verify action can take another key: click it and press the new one. A key already used on that screen is refused with the action that has it, and **Reset** puts the default back. The hints under the card and on the buttons follow your keys.
@@ -356,7 +357,7 @@ A few keys work everywhere: **/** or **Ctrl K** (**⌘K** on a Mac) opens **Jump
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/jump-to-dark.png" />
-  <img src="docs/screenshots/jump-to-light.png" alt="Jump to dialog searching for backoff, listing the computeBackoff unit, its file and the retry-backoff review" />
+  <img src="docs/screenshots/jump-to-light.png" alt="Jump to dialog searching for backoff, listing the backoffDelay unit and the other units and files that match" />
 </picture>
 
 <picture>
@@ -370,7 +371,7 @@ A few keys work everywhere: **/** or **Ctrl K** (**⌘K** on a Mac) opens **Jump
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/history-dark.png" />
-  <img src="docs/screenshots/history-light.png" alt="History screen listing reviews, two of them archived as branch deleted and merged" />
+  <img src="docs/screenshots/history-light.png" alt="History screen listing three reviews, two of them archived because their branch was deleted" />
 </picture>
 
 ### Open in your editor
@@ -405,6 +406,11 @@ The width you drag the Full diff's file list to is kept.
 </picture>
 
 ## What works today
+
+Everything below works in the current build.
+
+<details>
+<summary>The full list</summary>
 
 | Area | Status |
 | --- | --- |
@@ -451,9 +457,11 @@ The width you drag the Full diff's file list to is kept.
 | Rebindable keys for Focus and Verify | Works |
 | Jump to (/ or Ctrl K), key list (?), Esc closes panels, E shows the whole file in Focus | Works |
 | Start a review from a pasted MR or PR link, `!412` / `#412`, or a branch name; switch reviews from the top bar | Works |
-| Open-finding counts on Reviews rows; per-unit progress and +/- before review on the Stack screen | Works |
+| Open-finding counts on Overview rows; per-unit progress and +/- before review on the Stack screen | Works |
 | Syntax colors in finding quotes and Usages | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
+
+</details>
 
 ## Stack
 
@@ -462,36 +470,57 @@ The width you drag the Full diff's file list to is kept.
 - **Renderer (`apps/web`):** React 19 single-page app with Vite, TanStack Router and Query, Base UI, Tailwind CSS theme tokens, and [`@pierre/diffs`](https://www.npmjs.com/package/@pierre/diffs) for diff rendering.
 - **Shared:** `@chaff/server-contract` (API contracts), `@chaff/common` (shared helpers and enums), `enumwaii` and `eslint-plugin-enumwaii` from npm (typed closed string sets and their ESLint rules).
 
-## Getting started
+## Install
 
 You need Git 2.40 or newer on your PATH, Node.js 24 and pnpm 11.5.0 (`corepack enable` picks it up from `package.json`).
+
+There are no downloads. Builds are unsigned (I will not be paying for a license for a side project), so you build Chaff from source. It takes a few minutes.
+
+### macOS
 
 ```bash
 git clone https://github.com/CatOfJupit3r/chaff.git
 cd chaff
 pnpm install
-pnpm run dev
+pnpm run install-app
 ```
 
-`pnpm run dev` opens Chaff in an Electron window with live reload. Click **Add repository** and pick any folder inside a git repository; its local branch stacks appear on the Reviews screen.
+`install-app` builds Chaff from your checkout and installs it as `/Applications/Chaff.app`, quitting a running Chaff first and opening it again afterwards. Closing the window keeps Chaff running; click the Dock icon to bring it back, and quit with Cmd+Q.
 
-### Install as an app
-
-To use Chaff like any other installed app, build an installer for your OS:
+### Windows and Linux
 
 ```bash
+git clone https://github.com/CatOfJupit3r/chaff.git
+cd chaff
+pnpm install
 pnpm run package
 ```
 
-This writes a DMG (macOS), an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. Builds are unsigned and do not update themselves.
+This writes an NSIS installer (Windows) or an AppImage (Linux) to `apps/desktop/release`. On Windows, SmartScreen will warn about the unsigned build: choose **More info**, then **Run anyway**. On Linux, make the AppImage executable (`chmod +x`) and run it.
 
-On macOS, `pnpm run install-app` does all of this in one step: it builds Chaff from your checkout and installs it as `/Applications/Chaff.app`, quitting a running Chaff first and opening it again afterwards. It also keeps the installed app current with the repository: after each `git pull` (merge or rebase) on `main`, a git hook runs `install-app` in the background and shows a notification when the new build is installed. The build log is in `~/Library/Logs/Chaff/install-app.log`. To turn this off for your checkout:
+### Updating
+
+There is no updater. There is `git pull`.
+
+On macOS, the first time you run `install-app` in a terminal it asks whether Chaff should rebuild itself after every `git pull`. Say yes, and each pull (merge or rebase) on `main` rebuilds Chaff in the background, swaps it into `/Applications`, reopens it if it was running and shows a notification when the new build is in. The build log is in `~/Library/Logs/Chaff/install-app.log`. Nothing happens on pull until you have said yes, so contributors who only run `pnpm run dev` never get `/Applications` touched. To change your answer later:
 
 ```bash
-git config chaff.autoInstall false
+git config chaff.autoInstall true   # or false
 ```
 
-To install from the DMG by hand instead:
+On Windows and Linux, pull and package again, then run the new installer:
+
+```bash
+git pull
+pnpm install
+pnpm run package
+```
+
+Your reviews survive updates; they live in the app data folder, not in the app.
+
+### Installing the DMG by hand
+
+`pnpm run package` on macOS writes a DMG instead of installing anything.
 
 1. Open `apps/desktop/release/Chaff-<version>-<arch>.dmg` and drag **Chaff** into **Applications**.
 2. The first time, right-click Chaff in Applications and choose **Open**. If macOS still refuses to open it, clear the quarantine flag:
@@ -502,12 +531,22 @@ To install from the DMG by hand instead:
 
 3. While it runs, right-click its Dock icon and choose **Options > Keep in Dock**. Spotlight and Launchpad find it too.
 
-Closing the window keeps Chaff running; click the Dock icon to bring it back, and quit with Cmd+Q.
+### Running from source
 
-On Windows, run the installer; in the SmartScreen prompt choose **More info**, then **Run anyway**. On Linux, make the AppImage executable (`chmod +x`) and run it.
+```bash
+pnpm run dev
+```
+
+opens Chaff in an Electron window with live reload. Click **Add repository** and pick any folder inside a git repository, then start a stack from one of its branches.
+
+### Where your data lives
 
 Chaff keeps its database and snapshot store in the OS app data folder: `%APPDATA%\Chaff` on Windows, `~/Library/Application Support/Chaff` on macOS, `~/.config/Chaff` on Linux. `pnpm run dev` uses a separate `Chaff Dev` folder next to it.
 
+## License
+
+[AGPL-3.0](LICENSE). Use it, change it, share it; if you ship a modified Chaff, share your changes too.
+
 ## Contributing
 
-[docs/development.md](docs/development.md) covers the repository layout, workspace commands, commit hooks and conventions. Agents (Claude Code and other `AGENTS.md`-aware tools) start from [AGENTS.md](AGENTS.md) and the skills in `.agents/skills/`.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). [docs/development.md](docs/development.md) covers the workspace commands, commit hooks and conventions in more detail. Questions go through [SUPPORT.md](SUPPORT.md), vulnerabilities through [SECURITY.md](SECURITY.md). Agents (Claude Code and other `AGENTS.md`-aware tools) start from [AGENTS.md](AGENTS.md) and the skills in `.agents/skills/`.

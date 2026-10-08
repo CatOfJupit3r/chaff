@@ -2,7 +2,7 @@ import { STACK_ACTIVITIES, STACK_REVIEW_FILTERS, STACK_SOURCES } from '@chaff/co
 
 import type { iStackFilters } from './overview.types';
 
-/** A Jira-style ticket key in one segment of a branch name, such as `AB-10313` in `AB-10313-assemble-workbench`. */
+/** A Jira-style ticket key in one segment of a branch name, such as `PROJ-482` in `PROJ-482-add-retry-queue`. */
 export const BRANCH_TICKET_PATTERN = /(?:^|[-_.])([a-z]{2,10}-\d+)(?=$|[-_.])/i;
 
 /** Characters that separate the words of a branch name segment. */

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project page
+    url: https://catofjupit3r.github.io/chaff/
+    about: What Chaff is, how to install it and how to update it.
+  - name: Security report
+    url: https://github.com/CatOfJupit3r/chaff/security/advisories/new
+    about: Report suspected vulnerabilities privately.
