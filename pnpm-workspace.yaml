@@ -19,11 +19,11 @@ catalog:
   tsx: 4.23.0
   '@swc/core': 1.15.43
   unplugin-swc: 1.5.9
-  vitest: 4.1.10
+  vitest: 5.0.3
   '@vitest/ui': 4.1.10
   vite: 8.1.4
   '@orpc/contract': 1.14.7
-  '@orpc/server': 1.14.7
+  '@orpc/server': 1.14.8
   '@orpc/client': 1.14.7
   '@orpc/tanstack-query': 1.14.7
   '@typescript/native-preview': 7.0.0-dev.20260707.2
