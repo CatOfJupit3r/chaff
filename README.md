@@ -43,13 +43,13 @@ Chaff doesn't review anything for you, and it never decides what's resolved. It 
 
 ## Tour
 
-### Reviews
+### Overview
 
-Your repositories and their stacks. Paste a merge request link, `!412`, or a branch name into the box at the top to start a review, click a branch in the chain to review it against its parent, or **Continue** where you left off.
+Your repositories and their stacks. Click a branch in the chain to see its parent and progress and review it against its parent, or **Continue** where you left off. **Start a review** takes a pasted merge request link, `!412`, or a branch name.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/reviews-dark.png" />
-  <img src="docs/screenshots/reviews-light.png" alt="Reviews screen listing a three-branch local stack and a single-branch stack" />
+  <img src="docs/screenshots/reviews-light.png" alt="Overview with a three-branch stack, its middle branch selected and ready to review" />
 </picture>
 
 ### Stack overview
@@ -58,7 +58,7 @@ The whole stack top to bottom, each branch with its decisions so far, and the se
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stack-overview-dark.png" />
-  <img src="docs/screenshots/stack-overview-light.png" alt="Stack overview with a two-branch stack on the left and the selected branch's parent, dependents and units on the right" />
+  <img src="docs/screenshots/stack-overview-light.png" alt="Stack screen with the three branches on the left and the selected branch's parent, the branch built on it and its review buttons on the right" />
 </picture>
 
 ### Working changes
@@ -81,7 +81,7 @@ One unit at a time: a function, a type or a section of a file, shown whole with 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-dark.png" />
-  <img src="docs/screenshots/focus-light.png" alt="Focus review showing one function with its code, usages tab and the decision dock" />
+  <img src="docs/screenshots/focus-light.png" alt="Focus review showing the deliver function with its Usages tab and the decision dock" />
 </picture>
 
 <picture>
@@ -93,24 +93,24 @@ Cards come in three progressions, picked above the card. **Changes** shows each 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-change-dark.png" />
-  <img src="docs/screenshots/focus-change-light.png" alt="A Change card with the digest's before and after, a mixed decision, and the code of its first unit" />
+  <img src="docs/screenshots/focus-change-light.png" alt="A Change card with the digest's before and after and the code of its units" />
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/change-editor-dark.png" />
-  <img src="docs/screenshots/change-editor-light.png" alt="Edit changes dialog listing three Change units with their units, reorder and ungroup buttons, and a box to name a new change" />
+  <img src="docs/screenshots/change-editor-light.png" alt="Edit changes dialog listing the Change units with their units, reorder and ungroup buttons, and a box to name a new change" />
 </picture>
 
-A unit that doesn't need reading (an import shuffle, a lockfile) can be skipped with **S** and a short reason, such as "imports only". Skipping counts as accounted for, and the reason goes into the export, so the agent knows what nobody read. In the Full diff, **Skip…** next to a file does the same for every undecided unit in it. A review is complete once every region is in a unit you decided on or skipped; the Reviews and Stack screens count progress in regions, and the last card says so.
+A unit that doesn't need reading (an import shuffle, a lockfile) can be skipped with **S** and a short reason, such as "imports only". Skipping counts as accounted for, and the reason goes into the export, so the agent knows what nobody read. In the Full diff, **Skip…** next to a file does the same for every undecided unit in it. A review is complete once every region is in a unit you decided on or skipped; the Overview and Stack screens count progress in regions, and the last card says so.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-skip-dark.png" />
-  <img src="docs/screenshots/focus-skip-light.png" alt="Skipping a unit in Focus with the reason imports only, reordered by the formatter" />
+  <img src="docs/screenshots/focus-skip-light.png" alt="Skipping the lockfile in Focus with a short reason" />
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-complete-dark.png" />
-  <img src="docs/screenshots/focus-complete-light.png" alt="The last Focus card reading Review of feat/base-cli complete, with one unit looking good and one skipped" />
+  <img src="docs/screenshots/focus-complete-light.png" alt="The last Focus card reading Review of feat/retry-backoff complete, with the tally of looks good, concerns, questions and skips" />
 </picture>
 
 On a touch screen or with a pen, swipe the card: right is **Looks good**, left starts a **Concern**. The border turns green or amber once letting go will decide; a short drag slides back. A mouse keeps selecting code.
@@ -136,7 +136,7 @@ Chaff can ask the coding agent already on your computer (Claude Code or Codex) t
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-diagram-dark.png" />
-  <img src="docs/screenshots/focus-diagram-light.png" alt="Diagram tab with a state diagram the digest drew for the unit" />
+  <img src="docs/screenshots/focus-diagram-light.png" alt="Diagram tab with a flow diagram the digest drew for deliver" />
 </picture>
 
 <picture>
@@ -153,19 +153,19 @@ The Tests tab keeps three facts apart: a test exists, the agent read it, and it 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-dark.png" />
-  <img src="docs/screenshots/focus-tests-light.png" alt="Tests tab listing the test the digest tied to the unit, with Exists, Agent read it and Passed columns" />
+  <img src="docs/screenshots/focus-tests-light.png" alt="Tests tab listing the tests the digest tied to backoffDelay, with Exists, Agent read it and Passed columns" />
 </picture>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-tests-found-dark.png" />
-  <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing a test helper that mentions errorMessages" />
+  <img src="docs/screenshots/focus-tests-found-light.png" alt="Tests tab without a digest, listing the test file that mentions backoffDelay" />
 </picture>
 
 **AI digest** in the top bar starts one and tells you which company gets the code before anything runs. You pick the model the agent runs with from its own list (Codex's model catalog, or Claude Code's model aliases; remembered per agent) and can add instructions of your own to the prompt. Only a small diff goes into the prompt whole: every file's diff is saved next to the checkout, and on a long branch the agent reads the ones it needs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/digest-dialog-dark.png" />
-  <img src="docs/screenshots/digest-dialog-light.png" alt="Write an AI digest dialog with Claude Code found and Codex not installed, and a notice about what the agent sends" />
+  <img src="docs/screenshots/digest-dialog-light.png" alt="Write an AI digest dialog with Codex picked, extra instructions asking for a diagram, and a notice about what the agent sends" />
 </picture>
 
 ### Full diff
@@ -174,7 +174,7 @@ One branch against its parent, with a resizable file tree (or flat list) and a f
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/full-diff-dark.png" />
-  <img src="docs/screenshots/full-diff-light.png" alt="Full diff of a new file, one file at a time, unified view" />
+  <img src="docs/screenshots/full-diff-light.png" alt="Full diff of one file at a time, unified view" />
 </picture>
 
 <picture>
@@ -184,14 +184,14 @@ One branch against its parent, with a resizable file tree (or flat list) and a f
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/diff-search-dark.png" />
-  <img src="docs/screenshots/diff-search-light.png" alt="The file filter matching the word anchor in the added lines of several files" />
+  <img src="docs/screenshots/diff-search-light.png" alt="The file filter matching attempt in the changed lines of three files" />
 </picture>
 
 The bar beside each changed line shows the decision on its unit, and the file list shows how far each file got. Click the **+** beside a line (or pick a range first) to write a concern, question or note on exactly those lines.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/diff-notes-dark.png" />
-  <img src="docs/screenshots/diff-notes-light.png" alt="Full diff with decision bars and two findings under the lines they point at" />
+  <img src="docs/screenshots/diff-notes-light.png" alt="Full diff with decision bars and a concern under the lines it points at" />
 </picture>
 
 ### Findings
@@ -207,7 +207,7 @@ A concern can carry a severity (Minor, Major or Blocking), picked while you writ
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-note-severity-dark.png" />
-  <img src="docs/screenshots/focus-note-severity-light.png" alt="Writing a concern in Focus with the This card, Pick units, Whole branch and Whole stack choices and the severity set to Blocking" />
+  <img src="docs/screenshots/focus-note-severity-light.png" alt="Writing a concern in Focus with the This card, Pick units, Whole branch and Whole stack choices and the severity set to Major" />
 </picture>
 
 <picture>
@@ -226,7 +226,7 @@ A finding stays on the branch where you wrote it, and the branches above it hear
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/focus-stack-finding-dark.png" />
-  <img src="docs/screenshots/focus-stack-finding-light.png" alt="Focus review of feat/flags with a banner: a Major concern on the whole stack, from feat/base-cli" />
+  <img src="docs/screenshots/focus-stack-finding-light.png" alt="Focus review of feat/dead-letter with a banner about findings from the rest of the stack, and the Major whole-stack concern in the context panel" />
 </picture>
 
 ### New changes while you review
@@ -244,7 +244,7 @@ After **Update**, a banner sums up the new version: units edited or added since 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/second-pass-dark.png" />
-  <img src="docs/screenshots/second-pass-light.png" alt="Focus with the version 2 banner and an edited function card" />
+  <img src="docs/screenshots/second-pass-light.png" alt="Focus with the version 2 banner and an edited Change card whose concern has a fix proposed" />
 </picture>
 
 <picture>
@@ -258,7 +258,7 @@ Every finding is looked for again in the new version: the same lines, the code b
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/verify-fix-dark.png" />
-  <img src="docs/screenshots/verify-fix-light.png" alt="Findings screen with a concern marked Fix proposed, the flagged code and the agent's change below it" />
+  <img src="docs/screenshots/verify-fix-light.png" alt="Findings screen with the flagged code and the proposed fix below it" />
 </picture>
 
 ### Merge requests and pull requests
@@ -270,7 +270,7 @@ Connect GitLab (gitlab.com or self-managed) or GitHub in **Settings** with a tok
   <img src="docs/screenshots/settings-light.png" alt="Settings with a GitLab connection and the project detected for each repository" />
 </picture>
 
-Open merge requests appear on the Reviews screen, stacked when one targets another's branch. **Start** copies the merge request into Chaff's store and opens it in Focus like any branch. A local branch you already reviewed can be **linked** to the merge request it was pushed as, keeping its decisions and findings.
+Open merge requests appear on the Overview, stacked when one targets another's branch. **Start** copies the merge request into Chaff's store and opens it in Focus like any branch. A local branch you already reviewed can be **linked** to the merge request it was pushed as, keeping its decisions and findings.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/inbox-dark.png" />
@@ -325,7 +325,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/fix-dialog-dark.png" />
-  <img src="docs/screenshots/fix-dialog-light.png" alt="Fix with agent dialog with the agent picked and the write access confirmation" />
+  <img src="docs/screenshots/fix-dialog-light.png" alt="Fix with agent dialog with Codex picked and the write access confirmation" />
 </picture>
 
 <picture>
@@ -339,7 +339,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-preferences-dark.png" />
-  <img src="docs/screenshots/settings-preferences-light.png" alt="Preferences in Settings, one promoted from finding F-2" />
+  <img src="docs/screenshots/settings-preferences-light.png" alt="Preferences in Settings, one promoted from finding F-1" />
 </picture>
 
 ### Agents and keys
@@ -348,7 +348,7 @@ Once the drafts are published, answers to them come back: the Findings screen sh
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-agents-dark.png" />
-  <img src="docs/screenshots/settings-agents-light.png" alt="Coding agents in Settings with Claude Code found on PATH and Codex not found" />
+  <img src="docs/screenshots/settings-agents-light.png" alt="Coding agents in Settings with Claude Code and Codex found on PATH and Codex as the default" />
 </picture>
 
 Every Focus and Verify action can take another key: click it and press the new one. A key already used on that screen is refused with the action that has it, and **Reset** puts the default back. The hints under the card and on the buttons follow your keys.
@@ -357,7 +357,7 @@ A few keys work everywhere: **/** or **Ctrl K** (**⌘K** on a Mac) opens **Jump
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/jump-to-dark.png" />
-  <img src="docs/screenshots/jump-to-light.png" alt="Jump to dialog searching for backoff, listing the computeBackoff unit, its file and the retry-backoff review" />
+  <img src="docs/screenshots/jump-to-light.png" alt="Jump to dialog searching for backoff, listing the backoffDelay unit and the other units and files that match" />
 </picture>
 
 <picture>
@@ -371,7 +371,7 @@ A few keys work everywhere: **/** or **Ctrl K** (**⌘K** on a Mac) opens **Jump
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/history-dark.png" />
-  <img src="docs/screenshots/history-light.png" alt="History screen listing reviews, two of them archived as branch deleted and merged" />
+  <img src="docs/screenshots/history-light.png" alt="History screen listing three reviews, two of them archived because their branch was deleted" />
 </picture>
 
 ### Open in your editor
@@ -457,7 +457,7 @@ Everything below works in the current build.
 | Rebindable keys for Focus and Verify | Works |
 | Jump to (/ or Ctrl K), key list (?), Esc closes panels, E shows the whole file in Focus | Works |
 | Start a review from a pasted MR or PR link, `!412` / `#412`, or a branch name; switch reviews from the top bar | Works |
-| Open-finding counts on Reviews rows; per-unit progress and +/- before review on the Stack screen | Works |
+| Open-finding counts on Overview rows; per-unit progress and +/- before review on the Stack screen | Works |
 | Syntax colors in finding quotes and Usages | Works |
 | Agent settings: custom command paths, default agent, privacy notice | Works |
 
