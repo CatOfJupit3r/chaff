@@ -10,16 +10,17 @@ The repository settings and chores that the code cannot carry. Contributor instr
 - **Pull requests:** turn on automatically deleting head branches.
 - **About:** description, homepage `https://catofjupit3r.github.io/chaff/` and topics.
 
-## Site clips
+## Site clips and screenshots
 
-The four clips on the project page come from the packaged app. After a UI change they show:
+The four clips on the project page and the README screenshots come from the packaged app. After a UI change they show:
 
 ```bash
 pnpm run package
 pnpm run videos:record
+pnpm run screenshots:capture
 ```
 
-This needs macOS and ffmpeg. It records both themes into `docs/videos` with a throwaway repository and a data folder of its own, so the installed app's reviews are not touched.
+Both need macOS and record both themes (pass `--theme dark` or `--theme light` for one) with a throwaway repository and a data folder of their own, so the installed app's reviews are not touched. Clips go to `docs/videos` and need ffmpeg. Screenshots go to `docs/screenshots` and run a real AI digest, so Codex must be installed and signed in.
 
 ## Releases
 

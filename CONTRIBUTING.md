@@ -31,7 +31,7 @@ pnpm run dev
 - `apps/web`: the renderer, a React app that reaches the core only through oRPC.
 - `packages/core`: the core library with routers, services, SQLite schema and git access.
 - `packages/server-contract` and `packages/common`: shared contracts, enums and helpers.
-- `site` and `scripts/site-videos`: the project page and the recorder for its clips (`pnpm run videos:record`).
+- `site` and `scripts/app-capture`: the project page, and the recorder for its clips and the README screenshots (`pnpm run videos:record`, `pnpm run screenshots:capture`).
 
 [docs/development.md](docs/development.md) covers the workspace commands and workflow, and [docs/how-it-works.md](docs/how-it-works.md) the architecture. The coding conventions live in [AGENTS.md](AGENTS.md) and `.agents/skills/`. They are written for coding agents, and they apply to people just the same.
 

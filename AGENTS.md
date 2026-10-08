@@ -46,7 +46,7 @@ Examples:
 - `packages/server-contract` contains the API contracts shared by the core and the renderer.
 - `packages/common` contains shared utilities, types, constants, and helpers used by both apps.
 - `docs` contains the development guide, the architecture notes (`how-it-works.md`), and the screenshots and clips used by the README and the project page.
-- `site` is the project page deployed to GitHub Pages; `scripts/site-videos` records its clips from the packaged app.
+- `site` is the project page deployed to GitHub Pages; `scripts/app-capture` records its clips (`videos/`) and the README screenshots (`screenshots/`) from the packaged app.
 - `assets/brand` holds the Chaff icon (`chaff-mark.svg` uses `currentColor`; PNG originals for dark and light). In the web app use the `Logo` component (`components/ui/logo.tsx`) and color it with a token class (`text-fg`, `text-accent`). The desktop app icon is `apps/desktop/build/icon.png`, rendered from `chaff-app-icon.svg` (the mark on a rounded plate with the standard macOS margins) with `rsvg-convert -w 1024 -h 1024 assets/brand/chaff-app-icon.svg -o apps/desktop/build/icon.png`.
 
 ## UI, Theming, and Colors
