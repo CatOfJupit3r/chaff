@@ -1,4 +1,4 @@
-import type { DemoRepository } from './demo-repository.ts';
+import type { DemoRepository } from '../demo-repository.ts';
 import type { SiteClip } from './site-video.constants.ts';
 import type { VideoActor } from './video-actor.ts';
 

@@ -1,4 +1,5 @@
-import { DEMO_NOTES, SITE_CLIP } from '../site-video.constants.ts';
+import { DEMO_NOTES } from '../../app-capture.constants.ts';
+import { SITE_CLIP } from '../site-video.constants.ts';
 import type { iSiteClipScript } from '../site-video.types.ts';
 import type { VideoActor } from '../video-actor.ts';
 

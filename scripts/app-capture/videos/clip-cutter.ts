@@ -2,13 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
+import type { CaptureTheme } from '../app-capture.constants.ts';
 import { VIDEO_ENCODING, VIDEO_OUTPUT_DIR, VIDEO_PACE } from './site-video.constants.ts';
-import type { VideoTheme } from './site-video.constants.ts';
 import type { iClipMark } from './site-video.types.ts';
 
 /** Cuts the marked clips out of a session recording as silent H.264 loops with a poster frame. */
 export class ClipCutter {
-  public constructor(private readonly theme: VideoTheme) {}
+  public constructor(private readonly theme: CaptureTheme) {}
 
   public cut(videoPath: string, marks: iClipMark[], elapsedAtCloseMs: number) {
     mkdirSync(VIDEO_OUTPUT_DIR, { recursive: true });

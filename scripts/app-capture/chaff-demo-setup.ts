@@ -1,8 +1,8 @@
 import type { Locator, Page } from 'playwright-core';
 
 import { DEMO_BRANCH } from './demo-repository.constants.ts';
-import { VIDEO_THEME_LABEL } from './site-video.constants.ts';
-import type { VideoTheme } from './site-video.constants.ts';
+import { CAPTURE_THEME_LABEL } from './app-capture.constants.ts';
+import type { CaptureTheme } from './app-capture.constants.ts';
 
 const POPOVER_OPEN_ATTEMPTS = 3;
 const POPOVER_OPEN_TIMEOUT_MS = 3000;
@@ -11,7 +11,7 @@ const POPOVER_OPEN_TIMEOUT_MS = 3000;
 export class ChaffDemoSetup {
   public constructor(
     private readonly page: Page,
-    private readonly theme: VideoTheme,
+    private readonly theme: CaptureTheme,
   ) {}
 
   public async run() {
@@ -33,7 +33,7 @@ export class ChaffDemoSetup {
   private async chooseTheme() {
     await this.page.getByRole('banner').getByRole('button', { name: 'Appearance' }).click();
     const dialog = this.page.getByRole('dialog', { name: 'Appearance' });
-    await dialog.getByText(VIDEO_THEME_LABEL[this.theme], { exact: true }).click();
+    await dialog.getByText(CAPTURE_THEME_LABEL[this.theme], { exact: true }).click();
     await dialog.getByRole('button', { name: 'Done' }).click();
     await dialog.waitFor({ state: 'hidden' });
   }

@@ -1,3 +1,6 @@
+/** The agent's own checkout sits next to the demo repository while it commits a fix. */
+export const AGENT_CHECKOUT_SUFFIX = '-agent';
+
 export const DEMO_AUTHOR = { name: 'vibe coder', email: 'agent@example.com' } as const;
 
 export const DEMO_BRANCH = {
@@ -204,3 +207,26 @@ export async function deliver(
 `,
   },
 };
+
+/** Uncommitted work left on the checked-out branch, so the working changes screens have something to show. */
+export const DEMO_WORKING_CHANGE = {
+  path: 'src/delivery/dead-letter.ts',
+  content: `import type { WebhookEvent } from './types';
+
+export class DeadLetterQueue {
+  private readonly parked: WebhookEvent[] = [];
+
+  public park(event: WebhookEvent) {
+    this.parked.push(event);
+  }
+
+  public size() {
+    return this.parked.length;
+  }
+
+  public drain() {
+    return this.parked.splice(0, this.parked.length);
+  }
+}
+`,
+} as const;

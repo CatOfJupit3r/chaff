@@ -4,51 +4,51 @@
  * `pnpm run videos:record` (both themes) or `pnpm run videos:record --theme dark`. macOS only, needs ffmpeg.
  * Clips and their poster frames land in docs/videos as `<clip>-<theme>.mp4` and `.jpg`.
  */
+
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { ChaffDemoSetup } from './chaff-demo-setup.ts';
-import { ChaffSession } from './chaff-session.ts';
+import { PACKAGED_APP_BINARY, WORK_DIR_PREFIX } from '../app-capture.constants.ts';
+import type { CaptureTheme } from '../app-capture.constants.ts';
+import { requestedThemes } from '../capture-themes.ts';
+import { ChaffDemoSetup } from '../chaff-demo-setup.ts';
+import { ChaffSession } from '../chaff-session.ts';
+import { DemoRepository } from '../demo-repository.ts';
 import { ClipCutter } from './clip-cutter.ts';
+import { ClipTimeline } from './clip-timeline.ts';
 import { FOCUS_REVIEW_CLIP } from './clips/focus-review.clip.ts';
 import { HAND_BACK_CLIP } from './clips/hand-back.clip.ts';
 import { SECOND_PASS_CLIP } from './clips/second-pass.clip.ts';
 import { STACK_SNAPSHOT_CLIP } from './clips/stack-snapshot.clip.ts';
-import { DemoRepository } from './demo-repository.ts';
-import { PACKAGED_APP_BINARY, VIDEO_THEME } from './site-video.constants.ts';
-import type { VideoTheme } from './site-video.constants.ts';
+import { VIDEO_LAYOUT, VIDEO_SIZE } from './site-video.constants.ts';
 import type { iSiteClipScript } from './site-video.types.ts';
 import { VideoActor } from './video-actor.ts';
 
 const CLIP_SCRIPTS: iSiteClipScript[] = [STACK_SNAPSHOT_CLIP, FOCUS_REVIEW_CLIP, HAND_BACK_CLIP, SECOND_PASS_CLIP];
 
-function requestedThemes(): VideoTheme[] {
-  const flagIndex = process.argv.indexOf('--theme');
-  const requested = flagIndex === -1 ? null : process.argv[flagIndex + 1];
-  const themes = Object.values(VIDEO_THEME);
-  if (!requested) return themes;
-  const theme = themes.find((candidate) => candidate === requested);
-  if (!theme) throw new Error(`Unknown theme "${requested}". Use one of: ${themes.join(', ')}.`);
-  return [theme];
-}
-
-async function recordTheme(theme: VideoTheme) {
-  const workDir = mkdtempSync(path.join(tmpdir(), 'chaff-site-'));
+async function recordTheme(theme: CaptureTheme) {
+  const workDir = mkdtempSync(path.join(tmpdir(), WORK_DIR_PREFIX));
   const repository = new DemoRepository(path.join(workDir, 'webhooks'));
   repository.create();
-  const session = new ChaffSession({ repositoryDir: repository.directory, rawVideoDir: path.join(workDir, 'raw') });
+  const session = new ChaffSession({
+    repositoryDir: repository.directory,
+    layout: VIDEO_LAYOUT,
+    recording: { dir: path.join(workDir, 'raw'), size: VIDEO_SIZE },
+  });
+  const timeline = new ClipTimeline(session);
   try {
     await session.open();
     await new ChaffDemoSetup(session.page, theme).run();
     const actor = new VideoActor(session.page);
     for (const script of CLIP_SCRIPTS) {
       console.log(`[videos] ${theme}: ${script.clip}`);
-      await session.record(script.clip, () => script.run({ actor, repository }));
+      await timeline.record(script.clip, () => script.run({ actor, repository }));
     }
   } finally {
-    const { videoPath, marks, elapsedAtCloseMs } = await session.close();
-    const clips = new ClipCutter(theme).cut(videoPath, marks, elapsedAtCloseMs);
+    const { videoPath, elapsedAtCloseMs } = await session.close();
+    if (!videoPath) throw new Error('Playwright did not record the Chaff window.');
+    const clips = new ClipCutter(theme).cut(videoPath, timeline.marks, elapsedAtCloseMs);
     clips.forEach((clip) => console.log(`[videos] wrote ${path.relative(process.cwd(), clip)}`));
     rmSync(workDir, { recursive: true, force: true });
   }

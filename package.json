@@ -8,7 +8,7 @@
     "build": "pnpm --recursive run build",
     "package": "pnpm run build && pnpm --filter=desktop run package",
     "install-app": "tsx scripts/install-app.ts",
-    "videos:record": "tsx scripts/site-videos/record-site-videos.ts",
+    "videos:record": "tsx scripts/app-capture/videos/record-site-videos.ts",
     "test": "pnpm --recursive --stream run test",
     "check-types": "pnpm --recursive --stream --no-bail run check-types",
     "prettify": "pnpm --recursive --stream run prettify",

@@ -1,4 +1,4 @@
-import { DEMO_FIX_COMMIT } from '../demo-repository.constants.ts';
+import { DEMO_FIX_COMMIT } from '../../demo-repository.constants.ts';
 import { SITE_CLIP } from '../site-video.constants.ts';
 import type { iSiteClipScript } from '../site-video.types.ts';
 
