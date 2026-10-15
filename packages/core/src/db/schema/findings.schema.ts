@@ -46,10 +46,13 @@ export const findings = sqliteTable(
     body: text('body').notNull(),
     /** The answer the reviewer recorded for a question. */
     answer: text('answer'),
+    /** The id the finding has in the file it was imported from; unique within the review. */
+    externalId: text('external_id'),
     ...timestamps(),
   },
   (table) => [
     uniqueIndex('findings_workspace_number_unique').on(table.workspaceId, table.number),
+    uniqueIndex('findings_target_external_id_unique').on(table.targetId, table.externalId),
     index('findings_target_idx').on(table.targetId),
   ],
 );

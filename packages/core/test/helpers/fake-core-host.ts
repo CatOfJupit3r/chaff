@@ -27,6 +27,7 @@ export class FakeSecretStore implements iSecretStore {
 /** Stands in for the Electron main process: records what the core asked the OS to do. */
 export class FakeCoreHost implements iCoreHost {
   public pickedDirectory: string | null = null;
+  public pickedFile: string | null = null;
   public readonly openedUrls: string[] = [];
   public readonly pickerTitles: string[] = [];
   public readonly appliedThemes: ThemeMode[] = [];
@@ -35,6 +36,11 @@ export class FakeCoreHost implements iCoreHost {
   public async pickDirectory(options: { title: string }) {
     this.pickerTitles.push(options.title);
     return this.pickedDirectory;
+  }
+
+  public async pickFile(options: { title: string; extensions: string[] }) {
+    this.pickerTitles.push(options.title);
+    return this.pickedFile;
   }
 
   public async openExternal(url: string) {
@@ -47,6 +53,7 @@ export class FakeCoreHost implements iCoreHost {
 
   public reset() {
     this.pickedDirectory = null;
+    this.pickedFile = null;
     this.openedUrls.length = 0;
     this.pickerTitles.length = 0;
     this.appliedThemes.length = 0;

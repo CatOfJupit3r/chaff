@@ -180,3 +180,34 @@ GitLab merge requests and GitHub pull requests are read through one provider int
 - **Replies.** Whenever Chaff reads a change's threads (opening a unit with discussions, or **Check for replies**), it matches each thread to the finding it came from: by the thread id it stored the first time, else by the `Chaff F-12` label the thread's first note ends with. Notes after the first are stored as the finding's replies, once each by their id on the host. On GitHub only line comments come back as threads; a finding posted in the review body has no thread to reply in.
 - **Diff versions.** When a merge request snapshot is frozen, Chaff asks GitLab for the version whose head is the snapshot's commit and stores its id and number (counting from 1). Posting fills it in for older snapshots.
 - **Commands.** The preview also shows the same requests as `glab api`/`gh api` and curl commands that read the token from `GITLAB_TOKEN` or `GITHUB_TOKEN`.
+
+## Importing findings
+
+Findings written outside Chaff, for example by a coding agent asked to review a merge request, can be loaded into a review you have started: **Import findings…** in the review's top bar picks a JSON file and imports it into the snapshot on screen. The file's schema is `findingsImportFileSchema` in `packages/server-contract/src/contract/findings.contract.ts`.
+
+```json
+{
+  "headSha": "3f2a9c1e",
+  "findings": [
+    {
+      "id": "mr-10674-1",
+      "kind": "CONCERN",
+      "severity": "MAJOR",
+      "body": "The retry count is read before the config is loaded, so it is always **1**.",
+      "anchors": [{ "path": "src/scheduler.ts", "startLine": 12, "endLine": 18 }]
+    },
+    {
+      "id": "mr-10674-2",
+      "kind": "QUESTION",
+      "body": "Was this guard removed on purpose?",
+      "anchors": [{ "path": "src/guard.ts", "side": "OLD", "startLine": 40 }]
+    },
+    { "id": "mr-10674-3", "kind": "NOTE", "body": "The tests read well." }
+  ]
+}
+```
+
+- **Fields.** `headSha` is optional: the commit the line numbers refer to, at least 7 hex characters; when given, it must be the head of the snapshot, or nothing is imported. Each finding has an `id` (up to 200 characters, unique in the file), a `kind` (`CONCERN`, `QUESTION` or `NOTE`), an optional `severity` for concerns (`MINOR`, `MAJOR` or `BLOCKING`), a Markdown `body` and `anchors`. An anchor is a repository-relative `path`, a `side` (`NEW` by default, `OLD` for removed lines; an old-side path is the file's path before a rename), and 1-based inclusive `startLine` and `endLine` (the start line when left out). A finding with no anchors applies to the whole branch.
+- **Placing anchors.** An anchor is placed when its file is in the snapshot's change and its first and last lines are both lines the file's diff shows on that side, changed or context. Placed anchors are quoted like a finding written in Chaff, so they are found again in later snapshots.
+- **Anchors that cannot be placed** are never moved to nearby lines. They are left out of the finding and listed in the import summary and at the end of the finding's body with the reason: the file is not in the change, the file has no text diff (binary or too large to keep), or the lines are outside its diff. The finding is kept with the anchors that were placed; one left with none applies to the whole branch, so nothing in the file is dropped.
+- **Importing again.** A finding's `id` identifies it within the review. Ids the review already has are skipped and listed, so importing the same file twice creates nothing new, and a file with more findings adds only the new ones. Skipped findings are not updated.

@@ -4,6 +4,7 @@ import { TopBar } from '@~/components/layout/top-bar';
 import { Pill } from '@~/components/ui/pill';
 import { ChangeCrumb } from '@~/features/code-hosts/components/change-crumb';
 import { DigestChip } from '@~/features/digests/components/digest-chip';
+import { ImportFindingsButton } from '@~/features/findings/components/import-findings-button';
 
 import { REVIEW_TARGET_KIND_PILLS } from '../reviews.enums';
 import type { iSnapshot } from '../reviews.types';
@@ -16,6 +17,7 @@ export function ReviewTopBar({ snapshot, repositoryName }: { snapshot: iSnapshot
     <TopBar
       end={
         <>
+          <ImportFindingsButton snapshotId={snapshot.id} />
           <DigestChip snapshotId={snapshot.id} />
           <SnapshotChip snapshot={snapshot} />
         </>

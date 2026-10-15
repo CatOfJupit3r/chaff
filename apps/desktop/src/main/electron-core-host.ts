@@ -14,7 +14,7 @@ const THEME_SOURCES = themeModesEnumwaii.derive(
   [THEME_MODES.LIGHT, 'light'],
 );
 
-/** What the core may ask of the OS: a folder picker, opening links, following the theme, and the keychain. */
+/** What the core may ask of the OS: folder and file pickers, opening links, following the theme, and the keychain. */
 export class ElectronCoreHost implements iCoreHost {
   public readonly secrets;
 
@@ -30,10 +30,15 @@ export class ElectronCoreHost implements iCoreHost {
   }
 
   public async pickDirectory({ title }: { title: string }) {
-    const options: OpenDialogOptions = { title, properties: ['openDirectory'] };
-    const window = this.getWindow();
-    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
-    return result.canceled ? null : (result.filePaths[0] ?? null);
+    return this.showOpenDialog({ title, properties: ['openDirectory'] });
+  }
+
+  public async pickFile({ title, extensions }: { title: string; extensions: string[] }) {
+    return this.showOpenDialog({
+      title,
+      properties: ['openFile'],
+      filters: [{ name: extensions.map((extension) => extension.toUpperCase()).join(', '), extensions }],
+    });
   }
 
   public async openExternal(url: string) {
@@ -42,5 +47,11 @@ export class ElectronCoreHost implements iCoreHost {
 
   public async applyTheme(theme: ThemeMode) {
     nativeTheme.themeSource = THEME_SOURCES.get(theme);
+  }
+
+  private async showOpenDialog(options: OpenDialogOptions) {
+    const window = this.getWindow();
+    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+    return result.canceled ? null : (result.filePaths[0] ?? null);
   }
 }

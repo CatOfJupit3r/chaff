@@ -211,6 +211,13 @@
       "when": 1791396403967,
       "tag": "0029_common_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1792059966036,
+      "tag": "0030_fresh_shaman",
+      "breakpoints": true
     }
   ]
 }

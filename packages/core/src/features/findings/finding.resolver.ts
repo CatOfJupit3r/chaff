@@ -95,7 +95,7 @@ export class FindingResolver {
 
   public toFindingRecord = createRowResolver<FindingWithBranchRow, Omit<iFindingRecord, 'anchors' | 'events' | 'post'>>(
     {
-      optional: ['answer'],
+      optional: ['answer', 'externalId'],
       overrides: (row) => ({
         kind: findingKindSchema.parse(row.kind),
         status: findingStatusSchema.parse(row.status),
