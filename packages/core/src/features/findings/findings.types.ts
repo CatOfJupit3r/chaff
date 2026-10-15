@@ -132,7 +132,10 @@ export type iFindingAnchorRecord = Omit<
   locations: iAnchorLocationSummary[];
 };
 
-export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer' | 'severity' | 'scope' | 'externalId'> & {
+export type iFindingRecord = Omit<
+  FindingRow,
+  'kind' | 'status' | 'answer' | 'severity' | 'scope' | 'externalId' | 'author' | 'authorName'
+> & {
   kind: FindingKind;
   status: FindingStatus;
   severity?: FindingSeverity;
@@ -140,6 +143,9 @@ export type iFindingRecord = Omit<FindingRow, 'kind' | 'status' | 'answer' | 'se
   answer?: string;
   /** The id the finding has in the file it was imported from. */
   externalId?: string;
+  author: FindingAuthor;
+  /** The agent that wrote it, as it named itself. */
+  authorName?: string;
   /** Every status the finding went through, oldest first. */
   events: iFindingEventRecord[];
   /** Set once the finding was posted to its merge or pull request. */
@@ -168,6 +174,9 @@ export interface iNewFinding {
   body: string;
   /** The id the finding has in the file it was imported from. */
   externalId?: string;
+  /** The reviewer unless given. */
+  author?: FindingAuthor;
+  authorName?: string;
   anchors: iNewFindingAnchor[];
 }
 
@@ -175,7 +184,10 @@ export interface iNewFinding {
 export type iFindingAnchorInput =
   { unitId: string } | { fileId: string; side: DiffSide; startLine: number; endLine: number };
 
-export interface iCreateFindingInput {
+/** Who writes a finding: the reviewer unless a coding agent, named as it calls itself, writes it. */
+export type iFindingAuthorship = Pick<iNewFinding, 'author' | 'authorName'>;
+
+export interface iCreateFindingInput extends iFindingAuthorship {
   snapshotId: string;
   /** The id the finding has in the file it was imported from. */
   externalId?: string;

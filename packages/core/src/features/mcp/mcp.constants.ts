@@ -4,6 +4,8 @@ export const AGENT_INSTRUCTIONS = [
   'Call chaff_findings to read what the reviewer flagged, fix the code, then answer on each finding with chaff_reply:',
   'propose a fix (with the commits), answer a question, ask back, or reopen one you find still wrong, giving the reason.',
   'Only the reviewer verifies or closes findings.',
+  'When asked to review code, start the review with chaff_start_review and write what you find with chaff_write_findings;',
+  'the reviewer goes through your findings in Chaff and keeps or discards them.',
 ].join(' ');
 
 export const SERVER_NAME = 'chaff';

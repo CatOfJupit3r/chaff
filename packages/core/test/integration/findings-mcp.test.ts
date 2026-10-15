@@ -1,31 +1,13 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { call } from '@orpc/server';
 import path from 'node:path';
-import { container } from 'tsyringe';
 import { describe, expect, it } from 'vitest';
 
 import { FINDING_AUTHORS, FINDING_KINDS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 
-import { FindingsMcpService } from '@~/features/mcp/findings-mcp.service';
-
 import { createTempDirectory } from '../helpers/git-repo';
 import { appRouter } from '../helpers/instance';
+import { agentIn } from '../helpers/mcp-agent';
 import { featureReview } from '../helpers/review-repo';
-
-/** An MCP client talking to the server an agent in the folder would get. */
-async function agentIn(folder: string) {
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await container.resolve(FindingsMcpService).createServer({ folder }).connect(serverTransport);
-  const client = new Client({ name: 'test-agent', version: '1.0.0' });
-  await client.connect(clientTransport);
-  const run = async (name: string, args: Record<string, unknown> = {}) => {
-    const result = await client.callTool({ name, arguments: args });
-    const [first] = result.content as { type: string; text: string }[];
-    return { text: first?.text ?? '', isError: result.isError === true };
-  };
-  return { run };
-}
 
 async function reviewWithConcern() {
   const review = await featureReview();

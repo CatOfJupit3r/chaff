@@ -14,7 +14,7 @@ import { DIFF_MODES } from '@~/features/reviews/reviews.enums';
 import { formatRelativeTime } from '@~/utils/relative-time';
 
 import type { iAnchorComparison, iFinding, iFindingAnchor } from '../findings.types';
-import { findingTitle, formatAnchorLocation } from '../findings.utils';
+import { findingCommentLabel, findingNoteLabel, findingTitle, formatAnchorLocation } from '../findings.utils';
 import { useFindingComparison } from '../hooks/use-finding-comparison';
 import { useSetFindingSeverity } from '../hooks/use-set-finding-severity';
 import { FindingActions } from './finding-actions';
@@ -48,18 +48,20 @@ function currentPlace(anchor: iFindingAnchor) {
 
 interface iAnchorSectionProps {
   anchor: iFindingAnchor;
+  /** Whose note it is: "Your note", or the agent that wrote it. */
+  label: string;
   comparison: iAnchorComparison | undefined;
   onOpenInEditor: (path: string, line?: number) => void;
 }
 
-function AnchorSection({ anchor, comparison, onOpenInEditor }: iAnchorSectionProps) {
+function AnchorSection({ anchor, label, comparison, onOpenInEditor }: iAnchorSectionProps) {
   const place = currentPlace(anchor);
   const writtenOn = comparison?.before.headSha.slice(0, 7);
 
   return (
     <section className="flex flex-col gap-3 border-b border-line px-5 py-4">
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
-        <b className="font-medium text-fg">Your note</b>
+        <b className="font-medium text-fg">{label}</b>
         <span className="font-mono text-fg">{formatAnchorLocation(anchor)}</span>
         {writtenOn ? <span className="font-mono">on {writtenOn}</span> : null}
         <span className="ml-auto flex gap-1.5">
@@ -135,12 +137,15 @@ export function FindingDetail({ finding, repoPath, isPending, onSetStatus }: iFi
         <AnchorSection
           key={anchor.id}
           anchor={anchor}
+          label={findingNoteLabel(finding)}
           comparison={comparisons?.find((comparison) => comparison.anchorId === anchor.id)}
           onOpenInEditor={openInEditor}
         />
       ))}
       <section className="flex flex-col gap-1.5 px-5 py-4">
-        <span className="text-[12.5px] text-muted">Your comment · {formatRelativeTime(finding.createdAt)}</span>
+        <span className="text-[12.5px] text-muted">
+          {findingCommentLabel(finding)} · {formatRelativeTime(finding.createdAt)}
+        </span>
         <MarkdownBody text={finding.body} baseUrl={finding.post?.url ?? undefined} />
         {finding.answer ? (
           <div className="mt-2 flex flex-col gap-1 border-l-2 border-accent-line pl-3">

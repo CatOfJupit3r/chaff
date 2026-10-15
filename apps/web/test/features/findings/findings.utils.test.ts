@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ANCHOR_MATCHES, DIFF_SIDES, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { ANCHOR_MATCHES, DIFF_SIDES, FINDING_AUTHORS, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 import type { FindingStatus } from '@chaff/common/enums/review.enums';
 
 import { FINDING_FILTERS } from '@~/features/findings/findings.enums';
@@ -11,6 +11,7 @@ import {
   countByFilter,
   countWaitingOnYou,
   findingActionLabel,
+  findingCommentLabel,
   findingTitle,
   formatAnchorLocation,
   summarizeRelocations,
@@ -129,5 +130,15 @@ describe('findings', () => {
     expect(findingActionLabel(FINDING_STATUSES.OPEN, FINDING_STATUSES.VERIFIED)).toBe('Resolve without a fix');
     expect(findingActionLabel(FINDING_STATUSES.FIX_PROPOSED, FINDING_STATUSES.REOPENED)).toBe('Still wrong');
     expect(findingActionLabel(FINDING_STATUSES.VERIFIED, FINDING_STATUSES.REOPENED)).toBe('Reopen');
+  });
+});
+
+describe('findingCommentLabel', () => {
+  it("names the agent that wrote a finding and calls the reviewer's own theirs", () => {
+    expect(findingCommentLabel(findingFixture())).toBe('Your comment');
+    expect(findingCommentLabel(findingFixture({ author: FINDING_AUTHORS.AGENT, authorName: 'claude-code' }))).toBe(
+      'Written by claude-code',
+    );
+    expect(findingCommentLabel(findingFixture({ author: FINDING_AUTHORS.AGENT }))).toBe('Written by a coding agent');
   });
 });

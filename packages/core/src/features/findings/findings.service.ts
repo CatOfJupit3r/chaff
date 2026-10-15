@@ -106,6 +106,8 @@ export class FindingsService {
       scope,
       body: input.body,
       externalId: input.externalId,
+      author: input.author,
+      authorName: input.authorName,
       anchors,
     });
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseReviewLink } from '@~/features/workspaces/review-link.utils';
+import { parseReviewLink } from '@chaff/common/helpers/review-link.helper';
 
 describe('reading what was pasted into the start box', () => {
   it('reads a GitLab merge request link in a nested group', () => {

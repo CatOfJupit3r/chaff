@@ -19,3 +19,13 @@ export interface iAgentScope {
   branch: string;
   target: iReviewTargetRecord;
 }
+
+/** What an agent asks to review, and where. */
+export interface iStartReviewArguments extends iAgentSession {
+  /** A merge or pull request link, `!412` / `#412`, or a branch name. */
+  review: string;
+  /** Path of the repository, relative to the agent's folder; defaults to the folder. */
+  repo?: string;
+  /** What a branch outside any stack merges into. */
+  parentBranch?: string;
+}

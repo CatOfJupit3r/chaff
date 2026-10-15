@@ -183,7 +183,7 @@ GitLab merge requests and GitHub pull requests are read through one provider int
 
 ## Importing findings
 
-Findings written outside Chaff, for example by a coding agent asked to review a merge request, can be loaded into a review you have started: **Import findings…** in the review's top bar picks a JSON file and imports it into the snapshot on screen. The file's schema is `findingsImportFileSchema` in `packages/server-contract/src/contract/findings.contract.ts`.
+Findings written outside Chaff, for example by a coding agent asked to review a merge request, can be loaded into a review you have started: **Import findings…** in the review's top bar picks a JSON file and imports it into the snapshot on screen. A coding agent connected to Chaff can also write them itself with `chaff_write_findings` (see [Coding agents over MCP](#coding-agents-over-mcp)), which takes the same findings and places them the same way. The file's schema is `findingsImportFileSchema` in `packages/server-contract/src/contract/findings.contract.ts`.
 
 ```json
 {
@@ -211,3 +211,20 @@ Findings written outside Chaff, for example by a coding agent asked to review a 
 - **Placing anchors.** An anchor is placed when its file is in the snapshot's change and its first and last lines are both lines the file's diff shows on that side, changed or context. Placed anchors are quoted like a finding written in Chaff, so they are found again in later snapshots.
 - **Anchors that cannot be placed** are never moved to nearby lines. They are left out of the finding and listed in the import summary and at the end of the finding's body with the reason: the file is not in the change, the file has no text diff (binary or too large to keep), or the lines are outside its diff. The finding is kept with the anchors that were placed; one left with none applies to the whole branch, so nothing in the file is dropped.
 - **Importing again.** A finding's `id` identifies it within the review. Ids the review already has are skipped and listed, so importing the same file twice creates nothing new, and a file with more findings adds only the new ones. Skipped findings are not updated.
+
+## Coding agents over MCP
+
+With **Agent access** on in Settings, a coding agent reaches Chaff's MCP server over the `agents.sock` socket in Chaff's data folder. Each connection knows the folder the agent runs in, and a run Chaff starts is pinned to its review. The server offers four tools:
+
+- `chaff_findings` reads the findings of a review: by default the review of the branch checked out in the agent's folder, or the `repo` and `branch` it names.
+- `chaff_reply` answers on a finding, optionally proposing a fix, answering a question or reopening it.
+- `chaff_start_review` starts a review, or continues the one that exists, from `review`: a merge or pull request link, `!412` / `#412`, or a branch name, as in the start box on Overview. It returns the review's id and the snapshot to write findings on, with its head commit.
+- `chaff_write_findings` writes the agent's findings into a review: `findings` in the format of the import file, with an optional `headSha`, on `snapshot` (from `chaff_start_review`) or on the newest snapshot of the review of `repo` and `branch`. The result lists the findings created, those the review already had, and every anchor left out with the reason.
+
+How the two tools that write behave:
+
+- **Choosing the repository.** `chaff_start_review` reviews in the repository at `repo` (a path, relative to the agent's folder) when given. Otherwise a link that names a project uses the repository in Chaff linked to that project, and anything else uses the repository of the agent's folder. A linked worktree counts as its repository. A repository Chaff does not have yet is added, which only reads it.
+- **Branches.** A branch in a stack is reviewed onto the branch below it. A branch in no stack needs `parentBranch`, and is then put in a stack of its own onto that branch, as the start box does after you pick what it merges into. A `parentBranch` that disagrees with the stack is refused rather than changing the stack.
+- **Merge requests** are copied from the connected GitLab or GitHub like the start box does. Starting a review that exists continues it, so calling the tool again is harmless.
+- **Agents' findings** open like any other and are marked with the agent's name: the `author` the agent passes, else the name its MCP client reports. The Findings screen and the diff show it, and **Discard** deletes one you do not keep. Agents still cannot verify, close or withdraw findings. Ids work as in the import, so sending the same findings again creates nothing.
+

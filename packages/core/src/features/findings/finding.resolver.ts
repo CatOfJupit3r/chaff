@@ -95,8 +95,9 @@ export class FindingResolver {
 
   public toFindingRecord = createRowResolver<FindingWithBranchRow, Omit<iFindingRecord, 'anchors' | 'events' | 'post'>>(
     {
-      optional: ['answer', 'externalId'],
+      optional: ['answer', 'externalId', 'authorName'],
       overrides: (row) => ({
+        author: findingAuthorSchema.parse(row.author),
         kind: findingKindSchema.parse(row.kind),
         status: findingStatusSchema.parse(row.status),
         severity: row.severity === null ? undefined : findingSeveritySchema.parse(row.severity),

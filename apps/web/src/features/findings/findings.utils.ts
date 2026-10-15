@@ -2,6 +2,7 @@ import { emToZodSchema } from 'enumwaii/zod';
 
 import {
   ANCHOR_MATCHES,
+  FINDING_AUTHORS,
   FINDING_KINDS,
   FINDING_STATUSES,
   findingSeveritySchema,
@@ -104,4 +105,24 @@ export function severityFromChoice(choice: SeverityChoice): FindingSeverity | un
 
 export function choiceFromSeverity(severity: FindingSeverity | undefined): SeverityChoice {
   return severity === undefined ? SEVERITY_CHOICES.NONE : emToZodSchema(severityChoicesEnumwaii).parse(severity);
+}
+
+const UNNAMED_AGENT = 'a coding agent';
+
+/** The coding agent that wrote the finding, as it named itself; undefined for the reviewer's own. */
+export function findingAgentName(finding: Pick<iFinding, 'author' | 'authorName'>) {
+  if (finding.author !== FINDING_AUTHORS.AGENT) return undefined;
+  return finding.authorName ?? UNNAMED_AGENT;
+}
+
+/** Whose note an anchor carries: "Your note", or the agent that wrote it. */
+export function findingNoteLabel(finding: Pick<iFinding, 'author' | 'authorName'>) {
+  const agent = findingAgentName(finding);
+  return agent ? `Note by ${agent}` : 'Your note';
+}
+
+/** Whose comment the finding is: "Your comment", or the agent that wrote it. */
+export function findingCommentLabel(finding: Pick<iFinding, 'author' | 'authorName'>) {
+  const agent = findingAgentName(finding);
+  return agent ? `Written by ${agent}` : 'Your comment';
 }

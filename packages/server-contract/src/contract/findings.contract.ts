@@ -10,6 +10,9 @@ import {
   FINDING_KINDS,
   anchorMatchSchema,
   diffSideSchema,
+  diffSidesEnumwaii,
+  findingKindsEnumwaii,
+  findingSeveritiesEnumwaii,
   findingAuthorSchema,
   findingEventSourceSchema,
   findingKindSchema,
@@ -154,6 +157,10 @@ export const findingSchema = z.object({
   messages: z.array(findingMessageSchema),
   /** The id the finding has in the file it was imported from. */
   externalId: z.string().optional(),
+  /** The reviewer, or a coding agent that wrote it through Chaff's MCP server. */
+  author: findingAuthorSchema,
+  /** The agent that wrote it, as it named itself. */
+  authorName: z.string().optional(),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
@@ -183,7 +190,10 @@ const anchorInputSchema = z.union([
 export const importedAnchorSchema = z
   .object({
     path: z.string().trim().min(1).max(MAX_PATH_LENGTH),
-    side: diffSideSchema.default(DIFF_SIDES.NEW),
+    side: z
+      .literal(diffSidesEnumwaii.rawValues)
+      .transform((value) => diffSidesEnumwaii.parse(value))
+      .default(DIFF_SIDES.NEW),
     startLine: z.number().int().positive(),
     /** Defaults to the start line. */
     endLine: z.number().int().positive().optional(),
@@ -198,8 +208,11 @@ export const importedFindingSchema = z
   .object({
     /** Stable within the review; importing a finding whose id the review already has skips it. */
     id: z.string().trim().min(1).max(MAX_EXTERNAL_ID_LENGTH),
-    kind: findingKindSchema,
-    severity: findingSeveritySchema.optional(),
+    kind: z.literal(findingKindsEnumwaii.rawValues).transform((value) => findingKindsEnumwaii.parse(value)),
+    severity: z
+      .literal(findingSeveritiesEnumwaii.rawValues)
+      .transform((value) => findingSeveritiesEnumwaii.parse(value))
+      .optional(),
     /** Markdown. */
     body: z.string().trim().min(1).max(MAX_BODY_LENGTH),
     /** None for a finding about the whole branch. */
@@ -210,13 +223,16 @@ export const importedFindingSchema = z
     path: ['severity'],
   });
 
-/** A file of findings to import into one review. */
+/**
+ * A file of findings to import into one review. Its enum fields take the raw values and brand them, so the
+ * schema can also be given to coding agents as JSON Schema.
+ */
 export const findingsImportFileSchema = z.object({
   /** The commit the line numbers refer to; when given, it must be the head of the snapshot imported into. */
   headSha: z
     .string()
     .trim()
-    .regex(/^[0-9a-f]{7,40}$/i)
+    .regex(/^[0-9a-fA-F]{7,40}$/)
     .optional(),
   findings: z
     .array(importedFindingSchema)

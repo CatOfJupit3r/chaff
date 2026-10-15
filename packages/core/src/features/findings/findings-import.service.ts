@@ -5,6 +5,8 @@ import { IMPORTED_ANCHOR_PROBLEM_LABELS } from '@chaff/common/enums/findings-imp
 import { importedAnchorLines } from '@chaff/common/helpers/imported-anchor.helper';
 
 import { FINDING_REPOSITORY_TOKEN, SNAPSHOT_REPOSITORY_TOKEN } from '@~/di/tokens';
+import { EventBus } from '@~/features/events/event-bus';
+import { FINDINGS_CHANGED } from '@~/features/events/finding-events';
 import { ReviewsService } from '@~/features/reviews/reviews.service';
 import type { iSnapshotRepository } from '@~/features/reviews/snapshots/snapshot.repository';
 import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
@@ -12,6 +14,7 @@ import { ORPCBadRequestError } from '@~/lib/orpc-error-wrapper';
 import type { iFindingRepository } from './finding.repository';
 import { FindingsService } from './findings.service';
 import type {
+  iFindingAuthorship,
   iFindingsImportFile,
   iFindingsImportResult,
   iImportedFindingResult,
@@ -35,9 +38,11 @@ export class FindingsImportService {
     @inject(SNAPSHOT_REPOSITORY_TOKEN) private readonly snapshotRepository: iSnapshotRepository,
     private readonly reviewsService: ReviewsService,
     private readonly findingsService: FindingsService,
+    private readonly eventBus: EventBus,
   ) {}
 
-  public async import(snapshotId: string, file: iFindingsImportFile) {
+  /** Imports the file's findings into the snapshot, written by the reviewer unless authorship says otherwise. */
+  public async import(snapshotId: string, file: iFindingsImportFile, authorship: iFindingAuthorship = {}) {
     const { snapshot, target } = await this.reviewsService.getContext(snapshotId);
     if (file.headSha && !snapshot.headSha.startsWith(file.headSha.toLowerCase())) {
       throw ORPCBadRequestError(errorCodes.FINDINGS_IMPORT_HEAD_MISMATCH, {
@@ -59,7 +64,10 @@ export class FindingsImportService {
         result.existing.push({ id: finding.id, findingId: known.id, number: known.number });
         continue;
       }
-      result.created.push(await this.create(snapshotId, finding, index));
+      result.created.push(await this.create(snapshotId, finding, index, authorship));
+    }
+    if (result.created.length > 0) {
+      await this.eventBus.emit(FINDINGS_CHANGED, { findingIds: result.created.map((created) => created.findingId) });
     }
     return result;
   }
@@ -76,6 +84,7 @@ export class FindingsImportService {
     snapshotId: string,
     finding: iImportedFinding,
     index: SnapshotLineIndex,
+    authorship: iFindingAuthorship,
   ): Promise<iImportedFindingResult> {
     const located: iLocatedAnchor[] = [];
     const unresolvedAnchors: iUnresolvedAnchor[] = [];
@@ -89,6 +98,7 @@ export class FindingsImportService {
       }
     }
     const created = await this.findingsService.create({
+      ...authorship,
       snapshotId,
       externalId: finding.id,
       kind: finding.kind,

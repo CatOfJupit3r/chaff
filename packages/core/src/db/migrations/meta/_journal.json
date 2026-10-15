@@ -218,6 +218,13 @@
       "when": 1792059966036,
       "tag": "0030_fresh_shaman",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1792061337613,
+      "tag": "0031_sad_speedball",
+      "breakpoints": true
     }
   ]
 }
