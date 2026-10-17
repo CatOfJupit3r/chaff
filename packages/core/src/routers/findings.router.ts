@@ -4,6 +4,7 @@ import { FINDING_AUTHORS, FINDING_STATUSES } from '@chaff/common/enums/review.en
 
 import { AgentReportService } from '@~/features/findings/agent-report.service';
 import { FindingTasksService } from '@~/features/findings/finding-tasks.service';
+import { FindingsImportService } from '@~/features/findings/findings-import.service';
 import { FindingsService } from '@~/features/findings/findings.service';
 import { base, procedure } from '@~/lib/orpc';
 
@@ -46,6 +47,10 @@ export const findingsRouter = base.findings.router({
 
   importReport: procedure.findings.importReport.handler(async ({ input }) =>
     container.resolve(AgentReportService).import(input.workspaceId, input.report),
+  ),
+
+  importFindings: procedure.findings.importFindings.handler(async ({ input }) =>
+    container.resolve(FindingsImportService).import(input.snapshotId, input.file),
   ),
 
   reply: procedure.findings.reply.handler(async ({ input }) =>

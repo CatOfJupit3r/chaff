@@ -105,6 +105,9 @@ export class FindingsService {
       severity: input.severity,
       scope,
       body: input.body,
+      externalId: input.externalId,
+      author: input.author,
+      authorName: input.authorName,
       anchors,
     });
   }

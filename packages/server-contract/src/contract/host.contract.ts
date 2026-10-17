@@ -10,6 +10,23 @@ export const hostContract = oc.router({
     .input(z.object({ title: z.string().min(1).max(120) }))
     .output(z.object({ path: z.string().nullable() })),
 
+  openFile: oc
+    .route({
+      summary: 'Open a text file',
+      description:
+        'Opens the native file picker limited to the extensions and returns the name and text of the chosen file. Resolves with null when the picker is cancelled.',
+    })
+    .input(
+      z.object({
+        title: z.string().min(1).max(120),
+        extensions: z
+          .array(z.string().regex(/^[a-z0-9]+$/i))
+          .min(1)
+          .max(10),
+      }),
+    )
+    .output(z.object({ file: z.object({ name: z.string(), content: z.string() }).nullable() })),
+
   openExternal: oc
     .route({
       summary: 'Open a link outside Chaff',

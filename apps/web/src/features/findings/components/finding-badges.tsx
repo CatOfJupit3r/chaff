@@ -10,6 +10,7 @@ import { Pill } from '@~/components/ui/pill';
 
 import { FINDING_SEVERITY_PILLS, FINDING_STATUS_PILLS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
+import { findingAgentName } from '../findings.utils';
 
 /** A concern's severity, when it has one. */
 export function SeverityPill({ finding }: { finding: Pick<iFinding, 'severity'> }) {
@@ -19,13 +20,25 @@ export function SeverityPill({ finding }: { finding: Pick<iFinding, 'severity'> 
   );
 }
 
-/** Status, kind, severity, scope and number of a finding, as shown above its note. */
+/** The coding agent that wrote the finding, when an agent did. */
+export function AgentPill({ finding }: { finding: Pick<iFinding, 'author' | 'authorName'> }) {
+  const agent = findingAgentName(finding);
+  if (!agent) return null;
+  return (
+    <Pill variant="question" title={`Written by ${agent}`} className="max-w-[180px]">
+      <span className="truncate">By {agent}</span>
+    </Pill>
+  );
+}
+
+/** Status, kind, severity, scope, author and number of a finding, as shown above its note. */
 export function FindingBadges({ finding }: { finding: iFinding }) {
   return (
     <>
       <Pill variant={FINDING_STATUS_PILLS.get(finding.status)}>{FINDING_STATUS_LABELS.get(finding.status)}</Pill>
       <span className="font-medium text-fg">{FINDING_KIND_LABELS.get(finding.kind)}</span>
       <SeverityPill finding={finding} />
+      <AgentPill finding={finding} />
       {finding.scope === FINDING_SCOPES.CODE ? null : (
         <Pill variant="neutral">{FINDING_SCOPE_LABELS.get(finding.scope)}</Pill>
       )}

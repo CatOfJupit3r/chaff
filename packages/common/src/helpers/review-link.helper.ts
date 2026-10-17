@@ -2,8 +2,10 @@
 interface iChangeLink {
   project?: string;
   number: number;
+  branch?: undefined;
 }
 
+/** A change by number, or a branch by name; `branch` is set only for a branch. */
 export type iReviewLink = iChangeLink | { branch: string };
 
 const GITLAB_CHANGE_URL = /^https?:\/\/[^/]+\/(.+?)\/-\/merge_requests\/(\d+)/i;

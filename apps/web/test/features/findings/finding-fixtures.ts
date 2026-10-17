@@ -1,4 +1,4 @@
-import { FINDING_KINDS, FINDING_SCOPES, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
+import { FINDING_AUTHORS, FINDING_KINDS, FINDING_SCOPES, FINDING_STATUSES } from '@chaff/common/enums/review.enums';
 
 import type { iFinding } from '@~/features/findings/findings.types';
 
@@ -10,6 +10,7 @@ export function findingFixture(overrides: Partial<iFinding> = {}): iFinding {
     kind: FINDING_KINDS.CONCERN,
     scope: FINDING_SCOPES.CODE,
     status: FINDING_STATUSES.OPEN,
+    author: FINDING_AUTHORS.REVIEWER,
     body: 'Why does this helper exist?\nIt only reads one field.',
     workspaceId: 'w',
     targetId: 't',

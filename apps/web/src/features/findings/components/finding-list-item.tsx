@@ -6,7 +6,7 @@ import { pluralize } from '@~/utils/pluralize';
 import { FINDING_STATUS_DOTS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
 import { findingTitle, formatAnchorLocation } from '../findings.utils';
-import { SeverityPill } from './finding-badges';
+import { AgentPill, SeverityPill } from './finding-badges';
 
 interface iFindingListItemProps {
   finding: iFinding;
@@ -42,6 +42,7 @@ export function FindingListItem({ finding, isSelected, onSelect }: iFindingListI
           {FINDING_KIND_LABELS.get(finding.kind)}
         </span>
         <SeverityPill finding={finding} />
+        <AgentPill finding={finding} />
         {finding.replies.length > 0 ? (
           <span className="text-[11px] text-accent">{pluralize(finding.replies.length, 'reply', 'replies')}</span>
         ) : null}

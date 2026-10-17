@@ -14,6 +14,7 @@ import { tanstackRPC } from '@~/utils/tanstack-orpc';
 import { FINDING_ACTION_SHORTCUTS } from '../findings.enums';
 import type { iFinding } from '../findings.types';
 import { findingActionLabel } from '../findings.utils';
+import { DiscardFindingButton } from './discard-finding-button';
 
 interface iFindingActionsProps {
   finding: iFinding;
@@ -93,6 +94,7 @@ export function FindingActions({ finding, isPending, onSetStatus }: iFindingActi
             Turn into a concern
           </Button>
         ) : null}
+        <DiscardFindingButton finding={finding} />
         <span className="ml-auto text-[12.5px] text-faint">
           {finding.status === FINDING_STATUSES.VERIFIED
             ? 'Verified by you.'

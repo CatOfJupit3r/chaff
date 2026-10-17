@@ -31,7 +31,7 @@ export class AgentScopeService {
     if (targetId) return this.pinnedScope(targetId);
     const directory = path.resolve(folder, repo ?? '.');
     const repoPath = await this.repositoryRoot(directory);
-    const workspace = (await this.workspacesService.list()).find((candidate) => candidate.repoPath === repoPath);
+    const workspace = await this.workspaceAt(repoPath);
     if (!workspace) {
       throw new AgentAccessError(`Chaff has no repository at ${repoPath}. Add it in Chaff and start a review first.`);
     }
@@ -41,6 +41,19 @@ export class AgentScopeService {
       if (target) return { workspace, branch: reviewedBranch, target };
     }
     throw new AgentAccessError(`There is no review of ${reviewedBranch} in Chaff. Start one in Chaff first.`);
+  }
+
+  /**
+   * The repository Chaff knows for the folder (relative to the agent's folder), added to Chaff when it is not
+   * there yet. Adding only reads the repository.
+   */
+  public async findOrAddWorkspace(folder: string, repo = '.') {
+    const repoPath = await this.repositoryRoot(path.resolve(folder, repo));
+    return (await this.workspaceAt(repoPath)) ?? this.workspacesService.add(repoPath);
+  }
+
+  private async workspaceAt(repoPath: string) {
+    return (await this.workspacesService.list()).find((candidate) => candidate.repoPath === repoPath);
   }
 
   /** The review a session Chaff started is pinned to, whatever folder it runs in. */

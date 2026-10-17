@@ -59,6 +59,8 @@ const errorCodesEnumwaii = em([
   'SHORTCUT_CONFLICT',
   'CHANGE_UNIT_NOT_FOUND',
   'UNITS_IN_DIFFERENT_FILES',
+  'FINDINGS_IMPORT_HEAD_MISMATCH',
+  'FILE_TOO_LARGE',
 ]);
 
 export const errorCodes = errorCodesEnumwaii.enum;
@@ -128,4 +130,9 @@ export const errorMessages = errorCodesEnumwaii.derive(
   [errorCodes.NOTHING_TO_FIX, 'None of the selected findings is open for the agent to work on'],
   [errorCodes.CHANGE_UNIT_NOT_FOUND, 'Change not found in this snapshot'],
   [errorCodes.UNITS_IN_DIFFERENT_FILES, 'The units are not all in the same file'],
+  [
+    errorCodes.FINDINGS_IMPORT_HEAD_MISMATCH,
+    'The findings were written for another commit than the head of this snapshot',
+  ],
+  [errorCodes.FILE_TOO_LARGE, 'The file is too large to open'],
 );

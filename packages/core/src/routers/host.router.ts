@@ -8,6 +8,10 @@ export const hostRouter = base.host.router({
     container.resolve(HostService).pickDirectory(input.title),
   ),
 
+  openFile: procedure.host.openFile.handler(async ({ input }) =>
+    container.resolve(HostService).openFile(input.title, input.extensions),
+  ),
+
   openExternal: procedure.host.openExternal.handler(async ({ input }) =>
     container.resolve(HostService).openExternal(input.url),
   ),

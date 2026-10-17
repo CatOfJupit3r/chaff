@@ -17,6 +17,8 @@ export interface iSecretStore {
 export interface iCoreHost {
   /** Shows a native folder picker; resolves to null when cancelled. */
   pickDirectory: (options: { title: string }) => Promise<string | null>;
+  /** Shows a native file picker limited to the extensions; resolves to null when cancelled. */
+  pickFile: (options: { title: string; extensions: string[] }) => Promise<string | null>;
   /** Opens a URL with the OS handler (browser, editor URL schemes). */
   openExternal: (url: string) => Promise<void>;
   /** Follows the chosen theme in native UI such as the title bar and menus. */

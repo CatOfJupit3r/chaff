@@ -4,9 +4,15 @@ import z from 'zod';
 import { codeHostSchema } from '@chaff/common/enums/code-host.enums';
 import { digestRunnerSchema } from '@chaff/common/enums/digest.enums';
 import { reportSkipReasonSchema } from '@chaff/common/enums/export.enums';
+import { importedAnchorProblemSchema } from '@chaff/common/enums/findings-import.enums';
 import {
+  DIFF_SIDES,
+  FINDING_KINDS,
   anchorMatchSchema,
   diffSideSchema,
+  diffSidesEnumwaii,
+  findingKindsEnumwaii,
+  findingSeveritiesEnumwaii,
   findingAuthorSchema,
   findingEventSourceSchema,
   findingKindSchema,
@@ -22,6 +28,9 @@ const MAX_ANCHORS = 50;
 const MAX_REPORT_LENGTH = 1_000_000;
 const MAX_TASK_LENGTH = 2000;
 const MAX_MESSAGE_LENGTH = 20_000;
+const MAX_IMPORTED_FINDINGS = 500;
+const MAX_EXTERNAL_ID_LENGTH = 200;
+const MAX_PATH_LENGTH = 4096;
 
 const lineSchema = z.number().int().nonnegative();
 
@@ -146,6 +155,12 @@ export const findingSchema = z.object({
   replies: z.array(findingReplySchema),
   /** The discussion in Chaff, oldest first. */
   messages: z.array(findingMessageSchema),
+  /** The id the finding has in the file it was imported from. */
+  externalId: z.string().optional(),
+  /** The reviewer, or a coding agent that wrote it through Chaff's MCP server. */
+  author: findingAuthorSchema,
+  /** The agent that wrote it, as it named itself. */
+  authorName: z.string().optional(),
   workspaceId: z.string(),
   targetId: z.string(),
   branch: z.string(),
@@ -167,6 +182,94 @@ const anchorInputSchema = z.union([
     })
     .refine((anchor) => anchor.endLine >= anchor.startLine, { message: 'endLine must not be before startLine' }),
 ]);
+
+/**
+ * A line range in an imported finding, as an outside author sees the diff: the repository-relative path and
+ * 1-based inclusive lines on the new side (or the old side, for removed lines).
+ */
+export const importedAnchorSchema = z
+  .object({
+    path: z.string().trim().min(1).max(MAX_PATH_LENGTH),
+    side: z
+      .literal(diffSidesEnumwaii.rawValues)
+      .transform((value) => diffSidesEnumwaii.parse(value))
+      .default(DIFF_SIDES.NEW),
+    startLine: z.number().int().positive(),
+    /** Defaults to the start line. */
+    endLine: z.number().int().positive().optional(),
+  })
+  .refine((anchor) => anchor.endLine === undefined || anchor.endLine >= anchor.startLine, {
+    message: 'endLine must not be before startLine',
+    path: ['endLine'],
+  });
+
+/** A finding written outside Chaff, for example by a coding agent doing a code review. */
+export const importedFindingSchema = z
+  .object({
+    /** Stable within the review; importing a finding whose id the review already has skips it. */
+    id: z.string().trim().min(1).max(MAX_EXTERNAL_ID_LENGTH),
+    kind: z.literal(findingKindsEnumwaii.rawValues).transform((value) => findingKindsEnumwaii.parse(value)),
+    severity: z
+      .literal(findingSeveritiesEnumwaii.rawValues)
+      .transform((value) => findingSeveritiesEnumwaii.parse(value))
+      .optional(),
+    /** Markdown. */
+    body: z.string().trim().min(1).max(MAX_BODY_LENGTH),
+    /** None for a finding about the whole branch. */
+    anchors: z.array(importedAnchorSchema).max(MAX_ANCHORS).default([]),
+  })
+  .refine((finding) => finding.severity === undefined || finding.kind === FINDING_KINDS.CONCERN, {
+    message: 'Only concerns have a severity',
+    path: ['severity'],
+  });
+
+/**
+ * A file of findings to import into one review. Its enum fields take the raw values and brand them, so the
+ * schema can also be given to coding agents as JSON Schema.
+ */
+export const findingsImportFileSchema = z.object({
+  /** The commit the line numbers refer to; when given, it must be the head of the snapshot imported into. */
+  headSha: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-fA-F]{7,40}$/)
+    .optional(),
+  findings: z
+    .array(importedFindingSchema)
+    .min(1)
+    .max(MAX_IMPORTED_FINDINGS)
+    .refine((findings) => new Set(findings.map((finding) => finding.id)).size === findings.length, {
+      message: 'Each finding needs its own id',
+    }),
+});
+
+const importedFindingRefSchema = z.object({
+  /** The id as the file wrote it. */
+  id: z.string(),
+  findingId: z.string(),
+  number: z.number().int().positive(),
+});
+
+/** What an import created, what the review already had, and the anchors that could not be placed. */
+export const findingsImportResultSchema = z.object({
+  snapshotId: z.string(),
+  created: z.array(
+    importedFindingRefSchema.extend({
+      scope: findingScopeSchema,
+      /** Anchors left out of the finding, each with the reason; listed in its body as well. */
+      unresolvedAnchors: z.array(
+        z.object({
+          path: z.string(),
+          side: diffSideSchema,
+          startLine: z.number().int().positive(),
+          endLine: z.number().int().positive(),
+          problem: importedAnchorProblemSchema,
+        }),
+      ),
+    }),
+  ),
+  existing: z.array(importedFindingRefSchema),
+});
 
 export const findingsContract = oc.router({
   list: oc
@@ -294,6 +397,15 @@ export const findingsContract = oc.router({
     })
     .input(z.object({ workspaceId: idSchema, report: z.string().min(1).max(MAX_REPORT_LENGTH) }))
     .output(reportResultSchema),
+
+  importFindings: oc
+    .route({
+      summary: 'Import findings written outside Chaff',
+      description:
+        "Creates findings from a file, placing each anchor on the snapshot by path and lines and quoting the code. Anchors outside the snapshot's diff are left out and listed in the finding and the result, never guessed; a finding left with none applies to the whole branch. Ids the review already has are skipped.",
+    })
+    .input(z.object({ snapshotId: idSchema, file: findingsImportFileSchema }))
+    .output(findingsImportResultSchema),
 
   reply: oc
     .route({

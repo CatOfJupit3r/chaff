@@ -1,13 +1,14 @@
 import { useQueries } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 
+import { parseReviewLink } from '@chaff/common/helpers/review-link.helper';
+
 import { showToast } from '@~/components/toast/toast-store';
 import { useChangeActions } from '@~/features/code-hosts/hooks/use-change-actions';
 import { useStartReview } from '@~/features/reviews/hooks/use-start-review';
 import { useStackActions } from '@~/features/stacks/hooks/use-stack-actions';
 import { tanstackRPC } from '@~/utils/tanstack-orpc';
 
-import { parseReviewLink } from '../review-link.utils';
 import type { iWorkspace } from '../workspaces.types';
 
 /**
@@ -51,7 +52,7 @@ export function useOpenReviewLink(workspaces: readonly iWorkspace[]) {
       showToast('Paste a merge request link, !412, #412 or a local branch name.');
       return;
     }
-    if ('branch' in link) {
+    if (link.branch !== undefined) {
       const name = link.branch;
       const match = branches.find(({ branch }) => branch.name === name);
       if (!match) {

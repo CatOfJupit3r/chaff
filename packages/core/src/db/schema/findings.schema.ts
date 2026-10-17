@@ -2,7 +2,7 @@ import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqli
 
 import type { CodeHost } from '@chaff/common/enums/code-host.enums';
 import type { DigestRunner } from '@chaff/common/enums/digest.enums';
-import { FINDING_EVENT_SOURCES, FINDING_SCOPES } from '@chaff/common/enums/review.enums';
+import { FINDING_AUTHORS, FINDING_EVENT_SOURCES, FINDING_SCOPES } from '@chaff/common/enums/review.enums';
 import type {
   AnchorMatch,
   DiffSide,
@@ -46,10 +46,17 @@ export const findings = sqliteTable(
     body: text('body').notNull(),
     /** The answer the reviewer recorded for a question. */
     answer: text('answer'),
+    /** The id the finding has in the file it was imported from; unique within the review. */
+    externalId: text('external_id'),
+    /** Who wrote it: the reviewer, or a coding agent through Chaff's MCP server. */
+    author: text('author').$type<FindingAuthor>().notNull().default(FINDING_AUTHORS.REVIEWER),
+    /** The agent that wrote it, as it named itself. */
+    authorName: text('author_name'),
     ...timestamps(),
   },
   (table) => [
     uniqueIndex('findings_workspace_number_unique').on(table.workspaceId, table.number),
+    uniqueIndex('findings_target_external_id_unique').on(table.targetId, table.externalId),
     index('findings_target_idx').on(table.targetId),
   ],
 );
