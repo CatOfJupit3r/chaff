@@ -1,4 +1,5 @@
 import { call } from '@orpc/server';
+import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -7,7 +8,7 @@ import { errorCodes } from '@chaff/common/enums/errors.enums';
 import { REVIEW_TARGET_KINDS } from '@chaff/common/enums/review.enums';
 import { STACK_ENDS, STACK_SUGGESTION_SOURCES } from '@chaff/common/enums/stack.enums';
 
-import { appRouter } from '../helpers/instance';
+import { appRouter, testDataDir } from '../helpers/instance';
 import { expectORPCError } from '../helpers/orpc-errors';
 import { addWorkspace, createFeatureRepo, SCHEDULER } from '../helpers/review-repo';
 
@@ -17,6 +18,13 @@ function createStackRepo() {
   repo.branch('feature-ui');
   repo.commitFiles('ui', { 'src/ui.ts': 'export const label = "Retry";\n' });
   return repo;
+}
+
+function pinnedSnapshotRefs(workspaceId: string) {
+  return execFileSync('git', ['for-each-ref', '--format=%(refname)', 'refs/chaff/snapshots'], {
+    cwd: path.join(testDataDir, 'stores', `${workspaceId}.git`),
+    encoding: 'utf8',
+  });
 }
 
 async function branchNamed(workspaceId: string, name: string) {
@@ -91,6 +99,34 @@ describe('stacks', () => {
     expect(remaining?.branches).toMatchObject([{ branch: 'feature-ui', parentBranch: 'main', commitsAhead: 2 }]);
     expect(await call(appRouter.stacks.removeBranch, { stackId: stack.id, branch: 'feature-ui' })).toBeNull();
     expect(await call(appRouter.stacks.list, { workspaceId: workspace.id })).toEqual([]);
+  });
+
+  it('deletes a stack with the reviews of its branches and keeps reviews of other branches', async () => {
+    const workspace = await addWorkspace(createStackRepo());
+    const stack = await call(appRouter.stacks.create, { workspaceId: workspace.id, branch: 'feature-ui' });
+    const stacked = await call(appRouter.reviews.start, {
+      workspaceId: workspace.id,
+      branch: 'feature-ui',
+      parentBranch: 'feature',
+    });
+    const outside = await call(appRouter.reviews.start, {
+      workspaceId: workspace.id,
+      branch: 'feature',
+      parentBranch: 'main',
+    });
+
+    expect(await call(appRouter.stacks.remove, { stackId: stack.id })).toEqual({ stackId: stack.id });
+
+    expect(await call(appRouter.stacks.list, { workspaceId: workspace.id })).toEqual([]);
+    const reviews = await call(appRouter.reviews.list, { workspaceId: workspace.id });
+    expect(reviews.map((review) => review.id)).toEqual([outside.targetId]);
+    await expectORPCError(call(appRouter.reviews.snapshot, { snapshotId: stacked.snapshotId }), {
+      code: errorCodes.SNAPSHOT_NOT_FOUND,
+    });
+    const refs = pinnedSnapshotRefs(workspace.id);
+    expect(refs).not.toContain(stacked.snapshotId);
+    expect(refs).toContain(outside.snapshotId);
+    await expectORPCError(call(appRouter.stacks.remove, { stackId: stack.id }), { code: errorCodes.STACK_NOT_FOUND });
   });
 
   it('keeps branches of stacks listed and their reviews on the branch they merge into', async () => {

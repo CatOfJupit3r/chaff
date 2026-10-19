@@ -1,4 +1,4 @@
-import { DownIcon, EyeIcon, EyeOffIcon, RightIcon } from '@~/components/icons/icons';
+import { DownIcon, EyeIcon, EyeOffIcon, RightIcon, TrashIcon } from '@~/components/icons/icons';
 import { MarkdownTitle } from '@~/components/markdown/markdown-title';
 import { Button } from '@~/components/ui/button';
 import { cn } from '@~/lib/utils';
@@ -21,6 +21,7 @@ interface iStackOutlineGroupProps extends Pick<
   isSelected: boolean;
   query: string;
   onToggleHidden: ReturnType<typeof useStackList>['toggleHidden'];
+  onDelete: (stack: iOverviewStack) => unknown;
 }
 
 export function StackOutlineGroup({
@@ -31,6 +32,7 @@ export function StackOutlineGroup({
   selectStack,
   query,
   onToggleHidden,
+  onDelete,
 }: iStackOutlineGroupProps) {
   const { isHidden } = stack;
   const reviewed = stack.branches.filter(
@@ -61,19 +63,31 @@ export function StackOutlineGroup({
             </span>
           </span>
         </button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={isHidden ? 'Show stack' : 'Hide stack'}
-          title={isHidden ? 'Show stack' : 'Hide stack'}
-          onClick={() => onToggleHidden(stack)}
+        <div
           className={cn(
-            'mx-2 mt-3 shrink-0 group-hover/stack:opacity-100 focus-visible:opacity-100',
+            'mx-2 mt-3 flex shrink-0 gap-1 group-hover/stack:opacity-100 focus-within:opacity-100',
             isHidden ? '' : 'opacity-0',
           )}
         >
-          {isHidden ? <EyeIcon /> : <EyeOffIcon />}
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={isHidden ? 'Show stack' : 'Hide stack'}
+            title={isHidden ? 'Show stack' : 'Hide stack'}
+            onClick={() => onToggleHidden(stack)}
+          >
+            {isHidden ? <EyeIcon /> : <EyeOffIcon />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Delete stack"
+            title="Delete stack"
+            onClick={() => onDelete(stack)}
+          >
+            <TrashIcon />
+          </Button>
+        </div>
       </div>
       {isSelected ? (
         <nav aria-label="Stack branches" className="px-2 pb-3">

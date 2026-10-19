@@ -161,6 +161,13 @@ export const SparkIcon = createIcon(
     <path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z" />
   </>,
 );
+export const TrashIcon = createIcon(
+  'TrashIcon',
+  <>
+    <path d="M4 7h16M10 4h4M6 7l1 13h10l1-13" />
+    <path d="M10 11v5M14 11v5" />
+  </>,
+);
 export const StopIcon = createIcon('StopIcon', <rect x="6.5" y="6.5" width="11" height="11" rx="2" />);
 export const SettingsIcon = createIcon(
   'SettingsIcon',

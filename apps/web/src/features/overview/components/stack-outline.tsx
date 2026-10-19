@@ -5,7 +5,9 @@ import { Button } from '@~/components/ui/button';
 import { TextInput } from '@~/components/ui/text-input';
 
 import type { useOverview } from '../hooks/use-overview';
+import type { iOverviewStack } from '../overview.types';
 import { activeFilterCount } from '../stack-list.utils';
+import { DeleteStackDialog } from './delete-stack-dialog';
 import { StackFiltersPanel } from './stack-filters-panel';
 import { StackListFooter } from './stack-list-footer';
 import { StackOutlineGroup } from './stack-outline-group';
@@ -31,6 +33,7 @@ export function StackOutline({
   importLabel,
 }: iStackOutlineProps) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [deletingStack, setDeletingStack] = useState<iOverviewStack>();
   const filterCount = activeFilterCount(list.filters);
   return (
     <>
@@ -84,6 +87,7 @@ export function StackOutline({
             selectStack={selectStack}
             query={list.query}
             onToggleHidden={list.toggleHidden}
+            onDelete={setDeletingStack}
           />
         ))}
         {list.listed.length === 0 ? (
@@ -100,6 +104,12 @@ export function StackOutline({
         isShowingHidden={list.isShowingHidden}
         setIsShowingHidden={list.setIsShowingHidden}
         setFilters={list.setFilters}
+      />
+      <DeleteStackDialog
+        stack={deletingStack}
+        deleteStack={list.deleteStack}
+        isDeleting={list.isDeleting}
+        onClose={() => setDeletingStack(undefined)}
       />
     </>
   );

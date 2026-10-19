@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
 import type { ReviewTargetKind } from '@chaff/common/enums/review.enums';
@@ -79,5 +79,10 @@ export class DrizzleReviewTargetRepository implements iReviewTargetRepository {
       .where(eq(reviewTargets.id, targetId))
       .returning()
       .get();
+  }
+
+  public async deleteMany(targetIds: readonly string[]) {
+    if (targetIds.length === 0) return;
+    this.databaseService.getDb().delete(reviewTargets).where(inArray(reviewTargets.id, targetIds)).run();
   }
 }

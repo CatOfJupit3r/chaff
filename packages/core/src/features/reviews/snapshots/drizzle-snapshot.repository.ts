@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import { singleton } from 'tsyringe';
 
 import { DatabaseService } from '@~/db/database.service';
@@ -49,6 +49,11 @@ export class DrizzleSnapshotRepository implements iSnapshotRepository {
       .orderBy(desc(snapshots.version))
       .limit(1)
       .get();
+  }
+
+  public async listByTargets(targetIds: readonly string[]) {
+    if (targetIds.length === 0) return [];
+    return this.databaseService.getDb().select().from(snapshots).where(inArray(snapshots.targetId, targetIds)).all();
   }
 
   public async create(snapshot: iNewSnapshot, content: iSnapshotContent) {

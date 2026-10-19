@@ -12,6 +12,7 @@ import type {
 export interface iSnapshotRepository {
   findById: (snapshotId: string) => Promise<iSnapshotRecord | undefined>;
   findLatest: (targetId: string) => Promise<iSnapshotRecord | undefined>;
+  listByTargets: (targetIds: readonly string[]) => Promise<iSnapshotRecord[]>;
   /** Stores the snapshot with its files, units and regions in one transaction. */
   create: (snapshot: iNewSnapshot, content: iSnapshotContent) => Promise<iSnapshotRecord>;
   listFiles: (snapshotId: string) => Promise<iSnapshotFileSummary[]>;

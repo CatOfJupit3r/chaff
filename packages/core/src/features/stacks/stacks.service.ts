@@ -8,6 +8,7 @@ import { REVIEW_TARGET_REPOSITORY_TOKEN, STACK_REPOSITORY_TOKEN } from '@~/di/to
 import { OpenChangesService } from '@~/features/code-hosts/open-changes.service';
 import type { iOpenChanges } from '@~/features/code-hosts/open-changes.service';
 import { BranchRefsService } from '@~/features/git/branch-refs.service';
+import { ReviewRemovalService } from '@~/features/reviews/review-targets/review-removal.service';
 import type { iReviewTargetRepository } from '@~/features/reviews/review-targets/review-target.repository';
 import { BranchesService } from '@~/features/workspaces/branches.service';
 import { WorkspacesService } from '@~/features/workspaces/workspaces.service';
@@ -38,6 +39,7 @@ export class StacksService {
     private readonly branchesService: BranchesService,
     private readonly branchRefsService: BranchRefsService,
     private readonly openChangesService: OpenChangesService,
+    private readonly reviewRemovalService: ReviewRemovalService,
   ) {}
 
   public async list(workspaceId: string) {
@@ -108,9 +110,13 @@ export class StacksService {
     return this.respond(await this.workspacesService.getRecord(stack.workspaceId), record ?? stack);
   }
 
+  /** Deletes the stack and every review of its branches; the branches and the repository are not touched. */
   public async remove(stackId: string) {
-    const isDeleted = await this.stackRepository.delete(stackId);
-    if (!isDeleted) throw ORPCNotFoundError(errorCodes.STACK_NOT_FOUND);
+    const stack = await this.getStack(stackId);
+    const branches = new Set(stack.branches.map((member) => member.branch));
+    const targets = await this.reviewTargetRepository.list(stack.workspaceId);
+    await this.reviewRemovalService.remove(targets.filter((target) => branches.has(target.branch)));
+    await this.stackRepository.delete(stack.id);
     return { stackId };
   }
 

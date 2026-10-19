@@ -39,6 +39,7 @@ const longStack = overviewStack(
   longNames.map((_, index) => `Change ${index + 1}`),
 );
 const otherStack = overviewStack('signatures', 'Webhook signatures', ['signature'], ['Verify signatures']);
+const deleteStack = vi.fn<ReturnType<typeof useStackList>['deleteStack']>();
 
 function NavigationExample() {
   const [stack, setStack] = useState<iOverviewStack>(longStack);
@@ -62,6 +63,8 @@ function NavigationExample() {
     filters: INCLUSIVE_STACK_FILTERS,
     setFilters: vi.fn(),
     toggleHidden: vi.fn(),
+    deleteStack,
+    isDeleting: false,
     ...listStacks({ stacks: [longStack, otherStack], filters: INCLUSIVE_STACK_FILTERS, query, isShowingHidden: false }),
   };
   if (!branch) return null;
@@ -148,5 +151,26 @@ describe('stack train', () => {
     expect(within(preview).getByText('Verify signatures')).toBeInTheDocument();
     expect(within(preview).queryByText('Change 7')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Delivery reliability/ })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('deletes a stack only after the user confirms it', async () => {
+    const user = userEvent.setup();
+    deleteStack.mockClear();
+    render(<NavigationExample />);
+    const signatures = screen.getByRole('button', { name: /Webhook signatures/ }).closest('section');
+    if (!signatures) throw new Error('No Webhook signatures row');
+
+    await user.click(within(signatures).getByRole('button', { name: 'Delete stack' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete Webhook signatures?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(deleteStack).not.toHaveBeenCalled();
+
+    await user.click(within(signatures).getByRole('button', { name: 'Delete stack' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Delete Webhook signatures?' })).getByRole('button', {
+        name: 'Delete',
+      }),
+    );
+    expect(deleteStack).toHaveBeenCalledWith(expect.objectContaining({ id: 'signatures' }), expect.any(Function));
   });
 });
