@@ -20,4 +20,6 @@ export interface iReviewTargetRepository {
   updateChange: (targetId: string, fields: iChangeRequestFields) => Promise<iReviewTargetRecord | undefined>;
   updateParent: (targetId: string, parentBranch: string) => Promise<iReviewTargetRecord | undefined>;
   setArchive: (targetId: string, archive: iTargetArchive) => Promise<iReviewTargetRecord | undefined>;
+  /** Deletes the targets with their snapshots, findings and fixes. */
+  deleteMany: (targetIds: readonly string[]) => Promise<unknown>;
 }

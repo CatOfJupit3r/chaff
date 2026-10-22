@@ -161,8 +161,9 @@ export const stacksContract = oc.router({
 
   remove: oc
     .route({
-      summary: 'Remove a stack',
-      description: 'Forgets the stack; its branches, reviews and the repository are not touched.',
+      summary: 'Delete a stack',
+      description:
+        'Deletes the stack and every review of its branches, with their findings and fixes. The branches and the repository are not touched. Fails with FIX_STILL_RUNNING while an agent is fixing one of those reviews.',
     })
     .input(stackIdInput)
     .output(z.object({ stackId: z.string() })),
